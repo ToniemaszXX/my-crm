@@ -18,8 +18,16 @@ select, option {
     @apply bg-lime-600 text-white hover:bg-lime-700  py-2 px-3 rounded-md;
 }
 
+.buttonGreenNeg {
+    @apply bg-transparent border-solid border-2 border-lime-500 text-lime-500 py-2 px-3 rounded-md font-bold duration-200 hover:bg-lime-500  hover:text-white;
+}
+
 .buttonRed {
-    @apply bg-red-600 text-white hover:bg-red-700  py-1 px-3 rounded-md;
+    @apply bg-red-600 text-white hover:bg-red-700  py-2 px-3 rounded-md;
+}
+
+.buttonRedNeg {
+    @apply bg-transparent border-solid border-2 border-red-600 text-red-600 hover:bg-red-600 hover:text-white py-2 px-3 rounded-md;
 }
 
 input.placeholder {
@@ -39,11 +47,11 @@ input.placeholder {
 }
 
 .contactBlock {
-    @apply flex border border-gray-500 p-4 rounded-lg mb-4 gap-3 items-center justify-items-center;
+    @apply flex-col border border-gray-500 p-4 rounded-lg mb-4 gap-3 items-center;
 }
 
 .contactInput {
-    @apply flex-none basis-[100px] min-w-[80px] h-10 mb-0;
+    @apply flex-none basis-[138px] min-w-[80px] h-10 mb-0;
 }
 
 .contactSelect {

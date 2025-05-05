@@ -231,8 +231,8 @@ function AddClientModal({ isOpen, onClose, onClientAdded }) {
             <h4 className='header2'>Kontakt</h4>
             {contacts.map((contact, index) => (
             <div key={index} className='contactBlock'>
-                <select name="department" value={contact.department} onChange={(e) => handleContactChange(index, e)} className="contactSelect">
-                <option className='' value="">Dział</option>
+                <select name="department" value={contact.department} onChange={(e) => handleContactChange(index, e)} className="contactSelect mb-4">
+                <option className='' value="">Wybierz dział</option>
                 <option value="Zarząd">Zarząd / Właściciel</option>
                 <option value="Sprzedaż">Dział Sprzedaży</option>
                 <option value="Zakupy">Dział Zakupów</option>
@@ -242,6 +242,7 @@ function AddClientModal({ isOpen, onClose, onClientAdded }) {
                 <option value="Logistyka">Dział Logistyki</option>
                 <option value="Administracja">Dział Administracji / Obsługi klienta</option>
                 </select>
+                <div className='flex gap-2'>
                 <input type="text" name="position" placeholder="Stanowisko" value={contact.position} onChange={(e) => handleContactChange(index, e)} className="contactInput"/>
                 <input type="text" name="name" placeholder="Imię i nazwisko" value={contact.name} onChange={(e) => handleContactChange(index, e)} className="contactInput"/>
                 <input type="text" name="phone" placeholder="Telefon" value={contact.phone} onChange={(e) => handleContactChange(index, e)} className="contactInput"/>
@@ -254,16 +255,18 @@ function AddClientModal({ isOpen, onClose, onClientAdded }) {
                 <option value="nie ma">Brak</option>
                 </select>
                 <button className='buttonRed' type="button" onClick={() => handleRemoveContact(index)}>Remove</button>
+                </div>
+                
             </div>
             ))}
 
-            <button className='buttonGreen' type="button" onClick={handleAddContact} style={{ marginTop: '10px' }}>Add Contact</button>
+            <button className='buttonGreenNeg' type="button" onClick={handleAddContact} style={{ marginTop: '10px' }}>Add Contact</button>
 
 
             {/* Przyciski */}
             <div style={{ marginTop: '20px' }}>
-                <button type="submit" disabled={isSaving || isStructureInvalid}>{isSaving ? 'Saving...' : 'Save'}</button>
-                <button type="button" onClick={onClose} style={{ marginLeft: '10px' }}>Cancel</button>
+                <button className='buttonGreen' type="submit" disabled={isSaving || isStructureInvalid}>{isSaving ? 'Saving...' : 'Save'}</button>
+                <button className='buttonRed' type="button" onClick={onClose} style={{ marginLeft: '10px' }}>Cancel</button>
             </div>
             </form>
       </div>
