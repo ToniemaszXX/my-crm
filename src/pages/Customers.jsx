@@ -138,7 +138,7 @@ function Customers() {
                 <td>{client.nip || '-'}</td>
                 <td style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
                     <button onClick={() => handleEdit(client)}>Edit</button>
-                    <button onClick={() => handleDelete(client.id)} style={{ backgroundColor: 'red', color: 'white' }}>Delete</button>
+                    <button onClick={() => handleDelete(client.id)} className="bg-red-600 duration-300 hover:bg-red-800 text-white px-2 py-1 rounded">Delete</button>
                 </td>
 
               </tr>

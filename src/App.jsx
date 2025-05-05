@@ -14,7 +14,7 @@ function Layout() {
     <div className="flex h-screen w-screen box-border pr-5">
 
       {!hideSidebar && <Sidebar />}
-      <div className="flex-1 p-5">
+      <div className='w-full'>
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/" element={<Dashboard />} />

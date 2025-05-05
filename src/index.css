@@ -1,3 +1,51 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.header2 {
+    @apply text-neutral-800 font-bold mb-4;
+}
+
+input {
+    @apply bg-neutral-200 text-neutral-700 py-1 px-3 mb-3 rounded-md placeholder-neutral-500;
+}
+
+select, option {
+    @apply text-neutral-800 rounded-md;
+}
+
+.buttonGreen {
+    @apply bg-lime-600 text-white hover:bg-lime-700  py-2 px-3 rounded-md;
+}
+
+.buttonRed {
+    @apply bg-red-600 text-white hover:bg-red-700  py-1 px-3 rounded-md;
+}
+
+input.placeholder {
+    @apply text-neutral-700
+}
+
+.grid2col {
+    @apply grid grid-cols-2 gap-3;
+}
+
+.row {
+    @apply flex gap-3;
+}
+
+.flexColumn {
+    @apply flex flex-col;
+}
+
+.contactBlock {
+    @apply flex border border-gray-500 p-4 rounded-lg mb-4 gap-3 items-center justify-items-center;
+}
+
+.contactInput {
+    @apply flex-none basis-[100px] min-w-[80px] h-10 mb-0;
+}
+
+.contactSelect {
+    @apply flex-none basis-[170px] min-w-[100px] h-10;
+}
