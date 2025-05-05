@@ -2,19 +2,19 @@ import { Link } from 'react-router-dom';
 
 function Sidebar() {
   return (
-    <div style={{ width: '220px', background: '#f2f2f2', padding: '20px', height: '100vh' }}>
-      <h2>CRM ENGO</h2>
-      <ul style={{ listStyle: 'none', padding: 0 }}>
-        <li style={{ marginBottom: '10px' }}>
+    <div className="bg-black p-5 w-56 h-screen">
+      <h2 className='text-lime-50s0 text-xl font-bold mb-4'>CRM ENGO</h2>
+      <ul className="list-none p-0 text-white">
+        <li className='mb-3'>
           <Link to="/">Dashboard</Link>
         </li>
-        <li style={{ marginBottom: '10px' }}>
+        <li className='mb-3'>
           <Link to="/customers">Customers</Link>
         </li>
-        <li style={{ marginBottom: '10px' }}>
+        <li className='mb-3'>
           <Link to="/visits">Visits</Link>
         </li>
-        <li style={{ marginBottom: '10px' }}>
+        <li className='mb-3'>
             <Link to="/logout">Logout</Link>
         </li>
       </ul>

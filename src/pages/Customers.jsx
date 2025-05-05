@@ -87,7 +87,7 @@ function Customers() {
       <h1 className="text-2xl font-bold mb-4">Clients</h1>
 
           <div className="mb-5 flex justify-between gap-2">
-      <button onClick={() => setIsAddModalOpen(true)} className="bg-lime-400 text-white px-4 py-2 rounded">
+      <button onClick={() => setIsAddModalOpen(true)} className="bg-lime-500 text-white px-4 py-2 rounded">
         Add Client
       </button>
       <input

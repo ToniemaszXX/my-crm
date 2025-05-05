@@ -11,7 +11,7 @@ function Layout() {
   const hideSidebar = location.pathname === "/login";
 
   return (
-    <div className="flex h-screen w-[90vw] box-border">
+    <div className="flex h-screen w-screen box-border pr-5">
 
       {!hideSidebar && <Sidebar />}
       <div className="flex-1 p-5">
