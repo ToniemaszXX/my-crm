@@ -247,7 +247,7 @@ function AddClientModal({ isOpen, onClose, onClientAdded }) {
                 <input type="text" name="phone" placeholder="Telefon" value={contact.phone} onChange={(e) => handleContactChange(index, e)} className="contactInput"/>
                 <input type="email" name="email" placeholder="Email" value={contact.email} onChange={(e) => handleContactChange(index, e)} className="contactInput"/>
                 <input type="text" name="function_notes" placeholder="Funkcja / Uwagi" value={contact.function_notes} onChange={(e) => handleContactChange(index, e)} className="contactInput"/>
-                <select className='text-neutral-800' name="decision_level" value={contact.decision_level} onChange={(e) => handleContactChange(index, e)} className="contactSelect">
+                <select name="decision_level" value={contact.decision_level} onChange={(e) => handleContactChange(index, e)} className="contactSelect text-neutral-800">
                 <option value="">Decyzyjność</option>
                 <option value="wysoka">Wysoka</option>
                 <option value="średnia">Średnia (zastępstwo)</option>
