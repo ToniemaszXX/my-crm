@@ -215,7 +215,7 @@ function AddClientModal({ isOpen, onClose, onClientAdded }) {
 
                 
             {/* Sales Structure */}
-            <h4 className='header2'>Sales Structure (%)</h4>
+            <h4 className='header2'>Struktura sprzedaży (%)</h4>
             {isStructureInvalid && (
                 <div style={{ color: 'red', fontWeight: 'bold', marginBottom: '10px' }}>
                     Suma struktur sprzedaży nie może przekraczać 100%
@@ -240,7 +240,8 @@ function AddClientModal({ isOpen, onClose, onClientAdded }) {
                 <option value="Inwestycje">Dział Inwestycji</option>
                 <option value="Finanse">Dział Finansowy</option>
                 <option value="Logistyka">Dział Logistyki</option>
-                <option value="Administracja">Dział Administracji / Obsługi klienta</option>
+                <option value="Administracja">Dział Administracji</option>
+                <option value="Obsługi klienta">Obsługi klienta</option>
                 </select>
                 <div className='flex gap-2'>
                 <input type="text" name="position" placeholder="Stanowisko" value={contact.position} onChange={(e) => handleContactChange(index, e)} className="contactInput"/>
