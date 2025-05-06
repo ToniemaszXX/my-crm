@@ -29,8 +29,8 @@ function Login() {
 
   return (
     <div className='flex justify-center items-center h-full w-screen box-border'>
-      <form onSubmit={handleSubmit} style={{ padding: '20px', border: '1px solid #ccc', borderRadius: '8px' }}>
-        <h2>Login</h2>
+      <form onSubmit={handleSubmit} className='p-5 border-solid border-[1px] border-neutral-500 rounded-lg text-neutral-400 flex flex-col items-center'>
+        <h2 className='mb-5 text-lg font-bold'>CRM ENGO Controls</h2>
         {error && <p style={{ color: 'red' }}>{error}</p>}
         <div style={{ marginBottom: '10px' }}>
           <input
@@ -52,7 +52,7 @@ function Login() {
             style={{ padding: '8px' }}
           />
         </div>
-        <button type="submit" style={{ padding: '8px 16px' }}>Login</button>
+        <button type="submit" className='buttonGreen'>Zaloguj</button>
       </form>
     </div>
   );

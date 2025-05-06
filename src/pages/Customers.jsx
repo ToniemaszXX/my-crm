@@ -83,16 +83,16 @@ function Customers() {
     
 
 
-    <div className="p-5 w-full">
-      <h1 className="text-2xl font-bold mb-4">Clients</h1>
+    <div className="p-5 w-full text-neutral-300">
+      <h1 className="text-2xl font-bold mb-4">Klienci</h1>
 
-          <div className="mb-5 flex justify-between gap-2">
-      <button onClick={() => setIsAddModalOpen(true)} className="bg-lime-500 text-white px-4 py-2 rounded">
-        Add Client
+          <div className="mb-5 flex justify-between gap-2 items-center">
+      <button onClick={() => setIsAddModalOpen(true)} className="buttonGreen">
+        Dodaj klienta
       </button>
       <input
         type="text"
-        placeholder="Search clients..."
+        placeholder="Wyszukaj klienta..."
         value={searchQuery}
         onChange={(e) => handleSearch(e.target.value)}
         className="p-2 w-72 border rounded"
@@ -119,19 +119,19 @@ function Customers() {
       )}
 
       <table border="1" cellPadding="10" style={{ width: '100%', borderCollapse: 'collapse' }}>
-        <thead style={{ backgroundColor: '#f0f0f0' }}>
+        <thead className='bg-neutral-600'>
           <tr>
             <th>#</th>
-            <th>Company Name</th>
-            <th>City</th>
+            <th>Nazwa firmy</th>
+            <th>Miasto</th>
             <th>NIP</th>
-            <th>Actions</th>
+            <th>Operacje</th>
           </tr>
         </thead>
         <tbody>
           {filteredClients.length > 0 ? (
             filteredClients.map((client, index) => (
-              <tr key={client.id} style={{ textAlign: 'center' }}>
+              <tr key={client.id} className='border-b border-b-neutral-300 text-center'>
                 <td>{index + 1}</td>
                 <td>{client.company_name || '-'}</td>
                 <td>{client.city || '-'}</td>
