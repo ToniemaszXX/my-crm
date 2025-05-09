@@ -14,6 +14,14 @@ export default function useClientForm(initialData = {}) {
     number_of_branches: '',
     number_of_sales_reps: '',
     www: '',
+    turnover_pln: '',
+    turnover_eur: '',
+    installation_sales_share: '',
+    automatic_sales_share: '',
+    sales_potential: '',
+    has_webstore: '',
+    has_b2b_platform: '',
+    has_b2c_platform: '',
     facebook: '',
     auction_service: '',
     private_brand: 0,
@@ -23,7 +31,8 @@ export default function useClientForm(initialData = {}) {
     structure_installer: 0,
     structure_wholesaler: 0,
     structure_ecommerce: 0,
-    structure_retail: 0
+    structure_retail: 0,
+    structure_other: 0
   });
 
   const [contacts, setContacts] = useState([]);
@@ -47,6 +56,7 @@ export default function useClientForm(initialData = {}) {
         turnover_pln: initialData.turnover_pln || '',
         turnover_eur: initialData.turnover_eur || '',
         installation_sales_share: initialData.installation_sales_share || '',
+        automatic_sales_share: initialData.automatic_sales_share || '',
         sales_potential: initialData.sales_potential || '',
         has_webstore: initialData.has_webstore || '',
         has_b2b_platform: initialData.has_b2b_platform || '',
@@ -60,7 +70,8 @@ export default function useClientForm(initialData = {}) {
         structure_installer: initialData.structure_installer || 0,
         structure_wholesaler: initialData.structure_wholesaler || 0,
         structure_ecommerce: initialData.structure_ecommerce || 0,
-        structure_retail: initialData.structure_retail || 0
+        structure_retail: initialData.structure_retail || 0,
+        structure_other: initialData.structure_other || 0
       });
 
       setContacts(initialData.contacts || []);
@@ -75,7 +86,8 @@ export default function useClientForm(initialData = {}) {
       'structure_installer',
       'structure_wholesaler',
       'structure_ecommerce',
-      'structure_retail'
+      'structure_retail',
+      'structure_other'
     ].includes(name)) {
       const numeric = parseInt(newValue, 10);
       newValue = isNaN(numeric) ? 0 : Math.min(Math.max(numeric, 0), 100);
@@ -123,6 +135,7 @@ export default function useClientForm(initialData = {}) {
       turnover_pln: '',
       turnover_eur: '',
       installation_sales_share: '',
+      automatic_sales_share: '',
       sales_potential: '',
       has_webstore: '',
       has_b2b_platform: '',
@@ -136,7 +149,8 @@ export default function useClientForm(initialData = {}) {
       structure_installer: 0,
       structure_wholesaler: 0,
       structure_ecommerce: 0,
-      structure_retail: 0
+      structure_retail: 0,
+      structure_other: 0
     });
     setContacts([]);
     setIsSaving(false);
@@ -146,7 +160,8 @@ export default function useClientForm(initialData = {}) {
     Number(formData.structure_installer) +
     Number(formData.structure_wholesaler) +
     Number(formData.structure_ecommerce) +
-    Number(formData.structure_retail);
+    Number(formData.structure_retail) +
+    Number(formData.structure_other);
 
   const isStructureInvalid = structureSum > 100;
 

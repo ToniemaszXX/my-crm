@@ -19,67 +19,6 @@ function AddClientModal({ isOpen, onClose, onClientAdded }) {
       } = useClientForm(); // bez initialData
       
 
-//   const [formData, setFormData] = useState({
-//     company_name: '',
-//     street: '',
-//     city: '',
-//     postal_code: '',
-//     voivodeship: '',
-//     country: '',
-//     nip: '',
-//     www: '',
-//     facebook: '',
-//     auction_service: '',
-//     private_brand: 0,
-//     private_brand_details: '',
-//     loyalty_program: 0,
-//     loyalty_program_details: '',
-//     structure_installer: 0,
-//     structure_wholesaler: 0,
-//     structure_ecommerce: 0,
-//     structure_retail: 0
-//   });
-
-//   const [isSaving, setIsSaving] = useState(false);
-//   const [contacts, setContacts] = useState([]);
-
-//   const handleAddContact = () => {
-//     setContacts([...contacts, { department: '', position: '', name: '', phone: '', email: '', notes: '', decision_level: '' }]);
-//   };
-
-//   const handleContactChange = (index, e) => {
-//     const { name, value } = e.target;
-//     const updatedContacts = [...contacts];
-//     updatedContacts[index][name] = value;
-//     setContacts(updatedContacts);
-//   };
-
-//   const handleRemoveContact = (index) => {
-//     const updatedContacts = [...contacts];
-//     updatedContacts.splice(index, 1);
-//     setContacts(updatedContacts);
-//   };
-
-//   const handleChange = (e) => {
-//     const { name, value, type, checked } = e.target;
-  
-//     let newValue = type === 'checkbox' ? (checked ? 1 : 0) : value;
-  
-//     // Limit procentów
-//     if (
-//       ['structure_installer', 'structure_wholesaler', 'structure_ecommerce', 'structure_retail'].includes(name)
-//     ) {
-//       const numeric = parseInt(newValue, 10);
-//       if (isNaN(numeric) || numeric < 0) newValue = 0;
-//       else if (numeric > 100) newValue = 100;
-//       else newValue = numeric;
-//     }
-  
-//     setFormData((prev) => ({
-//       ...prev,
-//       [name]: newValue,
-//     }));
-//   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -103,28 +42,6 @@ function AddClientModal({ isOpen, onClose, onClientAdded }) {
         alert('Klient dodany poprawnie');
         resetForm();
       onClientAdded();
-      // Reset formularza:
-    // setFormData({
-    //     company_name: '',
-    //     street: '',
-    //     city: '',
-    //     postal_code: '',
-    //     voivodeship: '',
-    //     country: '',
-    //     nip: '',
-    //     www: '',
-    //     facebook: '',
-    //     auction_service: '',
-    //     private_brand: 0,
-    //     private_brand_details: '',
-    //     loyalty_program: 0,
-    //     loyalty_program_details: '',
-    //     structure_installer: 0,
-    //     structure_wholesaler: 0,
-    //     structure_ecommerce: 0,
-    //     structure_retail: 0
-    //   });
-    //   setContacts([]);
       onClose();
     } else {
       alert('Error adding client');
@@ -135,13 +52,7 @@ function AddClientModal({ isOpen, onClose, onClientAdded }) {
 
   if (!isOpen) return null;
 
-//   const structureSum =
-//   Number(formData.structure_installer) +
-//   Number(formData.structure_wholesaler) +
-//   Number(formData.structure_ecommerce) +
-//   Number(formData.structure_retail);
 
-// const isStructureInvalid = structureSum > 100;
 
 
   return (
@@ -202,7 +113,8 @@ function AddClientModal({ isOpen, onClose, onClientAdded }) {
                   <div className='flexColumn'>
                     <input type="text" name="turnover_pln" placeholder="Obrót PLN" value={formData.turnover_pln} onChange={handleChange} />
                     <input type="text" name="turnover_eur" placeholder="Obrót EUR" value={formData.turnover_eur} onChange={handleChange} />
-                    <input type="text" name="installation_sales_share" placeholder="Udział sprzedaży instal." value={formData.installation_sales_share} onChange={handleChange} />
+                    <input type="text" name="installation_sales_share" placeholder="Udział sprzedaży z instalacji grzewczych" value={formData.installation_sales_share} onChange={handleChange} />
+        <input type="text" name="automatic_sales_share" placeholder="Udział sprzedaży z automatyki" value={formData.automatic_sales_share} onChange={handleChange} />
                     <input type="text" name="sales_potential" placeholder="Potencjał PLN" value={formData.sales_potential} onChange={handleChange} />
                     <input type="text" name="has_webstore" placeholder="Sklep www" value={formData.has_webstore} onChange={handleChange} />
                     <input type="text" name="has_b2b_platform" placeholder="B2B" value={formData.has_b2b_platform} onChange={handleChange} />
@@ -226,6 +138,7 @@ function AddClientModal({ isOpen, onClose, onClientAdded }) {
                 <label className='text-neutral-800'>Podhurt<br></br><input type="number" name="structure_wholesaler" placeholder="Podhurt %" value={formData.structure_wholesaler} onChange={handleChange} /></label>
                 <label className='text-neutral-800'>E-commarce<br></br><input type="number" name="structure_ecommerce" placeholder="E-commerce %" value={formData.structure_ecommerce} onChange={handleChange} /></label>
                 <label className='text-neutral-800'>Kowalski<br></br><input type="number" name="structure_retail" placeholder="Kowalski %" value={formData.structure_retail} onChange={handleChange} /></label>
+                <label className='text-neutral-800'>Inne<br></br><input type="number" name="structure_other" placeholder="Inne %" value={formData.structure_other} onChange={handleChange} /></label> 
             </div>
 
             <h4 className='header2'>Kontakt</h4>

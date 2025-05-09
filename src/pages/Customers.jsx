@@ -26,8 +26,34 @@ function Customers() {
         (client) =>
           (client.company_name || '').toLowerCase().includes(lowerQuery) ||
           (client.city || '').toLowerCase().includes(lowerQuery) ||
+          (client.engo_team_contact || '').toLowerCase().includes(lowerQuery) ||
+          (client.country || '').toLowerCase().includes(lowerQuery) ||
           (client.nip || '').toLowerCase().includes(lowerQuery) ||
-          (client.country || '').toLowerCase().includes(lowerQuery)
+          (client.street || '').toLowerCase().includes(lowerQuery) ||
+          (client.postal_code || '').toLowerCase().includes(lowerQuery) ||
+          (client.voivodeship || '').toLowerCase().includes(lowerQuery) ||
+          (client.number_of_branches || '').toLowerCase().includes(lowerQuery) ||
+          (client.number_of_sales_reps || '').toLowerCase().includes(lowerQuery) ||
+          (client.www || '').toLowerCase().includes(lowerQuery) ||
+          (client.turnover_pln || '').toLowerCase().includes(lowerQuery) ||
+          (client.turnover_eur || '').toLowerCase().includes(lowerQuery) ||
+          (client.installation_sales_share || '').toLowerCase().includes(lowerQuery) ||
+          (client.automatic_sales_share || '').toLowerCase().includes(lowerQuery) ||
+          (client.sales_potential || '').toLowerCase().includes(lowerQuery) ||
+          (client.has_webstore || '').toLowerCase().includes(lowerQuery) ||
+          (client.has_b2b_platform || '').toLowerCase().includes(lowerQuery) ||
+          (client.has_b2c_platform || '').toLowerCase().includes(lowerQuery) ||
+          (client.facebook || '').toLowerCase().includes(lowerQuery) ||
+          (client.auction_service || '').toLowerCase().includes(lowerQuery) ||
+          (client.private_bran || '').toLowerCase().includes(lowerQuery) ||
+          (client.private_brand_details || '').toLowerCase().includes(lowerQuery) ||
+          (client.loyalty_progra || '').toLowerCase().includes(lowerQuery) ||
+          (client.loyalty_program_details || '').toLowerCase().includes(lowerQuery) ||
+          (client.structure_installe || '').toLowerCase().includes(lowerQuery) ||
+          (client.structure_wholesale || '').toLowerCase().includes(lowerQuery) ||
+          (client.structure_ecommerc || '').toLowerCase().includes(lowerQuery) ||
+          (client.structure_retai || '').toLowerCase().includes(lowerQuery) ||
+          (client.structure_oth || '').toLowerCase().includes(lowerQuery)
       );
       setFilteredClients(filtered);
     }
@@ -123,8 +149,9 @@ function Customers() {
           <tr>
             <th>#</th>
             <th>Nazwa firmy</th>
+            <th>Kraj</th>
             <th>Miasto</th>
-            <th>NIP</th>
+            <th>Handlowiec</th>
             <th>Operacje</th>
           </tr>
         </thead>
@@ -134,11 +161,12 @@ function Customers() {
               <tr key={client.id} className='border-b border-b-neutral-300 text-center'>
                 <td>{index + 1}</td>
                 <td>{client.company_name || '-'}</td>
+                <td>{client.country || '-'}</td>
                 <td>{client.city || '-'}</td>
-                <td>{client.nip || '-'}</td>
+                <td>{client.engo_team_contact || '-'}</td>
                 <td style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
-                    <button onClick={() => handleEdit(client)} className='buttonGreenNeg'>Edit</button>
-                    <button onClick={() => handleDelete(client.id)} className="buttonRedNeg">Delete</button>
+                    <button onClick={() => handleEdit(client)} className='buttonGreen2'>Szczegóły</button>
+                    <button onClick={() => handleDelete(client.id)} className="buttonRed2">Usuń</button>
                 </td>
 
               </tr>

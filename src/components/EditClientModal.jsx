@@ -1,6 +1,8 @@
 import useClientForm from '../hooks/useClientForm';
 import { useEffect } from 'react';
 
+
+
 function EditClientModal({ isOpen, client, onClose, onClientUpdated }) {
     const {
         formData,
@@ -15,43 +17,9 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated }) {
         handleRemoveContact,
         handleContactChange,
         resetForm
-      } = useClientForm(client); // przekazujemy klienta jako initialData
+      } = useClientForm(client); // przekazujemy klienta jako client
 
-  useEffect(() => {
-    if (client) {
-      setFormData({
-        id: client.id,
-        company_name: client.company_name || '',
-        street: client.street || '',
-        city: client.city || '',
-        postal_code: client.postal_code || '',
-        voivodeship: client.voivodeship || '',
-        country: client.country || '',
-        nip: client.nip || '',
-        engo_team_contact: client.engo_team_contact || '',
-        number_of_branches: client.number_of_branches || '',
-        number_of_sales_reps: client.number_of_sales_reps || '',
-        www: client.www || '',
-        turnover_pln: client.turnover_pln || '',
-        turnover_eur: client.turnover_eur || '',
-        installation_sales_share: client.installation_sales_share || '',
-        sales_potential: client.sales_potential || '',
-        has_webstore: client.has_webstore || '',
-        has_b2b_platform: client.has_b2b_platform || '',
-        has_b2c_platform: client.has_b2c_platform || '',
-        facebook: client.facebook || '',
-        auction_service: client.auction_service || '',
-        private_brand: client.private_brand == 1 ? 1 : 0,
-        private_brand_details: client.private_brand_details || '',
-        loyalty_program: client.loyalty_program == 1 ? 1 : 0,
-        loyalty_program_details: client.loyalty_program_details || '',
-        structure_installer: client.structure_installer || 0,
-        structure_wholesaler: client.structure_wholesaler || 0,
-        structure_ecommerce: client.structure_ecommerce || 0,
-        structure_retail: client.structure_retail || 0,
-      });
-    }
-  }, [client, setFormData]);
+  
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -76,8 +44,13 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated }) {
   };
 
   if (!isOpen || !formData) return null;
+  console.log('client prop:', client);
+
+
+  console.log('form prop:', formData);
 
   return (
+
     <div className='fixed inset-0 bg-black/50 flex justify-center items-center'> 
       <div className='bg-neutral-100 p-8 rounded-lg w-[1100px] max-h-[90vh] overflow-y-auto'>
         <h2 className="text-lime-500 text-xl font-extrabold mb-5">Edycja klienta</h2>
@@ -135,6 +108,7 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated }) {
                     <input type="text" name="turnover_pln" placeholder="Obrót PLN" value={formData.turnover_pln} onChange={handleChange} />
                     <input type="text" name="turnover_eur" placeholder="Obrót EUR" value={formData.turnover_eur} onChange={handleChange} />
                     <input type="text" name="installation_sales_share" placeholder="Udział sprzedaży instal." value={formData.installation_sales_share} onChange={handleChange} />
+                    <input type="text" name="automatic_sales_share" placeholder="Udział sprzedaży z automatyki" value={formData.automatic_sales_share} onChange={handleChange} />
                     <input type="text" name="sales_potential" placeholder="Potencjał PLN" value={formData.sales_potential} onChange={handleChange} />
                     <input type="text" name="has_webstore" placeholder="Sklep www" value={formData.has_webstore} onChange={handleChange} />
                     <input type="text" name="has_b2b_platform" placeholder="B2B" value={formData.has_b2b_platform} onChange={handleChange} />
@@ -162,6 +136,9 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated }) {
     <label className='text-neutral-800'>Kowalski<br />
       <input type="number" name="structure_retail" value={formData.structure_retail} onChange={handleChange} />
     </label>
+    <label className='text-neutral-800'>Inne<br />
+      <input type="number" name="structure_other" value={formData.structure_other} onChange={handleChange} />
+    </label> 
 </div>
 
 
