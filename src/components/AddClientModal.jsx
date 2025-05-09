@@ -77,6 +77,20 @@ function AddClientModal({ isOpen, onClose, onClientAdded }) {
                     <input type="text" name="voivodeship" placeholder="Województwo" value={formData.voivodeship} onChange={handleChange} /> 
                     <input type="text" name="country" placeholder="Kraj" value={formData.country} onChange={handleChange} />
                     <input type="text" name="postal_code" placeholder="Kod kreskowy" value={formData.postal_code} onChange={handleChange} />
+                    <select name="client_category" value={formData.client_category} onChange={handleChange} className='AddSelectClient'>
+                      <option value="">Wybierz dział</option>
+                      <option value="CENTRALA_SIEĆ">CENTRALA SIEĆ</option>
+                      <option value="DEWELOPER">DEWELOPER</option>
+                      <option value="DYSTRYBUTOR">DYSTRYBUTOR</option>
+                      <option value="DYSTRYBUTOR_CENTRALA">DYSTRYBUTOR CENTRALA</option>
+                      <option value="DYSTRYBUTOR_MAGAZYN">DYSTRYBUTOR MAGAZYN</option>
+                      <option value="DYSTRYBUTOR_ODDZIAŁ">DYSTRYBUTOR ODDZIAŁ</option>
+                      <option value="ENGO_PLUS">ENGO PLUS</option>
+                      <option value="INSTALATOR">INSTALATOR</option>
+                      <option value="PODHURT">PODHURT</option>
+                      <option value="PODHURT_ELEKTRYKA">PODHURT ELEKTRYKA</option>
+                      <option value="PROJEKTANT">PROJEKTANT</option>
+                    </select>
                   </div>
 
                 </div>

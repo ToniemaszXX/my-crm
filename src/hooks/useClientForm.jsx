@@ -10,6 +10,7 @@ export default function useClientForm(initialData = {}) {
     voivodeship: '',
     country: '',
     nip: '',
+    client_category: '',
     engo_team_contact: '',
     number_of_branches: '',
     number_of_sales_reps: '',
@@ -38,6 +39,7 @@ export default function useClientForm(initialData = {}) {
   const [contacts, setContacts] = useState([]);
   const [isSaving, setIsSaving] = useState(false);
 
+
   useEffect(() => {
     if (initialData && Object.keys(initialData).length > 0) {
       setFormData({
@@ -49,6 +51,7 @@ export default function useClientForm(initialData = {}) {
         voivodeship: initialData.voivodeship || '',
         country: initialData.country || '',
         nip: initialData.nip || '',
+        client_category: initialData.client_category || '',
         engo_team_contact: initialData.engo_team_contact || '',
         number_of_branches: initialData.number_of_branches || '',
         number_of_sales_reps: initialData.number_of_sales_reps || '',
@@ -128,6 +131,7 @@ export default function useClientForm(initialData = {}) {
       voivodeship: '',
       country: '',
       nip: '',
+      client_category: '',
       engo_team_contact: '',
       number_of_branches: '',
       number_of_sales_reps: '',

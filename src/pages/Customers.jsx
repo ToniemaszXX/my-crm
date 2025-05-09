@@ -32,6 +32,7 @@ function Customers() {
           (client.street || '').toLowerCase().includes(lowerQuery) ||
           (client.postal_code || '').toLowerCase().includes(lowerQuery) ||
           (client.voivodeship || '').toLowerCase().includes(lowerQuery) ||
+          (client.client_category || '').toLowerCase().includes(lowerQuery) ||
           (client.number_of_branches || '').toLowerCase().includes(lowerQuery) ||
           (client.number_of_sales_reps || '').toLowerCase().includes(lowerQuery) ||
           (client.www || '').toLowerCase().includes(lowerQuery) ||

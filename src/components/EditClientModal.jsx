@@ -1,5 +1,5 @@
 import useClientForm from '../hooks/useClientForm';
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
 
 
 
@@ -19,7 +19,7 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated }) {
         resetForm
       } = useClientForm(client); // przekazujemy klienta jako client
 
-  
+      const [searchTerm, setSearchTerm] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -44,10 +44,6 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated }) {
   };
 
   if (!isOpen || !formData) return null;
-  console.log('client prop:', client);
-
-
-  console.log('form prop:', formData);
 
   return (
 
@@ -61,16 +57,30 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated }) {
             
             <div className="grid2col mb-7">
                   <div className="flexColumn">
-                  <input type="text" name="company_name" placeholder="Company Name" value={formData.company_name} onChange={handleChange} />
+                  <input type="text" name="company_name" placeholder="Nazwa firmy" value={formData.company_name} onChange={handleChange} />
                   <input type="text" name="nip" placeholder="NIP" value={formData.nip} onChange={handleChange} />
-                  <input type="text" name="street" placeholder="Street" value={formData.street} onChange={handleChange} />
-                  <input type="text" name="city" placeholder="City" value={formData.city} onChange={handleChange} />
+                  <input type="text" name="street" placeholder="Ulica" value={formData.street} onChange={handleChange} />
+                  <input type="text" name="city" placeholder="Miasto" value={formData.city} onChange={handleChange} />
             </div>
 
             <div className='flexColumn'>
-                  <input type="text" name="postal_code" placeholder="Postal Code" value={formData.postal_code} onChange={handleChange} />
-                  <input type="text" name="voivodeship" placeholder="Voivodeship" value={formData.voivodeship} onChange={handleChange} />
-                  <input type="text" name="country" placeholder="Country" value={formData.country} onChange={handleChange} />
+                  <input type="text" name="postal_code" placeholder="Kod pocztowy" value={formData.postal_code} onChange={handleChange} />
+                  <input type="text" name="voivodeship" placeholder="Województwo" value={formData.voivodeship} onChange={handleChange} />
+                  <input type="text" name="country" placeholder="Kraj" value={formData.country} onChange={handleChange} />
+                  <select name="client_category" value={formData.client_category} onChange={handleChange} className='AddSelectClient'>
+                      <option value="">Wybierz dział</option>
+                      <option value="CENTRALA_SIEĆ">CENTRALA SIEĆ</option>
+                      <option value="DEWELOPER">DEWELOPER</option>
+                      <option value="DYSTRYBUTOR">DYSTRYBUTOR</option>
+                      <option value="DYSTRYBUTOR_CENTRALA">DYSTRYBUTOR CENTRALA</option>
+                      <option value="DYSTRYBUTOR_MAGAZYN">DYSTRYBUTOR MAGAZYN</option>
+                      <option value="DYSTRYBUTOR_ODDZIAŁ">DYSTRYBUTOR ODDZIAŁ</option>
+                      <option value="ENGO_PLUS">ENGO PLUS</option>
+                      <option value="INSTALATOR">INSTALATOR</option>
+                      <option value="PODHURT">PODHURT</option>
+                      <option value="PODHURT_ELEKTRYKA">PODHURT ELEKTRYKA</option>
+                      <option value="PROJEKTANT">PROJEKTANT</option>
+                    </select>
             </div>
           </div>
 
@@ -81,18 +91,18 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated }) {
 
             <div className='grid2col'>
               <div className="flexColumn">
-                    <input type="text" name="engo_team_contact" placeholder="Engo Member" value={formData.engo_team_contact} onChange={handleChange} />
-                    <input type="text" name="number_of_branches" placeholder="Number of Branches" value={formData.number_of_branches} onChange={handleChange} />
-                    <input type="text" name="number_of_sales_reps" placeholder="Ilość oddziałów" value={formData.number_of_sales_reps} onChange={handleChange} />
-                    <input type="text" name="www" placeholder="Website" value={formData.www} onChange={handleChange} />
+                    <input type="text" name="engo_team_contact" placeholder="Pracownik Engo" value={formData.engo_team_contact} onChange={handleChange} />
+                    <input type="text" name="number_of_branches" placeholder="Ilość oddziałów" value={formData.number_of_branches} onChange={handleChange} />
+                    <input type="text" name="number_of_sales_reps" placeholder="Ilość przedstawicieli" value={formData.number_of_sales_reps} onChange={handleChange} />
+                    <input type="text" name="www" placeholder="WWW" value={formData.www} onChange={handleChange} />
                     <input type="text" name="facebook" placeholder="Facebook" value={formData.facebook} onChange={handleChange} />
-                    <input type="text" name="auction_service" placeholder="Auction Service" value={formData.auction_service} onChange={handleChange} />
+                    <input type="text" name="auction_service" placeholder="Serwis aukcyjny" value={formData.auction_service} onChange={handleChange} />
                     <label className='text-neutral-800'>
                     <input type="checkbox" name="private_brand" checked={formData.private_brand === 1} onChange={handleChange} />
                     Marka własna
                     </label>
                       {formData.private_brand === 1 && (
-                        <input type="text" name="private_brand_details" placeholder="Private Brand Details" value={formData.private_brand_details} onChange={handleChange} />
+                        <input type="text" name="private_brand_details" placeholder="Nazwa marki własnej" value={formData.private_brand_details} onChange={handleChange} />
                       )}
 
                     <label className='text-neutral-800'>
@@ -100,7 +110,7 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated }) {
                       Program lojalnościowy
                     </label>
                       {formData.loyalty_program === 1 && (
-                        <input type="text" name="loyalty_program_details" placeholder="Loyalty Program Details" value={formData.loyalty_program_details} onChange={handleChange} />
+                        <input type="text" name="loyalty_program_details" placeholder="Nazwa programu lojalnościowego" value={formData.loyalty_program_details} onChange={handleChange} />
                       )}
               </div>
               
@@ -143,7 +153,21 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated }) {
 
 
 <h4 className='header2'>Contacts</h4>
-{contacts.map((c, i) => (
+<input
+  type="text"
+  placeholder="Szukaj kontaktów..."
+  value={searchTerm}
+  onChange={(e) => setSearchTerm(e.target.value)}
+  className="mb-4 p-2 border rounded w-full text-black"
+/>
+
+{contacts
+  .filter((c) =>
+    Object.values(c).some((val) =>
+      String(val).toLowerCase().includes(searchTerm.toLowerCase())
+    )
+  )
+  .map((c, i) => (
   <div key={i} className='contactBlock'>
     <select name="department" value={c.department} onChange={(e) => handleContactChange(i, e)} className="contactSelect mb-4">
       <option value="">Select Department</option>
@@ -170,19 +194,19 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated }) {
       <option value="średnia">Średnia</option>
       <option value="nie ma">Nie ma</option>
     </select>
-    <button className='buttonRed' type="button" onClick={() => handleRemoveContact(i)}>Remove</button>
+    <button className='buttonRed' type="button" onClick={() => handleRemoveContact(i)}>Usuń</button>
     </div>
   </div>
 ))}
-<button className='buttonGreenNeg' type="button" onClick={handleAddContact}>Add Contact</button>
+<button className='buttonGreenNeg' type="button" onClick={handleAddContact}>Dodaj kontakt</button>
 
 
           <div style={{ marginTop: '20px' }}>
             <button className='buttonGreen' type="submit" disabled={isSaving || isStructureInvalid}>
-              {isSaving ? 'Saving...' : 'Save'}
+              {isSaving ? 'Zapisuje...' : 'Zapisz'}
             </button>
             <button className='buttonRed' type="button" onClick={onClose} style={{ marginLeft: '10px' }}>
-              Cancel
+              Anuluj
             </button>
           </div>
         </form>
@@ -191,35 +215,5 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated }) {
   );
 }
 
-const styles = {
-  overlay: {
-    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center'
-  },
-  modal: {
-    backgroundColor: 'grey', padding: '30px', borderRadius: '8px',
-    width: '1100px', maxHeight: '90vh', overflowY: 'auto'
-  },
-  form: {
-    display: 'flex', flexDirection: 'column', gap: '10px'
-  },
-  grid2col: {
-    display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px'
-  },
-  flex: {
-    display: 'flex', flexDirection: 'column'
-  },
-  contactBlock: {
-    display: 'flex', border: '1px solid #ccc', padding: '15px',
-    borderRadius: '8px', marginBottom: '15px', gap: '10px',
-    alignItems: 'center', justifyContent: 'center'
-  },
-  contactInput: {
-    flex: '0 0 100px', minWidth: '80px', height: '40px'
-  },
-  contactSelect: {
-    flex: '0 0 170px', minWidth: '100px', height: '40px'
-  }
-};
 
 export default EditClientModal;
