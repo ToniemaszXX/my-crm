@@ -33,7 +33,9 @@ export default function useClientForm(initialData = {}) {
     structure_wholesaler: 0,
     structure_ecommerce: 0,
     structure_retail: 0,
-    structure_other: 0
+    structure_other: 0,
+    latitude: '',
+    longitude: ''
   });
 
   const [contacts, setContacts] = useState([]);
@@ -74,7 +76,9 @@ export default function useClientForm(initialData = {}) {
         structure_wholesaler: initialData.structure_wholesaler || 0,
         structure_ecommerce: initialData.structure_ecommerce || 0,
         structure_retail: initialData.structure_retail || 0,
-        structure_other: initialData.structure_other || 0
+        structure_other: initialData.structure_other || 0,
+        latitude: initialData.latitude || '',
+        longitude: initialData.longitude || ''
       });
 
       setContacts(initialData.contacts || []);
@@ -154,7 +158,9 @@ export default function useClientForm(initialData = {}) {
       structure_wholesaler: 0,
       structure_ecommerce: 0,
       structure_retail: 0,
-      structure_other: 0
+      structure_other: 0,
+      latitude: '',
+      longitude: ''
     });
     setContacts([]);
     setIsSaving(false);

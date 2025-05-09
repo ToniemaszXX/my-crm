@@ -1,6 +1,6 @@
 import useClientForm from '../hooks/useClientForm';
 import { useState, useEffect } from 'react';
-
+import LocationPicker from './LocationPicker';
 
 
 function EditClientModal({ isOpen, client, onClose, onClientUpdated }) {
@@ -84,6 +84,56 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated }) {
             </div>
           </div>
 
+          <div className="flex-col mb-7">
+                <h4 className="header2">Lokalizacja firmy</h4>
+
+                <div className="grid2col mb-4">
+                  <input
+                    type="text"
+                    name="latitude"
+                    placeholder="Szerokość geograficzna (lat)"
+                    value={formData.latitude}
+                    onChange={handleChange}
+                  />
+                  <input
+                    type="text"
+                    name="longitude"
+                    placeholder="Długość geograficzna (lng)"
+                    value={formData.longitude}
+                    onChange={handleChange}
+                  />
+                </div>
+
+                <div className='bg-neutral-100 p-8 rounded-lg w-full max-w-[90%] max-h-[90vh] overflow-y-auto'>
+
+                <LocationPicker
+                  street={formData.street}
+                  city={formData.city}
+                  voivodeship={formData.voivodeship}
+                  country={formData.country}
+                  onCoordsChange={(coords) => {
+                    // nadpisujemy pola tylko gdy user ruszy pinezkę
+                    setFormData((prev) => ({
+                      ...prev,
+                      latitude: coords.lat,
+                      longitude: coords.lng
+                    }));
+                  }}
+                />
+
+                </div>
+
+                {formData.latitude && formData.longitude && (
+                  <a
+                    href={`https://www.google.com/maps/dir/?api=1&destination=${formData.latitude},${formData.longitude}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="buttonGreen mt-3 inline-block"
+                  >
+                    Prowadź do klienta
+                  </a>
+                )}
+                </div>
 
           <div className="flex-col mb-7">
 

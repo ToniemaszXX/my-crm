@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import useClientForm from '../hooks/useClientForm';
+import LocationPicker from './LocationPicker';
 
 
 
@@ -15,7 +16,8 @@ function AddClientModal({ isOpen, onClose, onClientAdded }) {
         handleAddContact,
         handleRemoveContact,
         handleContactChange,
-        resetForm
+        resetForm,
+        setFormData
       } = useClientForm(); // bez initialData
       
 
@@ -95,6 +97,46 @@ function AddClientModal({ isOpen, onClose, onClientAdded }) {
 
                 </div>
               </div>
+
+                <div className="flex-col mb-7">
+                <h4 className="header2">Lokalizacja firmy</h4>
+
+                <div className="grid2col mb-4">
+                  <input
+                    type="text"
+                    name="latitude"
+                    placeholder="Szerokość geograficzna (lat)"
+                    value={formData.latitude}
+                    onChange={handleChange}
+                  />
+                  <input
+                    type="text"
+                    name="longitude"
+                    placeholder="Długość geograficzna (lng)"
+                    value={formData.longitude}
+                    onChange={handleChange}
+                  />
+                </div>
+
+                <div className='bg-neutral-100 p-8 rounded-lg w-full max-w-[90%] max-h-[90vh] overflow-y-auto'>
+
+                <LocationPicker
+                  street={formData.street}
+                  city={formData.city}
+                  voivodeship={formData.voivodeship}
+                  country={formData.country}
+                  onCoordsChange={(coords) => {
+                    // nadpisujemy pola tylko gdy user ruszy pinezkę
+                    setFormData((prev) => ({
+                      ...prev,
+                      latitude: coords.lat,
+                      longitude: coords.lng
+                    }));
+                  }}
+                />
+
+                  </div>
+                </div>
 
                 <div className="flex-col mb-7">
                 <h4 className='header2'>Konta i serwisy</h4>

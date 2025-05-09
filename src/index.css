@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-@import '.././node_modules/leaflet/dist/leaflet.css';
+@import '../node_modules/leaflet/dist/leaflet.css';
 
 .header2 {
     @apply text-neutral-800 font-bold mb-4;
