@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import useAuth from '../hooks/useAuth';
 import AddClientModal from '../components/AddClientModal';
 import EditClientModal from '../components/EditClientModal';
+import { useTranslation } from 'react-i18next';
 
 function Customers() {
   const loading = useAuth();
@@ -11,6 +12,7 @@ function Customers() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState(null);
+  const { t } = useTranslation();
 
   useEffect(() => {
     fetchClients();
@@ -77,10 +79,10 @@ function Customers() {
     setIsEditModalOpen(true);
   };
 
-  if (loading) return <p>Loading...</p>;
+  if (loading) return <p>{t('loading')}</p>;
 
   const handleDelete = async (id) => {
-    const confirm = window.confirm('Czy na pewno chcesz usunąć tego klienta?');
+    const confirm = window.confirm(t('alertClientRemove'));
     if (!confirm) return;
   
     try {
@@ -94,14 +96,14 @@ function Customers() {
       const data = await response.json();
   
       if (data.success) {
-        alert('Klient został usunięty.');
+        alert(t('clientDeleted'));
         fetchClients();
       } else {
-        alert('Błąd podczas usuwania klienta.');
+        alert(t('clientDeleteError'));
       }
     } catch (error) {
       console.error('Delete error:', error);
-      alert('Wystąpił błąd po stronie klienta.');
+      alert(t('clientDeleteClientError'));
     }
   };
   
@@ -111,15 +113,15 @@ function Customers() {
 
 
     <div className="p-5 w-full text-neutral-300">
-      <h1 className="text-2xl font-bold mb-4">Klienci</h1>
+      <h1 className="text-2xl font-bold mb-4">{t('customersTitle')}</h1>
 
           <div className="mb-5 flex justify-between gap-2 items-center">
       <button onClick={() => setIsAddModalOpen(true)} className="buttonGreen">
-        Dodaj klienta
+        {t('addClient')}
       </button>
       <input
         type="text"
-        placeholder="Wyszukaj klienta..."
+        placeholder={t('searchPlaceholder')}
         value={searchQuery}
         onChange={(e) => handleSearch(e.target.value)}
         className="p-2 w-72 border rounded"
@@ -148,12 +150,12 @@ function Customers() {
       <table border="1" cellPadding="10" style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead className='bg-neutral-600'>
           <tr>
-            <th>#</th>
-            <th>Nazwa firmy</th>
-            <th>Kraj</th>
-            <th>Miasto</th>
-            <th>Handlowiec</th>
-            <th>Operacje</th>
+            <th>{t('tableHeaders.number')}</th>
+            <th>{t('tableHeaders.company')}</th>
+            <th>{t('tableHeaders.country')}</th>
+            <th>{t('tableHeaders.city')}</th>
+            <th>{t('tableHeaders.salesperson')}</th>
+            <th>{t('tableHeaders.actions')}</th>
           </tr>
         </thead>
         <tbody>
@@ -166,15 +168,15 @@ function Customers() {
                 <td>{client.city || '-'}</td>
                 <td>{client.engo_team_contact || '-'}</td>
                 <td style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
-                    <button onClick={() => handleEdit(client)} className='buttonGreen2'>Szczegóły</button>
-                    <button onClick={() => handleDelete(client.id)} className="buttonRed2">Usuń</button>
+                    <button onClick={() => handleEdit(client)} className='buttonGreen2'>{t('details')}</button>
+                    <button onClick={() => handleDelete(client.id)} className="buttonRed2">{t('delete')}</button>
                 </td>
 
               </tr>
             ))
           ) : (
             <tr>
-              <td colSpan="5" style={{ textAlign: 'center' }}>No clients found.</td>
+              <td colSpan="5" style={{ textAlign: 'center' }}>{t('noClientsFound')}</td>
             </tr>
           )}
         </tbody>

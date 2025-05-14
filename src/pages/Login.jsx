@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import i18n from '../languages/i18n';
 
 function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -21,6 +24,12 @@ function Login() {
     const data = await response.json();
 
     if (data.success) {
+
+      if (data.language) {
+        i18n.changeLanguage(data.language); // np. "en" lub "pl"
+        localStorage.setItem('lang', data.language); // zapamiętaj preferencję
+      }
+
       navigate('/'); // Przekieruj na Dashboard
     } else {
       setError('Invalid username or password');
@@ -35,7 +44,7 @@ function Login() {
         <div style={{ marginBottom: '10px' }}>
           <input
             type="text"
-            placeholder="Username"
+            placeholder={t('login')}
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             required
@@ -45,14 +54,14 @@ function Login() {
         <div style={{ marginBottom: '10px' }}>
           <input
             type="password"
-            placeholder="Password"
+            placeholder={t('password')}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
             style={{ padding: '8px' }}
           />
         </div>
-        <button type="submit" className='buttonGreen'>Zaloguj</button>
+        <button type="submit" className='buttonGreen'>{t('signin')}</button>
       </form>
     </div>
   );

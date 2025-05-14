@@ -9,7 +9,7 @@
 }
 
 input {
-    @apply bg-neutral-200 text-neutral-700 py-1 px-3 mb-3 rounded-md placeholder-neutral-500;
+    @apply bg-neutral-200 text-neutral-700 py-1 px-3 mb-3 rounded-md placeholder-neutral-500; 
 }
 
 select, option {
@@ -17,7 +17,7 @@ select, option {
 }
 
 .AddSelectClient {
-    @apply bg-neutral-200 text-neutral-700 py-1 px-3 mb-3 rounded-md placeholder-neutral-500;
+    @apply bg-neutral-200 text-neutral-700 py-1 px-3 mb-3 rounded-md placeholder-neutral-500 w-full;
 }
 
 .buttonGreen {
@@ -48,6 +48,15 @@ input.placeholder {
     @apply text-neutral-700
 }
 
+label > input {
+    @apply w-full;
+}
+
+label > input[type=checkbox] {
+    width: auto;
+  }
+  
+
 .grid2col {
     @apply grid grid-cols-2 gap-3;
 }
@@ -70,4 +79,8 @@ input.placeholder {
 
 .contactSelect {
     @apply flex-none basis-[170px] min-w-[100px] h-10;
+}
+
+.contactBlock > .flex {
+    align-items: center;
 }

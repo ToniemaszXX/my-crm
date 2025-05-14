@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import useAuth from "../hooks/useAuth";
 import AddVisitModal from "../components/AddVisitModal";
 import EditVisitModal from "../components/EditVisitModal";
+import { useTranslation } from 'react-i18next';
 
 function Visits() {
   const loading = useAuth();
@@ -12,6 +13,7 @@ function Visits() {
   const [selectedVisit, setSelectedVisit] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [allClients, setAllClients] = useState([]);
+  const { t } = useTranslation();
 
     useEffect(() => {
     fetchAllClients();
@@ -65,19 +67,21 @@ function Visits() {
     c.company_name.toLowerCase().includes(search.toLowerCase())
   );
 
-  if (loading) return <p>Loading...</p>;
+  if (loading) return <p>{t('loading')}</p>;
+
 
   return (
     <div className="p-5 w-full">
-      <h1 className="text-2xl font-bold mb-4 text-white">Wizyty</h1>
+      <h1 className="text-2xl font-bold mb-4 text-white">{t('visitsTitle')}</h1>
 
       <div className="flex justify-between mb-4 items-center">
-        <button onClick={() => setIsAddModalOpen(true)} className="buttonGreen">
-          Dodaj wizytę
-        </button>
+      <button onClick={() => setIsAddModalOpen(true)} className="buttonGreen">
+        {t('addVisit')}
+      </button>
+
         <input
           type="text"
-          placeholder="Szukaj klienta..."
+          placeholder={t('searchClient')}
           className="border p-2 rounded w-64"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -85,7 +89,7 @@ function Visits() {
       </div>
 
       {filteredClients.length === 0 ? (
-        <p className="text-white">Brak klientów z wizytami.</p>
+        <p className="text-white">{t('noClientsWithVisits')}</p>
       ) : (
         <ul className="text-white space-y-2">
           {filteredClients.map((client) => (
@@ -111,10 +115,10 @@ function Visits() {
                       className="border p-2 rounded flex justify-between items-center"
                     >
                       <div>
-                        <p><strong>Data:</strong> {visit.visit_date}</p>
-                        <p><strong>Z kim:</strong> {visit.contact_person}</p>
-                        <p><strong>Typ:</strong> {visit.meeting_type}</p>
-                        <p><strong>Cel:</strong> {visit.meeting_purpose}</p>
+                        <p><strong>{t('visitLabelDate')}:</strong> {visit.visit_date}</p>
+                        <p><strong>{t('visitLabelPerson')}:</strong> {visit.contact_person}</p>
+                        <p><strong>{t('visitLabelType')}:</strong> {visit.meeting_type}</p>
+                        <p><strong>{t('visitLabelPurpose')}:</strong> {visit.meeting_purpose}</p>
                       </div>
                       <button
                         onClick={() => {
@@ -123,7 +127,7 @@ function Visits() {
                         }}
                         className="bg-yellow-400 text-black px-3 py-1 rounded"
                       >
-                        Edytuj
+                        {t('edit')}
                       </button>
                     </div>
                   ))}

@@ -1,8 +1,10 @@
 import {useEffect} from 'react';
 import {useNavigate} from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 function Logout() {
     const navigate = useNavigate();
+    const { t } = useTranslation();
 
     useEffect(() => {
         const logout = async () => {
@@ -13,7 +15,7 @@ function Logout() {
         logout();
     }, [navigate]);
 
-    return <p>Logging out...</p>;
+    return <p>{t('logout')}</p>;
 }
 
 export default Logout;
