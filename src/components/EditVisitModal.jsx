@@ -20,7 +20,7 @@ function EditVisitModal({ isOpen, onClose, onVisitUpdated, visit, clients }) {
 
   useEffect(() => {
     if (isOpen && visit?.visit_id) {
-      fetch(`/api/visits/get_visit_by_id.php?id=${visit.visit_id}`, {
+      fetch(`${import.meta.env.VITE_API_URL}/visits/get_visit_by_id.php?id=${visit.visit_id}`, {
         credentials: "include",
       })
         .then((res) => res.json())
@@ -58,7 +58,7 @@ function EditVisitModal({ isOpen, onClose, onVisitUpdated, visit, clients }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const response = await fetch("/api/visits/edit.php", {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/visits/edit.php`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",

@@ -8,7 +8,7 @@ export default function useAuth() {
   useEffect(() => {
     const checkSession = async () => {
       try {
-        const response = await fetch('/api/auth/session_check.php');
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/session_check.php`);
         const data = await response.json();
 
         if (!data.success) {

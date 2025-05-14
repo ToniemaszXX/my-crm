@@ -141,6 +141,15 @@
     "competitionInfo": "Competition / Annual turnover / PLN",
     "additionalNotes": "Additional notes"
   },
-  "editVisitModal.editVisit": "Edit visit"
+  "editVisitModal.editVisit": "Edit visit",
+  "visit": {
+      "visitsLead": "Visits",
+      "addVisit": "Add visit",
+      "noClientsWithVisit": "No clients with visits.",
+      "date": "Date",
+      "whome": "With whome",
+      "type": "Type",
+      "goal": "Goal"
+    }
 }
   

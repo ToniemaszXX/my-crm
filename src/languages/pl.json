@@ -141,6 +141,15 @@
       "locationPicker.longitude": "Długość",
       "locationPicker.reset": "Resetuj pinezkę do adresu"
     },
-    "editVisitModal.editVisit": "Edytuj wizyte"
+    "editVisitModal.editVisit": "Edytuj wizyte",
+    "visit": {
+      "visitsLead": "Wizyty",
+      "addVisit": "Dodaj wizytę",
+      "noClientsWithVisit": "Brak klientów z wizytami.",
+      "date": "Data",
+      "whome": "Z kim",
+      "type": "Typ",
+      "goal": "Cel"
+    }
   }
   

@@ -28,7 +28,7 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated }) {
     e.preventDefault();
     setIsSaving(true);
 
-    const response = await fetch('/api/customers/edit.php', {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/customers/edit.php`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',

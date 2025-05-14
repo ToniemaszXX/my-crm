@@ -5,16 +5,20 @@ import Customers from './pages/Customers';
 import Visits from './pages/Visits';
 import Login from './pages/Login';
 import Logout from './pages/Logout';
+import useAuth from './hooks/useAuth';
 
 function Layout() {
-  const Location = useLocation();
+  const location = useLocation();
+  const loading = useAuth();
+
+  if (loading) return <div className="text-white p-4">Checking session...</div>;
+
   const hideSidebar = location.pathname === "/login";
 
   return (
     <div className="flex h-screen w-screen box-border pr-5 bg-neutral-900">
-
       {!hideSidebar && <Sidebar />}
-      <div className='w-full'>
+      <div className="w-full">
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/" element={<Dashboard />} />
@@ -27,12 +31,14 @@ function Layout() {
   );
 }
 
+
 function App() {
   return (
-    <Router>
+    <Router basename="/engo/CRM">
       <Layout />
     </Router>
   );
 }
+
 
 export default App;

@@ -8,7 +8,7 @@ function Logout() {
 
     useEffect(() => {
         const logout = async () => {
-            await fetch('api/auth/logout.php');
+            await fetch(`${import.meta.env.VITE_API_URL}/auth/logout.php`);
             navigate('/login');
         };
 

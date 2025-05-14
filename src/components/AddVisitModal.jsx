@@ -25,7 +25,7 @@ function AddVisitModal({ isOpen, onClose, onVisitAdded, clients }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
   
-    const response = await fetch("/api/visits/add.php", {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/visits/add.php`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",

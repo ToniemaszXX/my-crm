@@ -24,7 +24,7 @@ function AddClientModal({ isOpen, onClose, onClientAdded }) {
     e.preventDefault();
     setIsSaving(true);
 
-    const response = await fetch('/api/customers/add.php', {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/customers/add.php`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'

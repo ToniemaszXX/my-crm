@@ -63,7 +63,7 @@ function Customers() {
   }, [clients, searchQuery]);
 
   const fetchClients = async () => {
-    const response = await fetch('/api/customers/list.php');
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/customers/list.php`);
     const data = await response.json();
     if (data.success) {
       setClients(data.clients);
@@ -86,7 +86,7 @@ function Customers() {
     if (!confirm) return;
   
     try {
-      const response = await fetch('/api/customers/delete.php', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/customers/delete.php`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

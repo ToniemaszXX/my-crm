@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import useAuth from "../hooks/useAuth";
 import AddVisitModal from "../components/AddVisitModal";
 import EditVisitModal from "../components/EditVisitModal";
+import i18n from '../languages/i18n';
 import { useTranslation } from 'react-i18next';
 
 function Visits() {
@@ -21,7 +22,7 @@ function Visits() {
 
     const fetchAllClients = async () => {
     try {
-        const res = await fetch("/api/customers/list.php", {
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/customers/list.php`, {
         credentials: "include",
         });
         const data = await res.json();
@@ -40,7 +41,7 @@ function Visits() {
 
   const fetchClients = async () => {
     try {
-      const res = await fetch("/api/visits/get_visits_by_clients.php", {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/visits/get_visits_by_clients.php`, {
         credentials: "include",
       });
       const data = await res.json();
@@ -69,16 +70,14 @@ function Visits() {
 
   if (loading) return <p>{t('loading')}</p>;
 
-
   return (
     <div className="p-5 w-full">
-      <h1 className="text-2xl font-bold mb-4 text-white">{t('visitsTitle')}</h1>
+      <h1 className="text-2xl font-bold mb-4 text-white">{t('visit.visitsLead')}</h1>
 
       <div className="flex justify-between mb-4 items-center">
-      <button onClick={() => setIsAddModalOpen(true)} className="buttonGreen">
-        {t('addVisit')}
-      </button>
-
+        <button onClick={() => setIsAddModalOpen(true)} className="buttonGreen">
+          {t('visit.addVisit')}
+        </button>
         <input
           type="text"
           placeholder={t('searchClient')}
@@ -89,7 +88,7 @@ function Visits() {
       </div>
 
       {filteredClients.length === 0 ? (
-        <p className="text-white">{t('noClientsWithVisits')}</p>
+        <p className="text-white">{t('visit.noClientsWithVisit')}</p>
       ) : (
         <ul className="text-white space-y-2">
           {filteredClients.map((client) => (
@@ -115,10 +114,10 @@ function Visits() {
                       className="border p-2 rounded flex justify-between items-center"
                     >
                       <div>
-                        <p><strong>{t('visitLabelDate')}:</strong> {visit.visit_date}</p>
-                        <p><strong>{t('visitLabelPerson')}:</strong> {visit.contact_person}</p>
-                        <p><strong>{t('visitLabelType')}:</strong> {visit.meeting_type}</p>
-                        <p><strong>{t('visitLabelPurpose')}:</strong> {visit.meeting_purpose}</p>
+                        <p><strong>{t('visit.date')}:</strong> {visit.visit_date}</p>
+                        <p><strong>{t('visit.whome')}:</strong> {visit.contact_person}</p>
+                        <p><strong>{t('visit.type')}:</strong> {visit.meeting_type}</p>
+                        <p><strong>{t('visit.goal')}:</strong> {visit.meeting_purpose}</p>
                       </div>
                       <button
                         onClick={() => {
@@ -127,7 +126,7 @@ function Visits() {
                         }}
                         className="bg-yellow-400 text-black px-3 py-1 rounded"
                       >
-                        {t('edit')}
+                        Edytuj
                       </button>
                     </div>
                   ))}
