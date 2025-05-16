@@ -16,9 +16,13 @@ function Layout() {
   const hideSidebar = location.pathname === "/login";
 
   return (
-    <div className="flex h-screen w-screen box-border pr-5 bg-neutral-900">
+    <div className="flex bg-neutral-900">
       {!hideSidebar && <Sidebar />}
-      <div className="w-full">
+      <div className={`w-full h-screen box-border ${
+          hideSidebar
+          ? ''
+          : 'ml-56 p-5 overflow-y-auto text-neutral-300'
+          }`}>
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/" element={<Dashboard />} />

@@ -112,7 +112,7 @@ function Customers() {
     
 
 
-    <div className="p-5 w-full text-neutral-300">
+    <div className="w-full">
       <h1 className="text-2xl font-bold mb-4">{t('customersTitle')}</h1>
 
           <div className="mb-5 flex justify-between gap-2 items-center">

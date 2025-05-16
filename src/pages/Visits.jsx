@@ -71,7 +71,7 @@ function Visits() {
   if (loading) return <p>{t('loading')}</p>;
 
   return (
-    <div className="p-5 w-full">
+    <div className="w-full">
       <h1 className="text-2xl font-bold mb-4 text-white">{t('visit.visitsLead')}</h1>
 
       <div className="flex justify-between mb-4 items-center">
