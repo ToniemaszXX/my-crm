@@ -125,12 +125,12 @@ function AddVisitModal({ isOpen, onClose, onVisitAdded, clients }) {
           </label> 
 
           {[
-            t('addVisitModal.meetingPurpose'),
-            t('addVisitModal.postMeetingSummary'),
-            t('addVisitModal.marketingTasks'),
-            t('addVisitModal.actionPlan'),
-            t('addVisitModal.competitionInfo'),
-            t('addVisitModal.additionalNotes'),
+            { name: "meeting_purpose", label: t('addVisitModal.meetingPurpose') },
+            { name: "post_meeting_summary", label: t('addVisitModal.postMeetingSummary') },
+            { name: "marketing_tasks", label: t('addVisitModal.marketingTasks') },
+            { name: "action_plan", label: t('addVisitModal.actionPlan') },
+            { name: "competition_info", label: t('addVisitModal.competitionInfo') },
+            { name: "additional_notes", label: t('addVisitModal.additionalNotes') },
           ].map((field) => (
             <label class="text-neutral-800">{field}
             <textarea
