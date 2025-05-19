@@ -21,7 +21,7 @@ function Layout() {
       <div className={`w-full h-screen box-border ${
           hideSidebar
           ? ''
-          : 'ml-56 p-5 overflow-y-auto text-neutral-300'
+          : 'p-5 overflow-y-auto text-neutral-300 portrait:ml-40 landscape:ml-56'
           }`}>
         <Routes>
           <Route path="/login" element={<Login />} />

@@ -153,8 +153,8 @@ function Customers() {
             <th>{t('tableHeaders.number')}</th>
             <th>{t('tableHeaders.company')}</th>
             <th>{t('tableHeaders.country')}</th>
-            <th>{t('tableHeaders.city')}</th>
-            <th>{t('tableHeaders.salesperson')}</th>
+            <th className='portrait:hidden'>{t('tableHeaders.city')}</th>
+            <th className='portrait:hidden'>{t('tableHeaders.salesperson')}</th>
             <th>{t('tableHeaders.actions')}</th>
           </tr>
         </thead>
@@ -165,8 +165,8 @@ function Customers() {
                 <td>{index + 1}</td>
                 <td>{client.company_name || '-'}</td>
                 <td>{client.country || '-'}</td>
-                <td>{client.city || '-'}</td>
-                <td>{client.engo_team_contact || '-'}</td>
+                <td className='portrait:hidden'>{client.city || '-'}</td>
+                <td className='portrait:hidden'>{client.engo_team_contact || '-'}</td>
                 <td style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
                     <button onClick={() => handleEdit(client)} className='buttonGreen2'>{t('details')}</button>
                     <button onClick={() => handleDelete(client.id)} className="buttonRed2">{t('delete')}</button>
