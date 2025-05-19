@@ -150,15 +150,14 @@ function EditVisitModal({ isOpen, onClose, onVisitUpdated, visit, clients }) {
             { name: "action_plan", label: t('addVisitModal.actionPlan') },
             { name: "competition_info", label: t('addVisitModal.competitionInfo') },
             { name: "additional_notes", label: t('addVisitModal.additionalNotes') },
-          ].map((field) => (
-            <label class="text-neutral-800">{field}
-            <textarea
-              key={field}
-              name={field}
-              value={formData[field]}
-              onChange={handleChange}
-              className="w-full border p-2"
-            />
+          ].map(({name, label}) => (
+            <label key={name} className="text-neutral-800">{label}
+              <textarea
+                name={name}
+                value={formData[name]}
+                onChange={handleChange}
+                className="w-full border p-2"
+              />
             </label>
           ))}
 

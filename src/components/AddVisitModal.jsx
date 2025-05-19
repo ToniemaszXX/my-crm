@@ -131,12 +131,12 @@ function AddVisitModal({ isOpen, onClose, onVisitAdded, clients }) {
             { name: "action_plan", label: t('addVisitModal.actionPlan') },
             { name: "competition_info", label: t('addVisitModal.competitionInfo') },
             { name: "additional_notes", label: t('addVisitModal.additionalNotes') },
-          ].map((field) => (
-            <label class="text-neutral-800">{field}
+          ].map(({name, label}) => (
+            <label class="text-neutral-800">{label}
             <textarea
-              key={field}
-              name={field}
-              value={formData[field]}
+              key={name}
+              name={name}
+              value={formData[name]}
               onChange={handleChange}
               className="w-full border p-2"
             />
