@@ -53,7 +53,7 @@ function AddClientModal({ isOpen, onClose, onClientAdded }) {
   if (!isOpen) return null;
 
   return (
-    <div className='fixed inset-0 bg-black/50 flex justify-center items-center'>
+    <div className='fixed inset-0 bg-black/50 flex justify-center items-center z-[99]'>
       <div className='bg-neutral-100 p-8 rounded-lg w-[1100px] max-h-[90vh] overflow-y-auto'>
         <h2 className="text-lime-500 text-xl font-extrabold mb-5">{t('addClientModal.title')}</h2>
         <form onSubmit={handleSubmit} className="text-white flex flex-col gap-3">
@@ -283,7 +283,7 @@ function AddClientModal({ isOpen, onClose, onClientAdded }) {
           <button className='buttonGreenNeg' type="button" onClick={handleAddContact} style={{ marginTop: '10px' }}>{t('addClientModal.addContact')}</button>
 
           {/* Buttons */}
-          <div style={{ marginTop: '20px' }}>
+          <div className='flex justify-end mt-5'>
             <button className='buttonGreen' type="submit" disabled={isSaving || isStructureInvalid}>
               {isSaving ? t('addClientModal.saving') : t('addClientModal.save')}
             </button>

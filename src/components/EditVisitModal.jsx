@@ -83,7 +83,7 @@ function EditVisitModal({ isOpen, onClose, onVisitUpdated, visit, clients }) {
   if (!isOpen || !visit) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-start pt-20 z-50">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-start pt-20  z-[99]">
       <div className="bg-white text-black p-6 rounded-lg w-[600px] max-h-[90vh] overflow-y-auto">
         <h2 className="text-xl font-bold mb-4">{t('editVisitModal.editVisit')}</h2>
         <form onSubmit={handleSubmit} className="space-y-3">
