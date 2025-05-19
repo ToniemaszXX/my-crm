@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import useAuth from '../hooks/useAuth';
+import { useAuth } from '../context/AuthContext';
 import AddClientModal from '../components/AddClientModal';
 import EditClientModal from '../components/EditClientModal';
 import { useTranslation } from 'react-i18next';
+import { isAdmin, isZarzad } from '../utils/roles';
 
 function Customers() {
-  const loading = useAuth();
+  const { user, loading } = useAuth();
   const [clients, setClients] = useState([]);
   const [filteredClients, setFilteredClients] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -116,9 +117,9 @@ function Customers() {
       <h1 className="text-2xl font-bold mb-4">{t('customersTitle')}</h1>
 
           <div className="mb-5 flex justify-between gap-2 items-center">
-      <button onClick={() => setIsAddModalOpen(true)} className="buttonGreen">
+      {!isZarzad(user) && (<button onClick={() => setIsAddModalOpen(true)} className="buttonGreen">
         {t('addClient')}
-      </button>
+      </button>)}
       <input
         type="text"
         placeholder={t('searchPlaceholder')}
@@ -167,10 +168,14 @@ function Customers() {
                 <td>{client.country || '-'}</td>
                 <td className='portrait:hidden'>{client.city || '-'}</td>
                 <td className='portrait:hidden'>{client.engo_team_contact || '-'}</td>
+                
                 <td style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
                     <button onClick={() => handleEdit(client)} className='buttonGreen2'>{t('details')}</button>
+                    {isAdmin(user) && (
                     <button onClick={() => handleDelete(client.id)} className="buttonRed2">{t('delete')}</button>
+                    )}
                 </td>
+                
 
               </tr>
             ))

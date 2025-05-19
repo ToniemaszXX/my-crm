@@ -5,11 +5,21 @@ import Customers from './pages/Customers';
 import Visits from './pages/Visits';
 import Login from './pages/Login';
 import Logout from './pages/Logout';
-import useAuth from './hooks/useAuth';
+import { useAuth } from './context/AuthContext';
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+
 
 function Layout() {
+  const { user, loading } = useAuth();
   const location = useLocation();
-  const loading = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!loading && !user && location.pathname !== '/login') {
+      navigate('/login');
+    }
+  }, [loading, user, location, navigate]);
 
   if (loading) return <div className="text-white p-4">Checking session...</div>;
 
@@ -20,9 +30,9 @@ function Layout() {
       {!hideSidebar && <Sidebar />}
       <div className={`w-full h-screen box-border ${
           hideSidebar
-          ? ''
-          : 'p-5 overflow-y-auto text-neutral-300 portrait:ml-40 landscape:ml-56'
-          }`}>
+            ? ''
+            : 'p-5 overflow-y-auto text-neutral-300 portrait:ml-40 landscape:ml-56'
+        }`}>
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/" element={<Dashboard />} />
@@ -34,6 +44,7 @@ function Layout() {
     </div>
   );
 }
+
 
 
 function App() {

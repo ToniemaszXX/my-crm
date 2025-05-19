@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import i18n from '../languages/i18n';
+import { useAuth } from '../context/AuthContext';
 
 function Login() {
   const [username, setUsername] = useState('');
@@ -9,6 +10,7 @@ function Login() {
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { setUser } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -24,13 +26,22 @@ function Login() {
     const data = await response.json();
 
     if (data.success) {
+      // Pobieramy dane użytkownika z sesji
+      const sessionRes = await fetch(`${import.meta.env.VITE_API_URL}/auth/session_check.php`);
+      const sessionData = await sessionRes.json();
 
-      if (data.language) {
-        i18n.changeLanguage(data.language); // np. "en" lub "pl"
-        localStorage.setItem('lang', data.language); // zapamiętaj preferencję
+      if (sessionData.success) {
+        setUser(sessionData.user); // <-- ustawiamy użytkownika w kontekście
+
+        if (data.language) {
+          i18n.changeLanguage(data.language);
+          localStorage.setItem('lang', data.language);
+        }
+
+        navigate('/'); // przekierowanie na dashboard
+      } else {
+        setError('Login session failed');
       }
-
-      navigate('/'); // Przekieruj na Dashboard
     } else {
       setError('Invalid username or password');
     }

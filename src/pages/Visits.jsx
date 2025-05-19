@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
-import useAuth from "../hooks/useAuth";
+import { useAuth } from '../context/AuthContext';
 import AddVisitModal from "../components/AddVisitModal";
 import EditVisitModal from "../components/EditVisitModal";
 import i18n from '../languages/i18n';
 import { useTranslation } from 'react-i18next';
+import { isAdmin } from '../utils/roles';
 
 function Visits() {
-  const loading = useAuth();
+  const { user, loading } = useAuth();
   const [clients, setClients] = useState([]);
   const [search, setSearch] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);

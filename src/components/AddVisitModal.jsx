@@ -1,5 +1,7 @@
 import { useState } from "react";
+import { useAuth } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
+import { isTsr } from '../utils/roles';
 
 function AddVisitModal({ isOpen, onClose, onVisitAdded, clients }) {
   const [formData, setFormData] = useState({
@@ -16,6 +18,7 @@ function AddVisitModal({ isOpen, onClose, onVisitAdded, clients }) {
   });
 
   const { t } = useTranslation();
+  const { user} = useAuth();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -60,6 +63,18 @@ function AddVisitModal({ isOpen, onClose, onVisitAdded, clients }) {
       alert("Błąd serwera: " + response.status);
     }
   };
+
+  const fields = [
+    { name: "meeting_purpose", label: t('addVisitModal.meetingPurpose') },
+    { name: "post_meeting_summary", label: t('addVisitModal.postMeetingSummary') },
+    { name: "marketing_tasks", label: t('addVisitModal.marketingTasks') },
+    { name: "action_plan", label: t('addVisitModal.actionPlan') },
+    { name: "competition_info", label: t('addVisitModal.competitionInfo') }
+  ]
+
+  if(!isTsr(user)){
+    fields.push({ name: "additional_notes", label: t('addVisitModal.additionalNotes') });
+  }
   
 
   if (!isOpen) return null;
@@ -124,14 +139,7 @@ function AddVisitModal({ isOpen, onClose, onVisitAdded, clients }) {
           </select>
           </label> 
 
-          {[
-            { name: "meeting_purpose", label: t('addVisitModal.meetingPurpose') },
-            { name: "post_meeting_summary", label: t('addVisitModal.postMeetingSummary') },
-            { name: "marketing_tasks", label: t('addVisitModal.marketingTasks') },
-            { name: "action_plan", label: t('addVisitModal.actionPlan') },
-            { name: "competition_info", label: t('addVisitModal.competitionInfo') },
-            { name: "additional_notes", label: t('addVisitModal.additionalNotes') },
-          ].map(({name, label}) => (
+          {fields.map(({name, label}) => (
             <label class="text-neutral-800">{label}
             <textarea
               key={name}
