@@ -6,4 +6,5 @@ export const isZarzad = (user) => user?.role === 'zarzad';
 export const isTsr = (user) => user?.role === 'tsr';
 export const isUser = (user) => user?.role === 'user';
 export const isManager = (user) => user?.role === 'manager';
-
+export const isReadOnly = (user) =>
+    ['tsr', 'manager', 'zarzad'].includes(user?.role);

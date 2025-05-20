@@ -2,6 +2,7 @@ import { useState } from 'react';
 import useClientForm from '../hooks/useClientForm';
 import LocationPicker from './LocationPicker';
 import { useTranslation } from 'react-i18next';
+import { X } from 'lucide-react';
 
 function AddClientModal({ isOpen, onClose, onClientAdded }) {
   const {
@@ -55,7 +56,16 @@ function AddClientModal({ isOpen, onClose, onClientAdded }) {
   return (
     <div className='fixed inset-0 bg-black/50 flex justify-center items-center z-[99]'>
       <div className='bg-neutral-100 p-8 rounded-lg w-[1100px] max-h-[90vh] overflow-y-auto'>
+      <div className='flex justify-between items-center mb-5'>
         <h2 className="text-lime-500 text-xl font-extrabold mb-5">{t('addClientModal.title')}</h2>
+        <button
+          className="text-black hover:text-red-500 text-2xl font-bold bg-neutral-300 rounded-lg w-10 h-10 flex items-center justify-center leading-none"
+          onClick={onClose}
+          aria-label="Close modal"
+        >
+          <X size={20} />
+        </button>
+        </div>
         <form onSubmit={handleSubmit} className="text-white flex flex-col gap-3">
           {/* Podstawowe informacje */}
           <div className="flex-col">

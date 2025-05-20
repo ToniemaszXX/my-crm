@@ -63,7 +63,7 @@
       "latitude": "Szerokość geograficzna (lat)",
       "longitude": "Długość geograficzna (lng)",
       "accounts": "Konta i serwisy",
-      "engoTeamContact": "Engo Team Osoba",
+      "engoTeamContact": "Engo Team Osoba(miedzy osobami dodawaj średnik)",
       "branches": "Ilość oddziałów",
       "salesReps": "Ilość handlowców",
       "www": "WWW",
@@ -150,6 +150,9 @@
       "whome": "Z kim",
       "type": "Typ",
       "goal": "Cel"
-    }
+    },
+    "logged_in_as": "Zalogowany jako",
+    "role": "Rola",
+    "meMode": "Pokaż tylko moich klientów"
   }
   

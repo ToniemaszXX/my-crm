@@ -150,6 +150,9 @@
       "whome": "With whome",
       "type": "Type",
       "goal": "Goal"
-    }
+    },
+  "logged_in_as": "Logged as",
+  "role": "Type",
+  "meMode": "Show my clients only"
 }
   

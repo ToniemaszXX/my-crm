@@ -14,18 +14,80 @@ function Customers() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState(null);
   const { t } = useTranslation();
+  const [meModeOnly, setMeModeOnly] = useState(false);
+
 
   useEffect(() => {
     fetchClients();
   }, []);
 
+
+  //filtracja me mode
+
+  const normalizeText = (text) => {
+    if (!text) return '';
+
+    const polishMap = {
+      ą: 'a', ć: 'c', ę: 'e', ł: 'l', ń: 'n',
+      ó: 'o', ś: 's', ź: 'z', ż: 'z',
+      Ą: 'a', Ć: 'c', Ę: 'e', Ł: 'l', Ń: 'n',
+      Ó: 'o', Ś: 's', Ź: 'z', Ż: 'z'
+    };
+
+
+    return text
+    .trim()
+    .toLowerCase()
+    .split('')
+    .map(char => polishMap[char] || char)
+    .join('')
+    .replace(/\s+/g, '.');            // zamienia spacje na kropki
+  };  
+  
+  
+  const isAssignedToUser = (contactField, userName) => {
+    const normalizedUser = normalizeText(userName);
+  
+    const contactList = Array.isArray(contactField)
+      ? contactField
+      : (contactField || '').split(';');
+  
+    const normalizedList = contactList.map(name => normalizeText(name));
+  
+    console.log('👤 SZUKAMY:', normalizedUser);
+    console.log('📋 LISTA:', normalizedList);
+    console.log('✅ PASUJE?', normalizedList.includes(normalizedUser));
+  
+    return normalizedList.includes(normalizedUser);
+  };
+  
+  
+
+
+
   // Odśwież listę po zmianie klientów lub zapytania
   useEffect(() => {
+    let baseClients = [...clients];
+  
+    const currentUserName = user?.username || '';
+
+    // Me mode filtering first
+    if (meModeOnly && currentUserName) {
+      baseClients = baseClients.filter(client => {
+        const result = isAssignedToUser(client.engo_team_contact, currentUserName);
+        console.log('👤 User:', normalizeText(currentUserName));
+        console.log('📋 Contact list:', client.engo_team_contact);
+        console.log('✅ Pasuje?', result);
+        return result;
+      });
+    }
+  
+    // Then apply search query on top of that
     if (searchQuery.trim() === '') {
-      setFilteredClients(clients);
+      setFilteredClients(baseClients);
     } else {
       const lowerQuery = searchQuery.toLowerCase();
-      const filtered = clients.filter(
+      const filtered = baseClients.filter(
         (client) =>
           (client.company_name || '').toLowerCase().includes(lowerQuery) ||
           (client.city || '').toLowerCase().includes(lowerQuery) ||
@@ -61,7 +123,8 @@ function Customers() {
       );
       setFilteredClients(filtered);
     }
-  }, [clients, searchQuery]);
+  }, [clients, searchQuery, meModeOnly, user]);
+  
 
   const fetchClients = async () => {
     const response = await fetch(`${import.meta.env.VITE_API_URL}/customers/list.php`);
@@ -108,6 +171,7 @@ function Customers() {
     }
   };
   
+  
 
   return (
     
@@ -120,6 +184,17 @@ function Customers() {
       {!isZarzad(user) && (<button onClick={() => setIsAddModalOpen(true)} className="buttonGreen">
         {t('addClient')}
       </button>)}
+
+      <label className="flex items-center gap-2 mb-2">
+        <input
+          className='mb-0'
+          type="checkbox"
+          checked={meModeOnly}
+          onChange={(e) => setMeModeOnly(e.target.checked)}
+        />
+        {t('meMode')}
+      </label>
+
       <input
         type="text"
         placeholder={t('searchPlaceholder')}
