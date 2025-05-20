@@ -1,8 +1,10 @@
 import { useState } from 'react';
+import { useAuth } from '../context/AuthContext';
 import useClientForm from '../hooks/useClientForm';
 import LocationPicker from './LocationPicker';
 import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
+import { isAdmin, isZarzad } from '../utils/roles';
 
 function AddClientModal({ isOpen, onClose, onClientAdded }) {
   const {

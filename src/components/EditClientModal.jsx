@@ -1,4 +1,5 @@
 import useClientForm from '../hooks/useClientForm';
+import { useAuth } from '../context/AuthContext';
 import { useState, useEffect } from 'react';
 import LocationPicker from './LocationPicker';
 import { useTranslation } from 'react-i18next';
@@ -23,7 +24,8 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated }) {
       } = useClientForm(client); // przekazujemy klienta jako client
 
       const { t } = useTranslation();
-
+      const { user } = useAuth();
+      const readOnly = isReadOnly(user);
       const [searchTerm, setSearchTerm] = useState("");
 
   const handleSubmit = async (e) => {
@@ -73,35 +75,35 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated }) {
             <div className="grid2col mb-7">
                   <div className="flexColumn">
                     <label className="text-neutral-800">{t('addClientModal.companyName')}
-                      <input type="text" name="company_name" value={formData.company_name} onChange={handleChange} readOnly={!!isReadOnly}/>
+                      <input type="text" name="company_name" value={formData.company_name} onChange={handleChange} readOnly={readOnly}/>
                     </label>
                   <label className="text-neutral-800">{t('addClientModal.nip')}
-                  <input type="text" name="nip" value={formData.nip} onChange={handleChange} readOnly={!!isReadOnly}/>
+                  <input type="text" name="nip" value={formData.nip} onChange={handleChange} readOnly={readOnly}/>
                   </label>
                   <label className="text-neutral-800">{t('addClientModal.street')}
-                  <input type="text" name="street" value={formData.street} onChange={handleChange} readOnly={!!isReadOnly}/>
+                  <input type="text" name="street" value={formData.street} onChange={handleChange} readOnly={readOnly}/>
                   </label>
                   <label className="text-neutral-800">{t('addClientModal.city')}
-                  <input type="text" name="city" value={formData.city} onChange={handleChange} readOnly={!!isReadOnly}/>
+                  <input type="text" name="city" value={formData.city} onChange={handleChange} readOnly={readOnly}/>
                   </label>
             </div>
 
             <div className='flexColumn'>
                   <label className='text-neutral-800'>
                   {t('addClientModal.postalCode')}
-                  <input type="text" name="postal_code" value={formData.postal_code} onChange={handleChange} readOnly={!!isReadOnly}/>
+                  <input type="text" name="postal_code" value={formData.postal_code} onChange={handleChange} readOnly={readOnly}/>
                   </label>
                   <label className='text-neutral-800'>
                   {t('addClientModal.voivodeship')}
-                  <input type="text" name="voivodeship" placeholder="" value={formData.voivodeship} onChange={handleChange} readOnly={!!isReadOnly}/>
+                  <input type="text" name="voivodeship" placeholder="" value={formData.voivodeship} onChange={handleChange} readOnly={readOnly}/>
                   </label>
                   <label className='text-neutral-800'>
                   {t('addClientModal.country')}
-                  <input type="text" name="country" placeholder="" value={formData.country} onChange={handleChange} readOnly={!!isReadOnly}/>
+                  <input type="text" name="country" placeholder="" value={formData.country} onChange={handleChange} readOnly={readOnly}/>
                   </label>
                   <label className='text-neutral-800'>
                   {t('addClientModal.clientCategory')}
-                  <select name="client_category" value={formData.client_category} onChange={handleChange} disabled={!!isReadOnly} className='AddSelectClient'>
+                  <select name="client_category" value={formData.client_category} onChange={handleChange} disabled={readOnly} className='AddSelectClient'>
                   <option value="">{t('addClientModal.selectCategory')}</option>
                     <option value="CENTRALA_SIEĆ">{t('addClientModal.categories.CENTRALA_SIEĆ')}</option>
                     <option value="DEWELOPER">{t('addClientModal.categories.DEWELOPER')}</option>
@@ -129,7 +131,7 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated }) {
                     placeholder="Szerokość geograficzna (lat)"
                     value={formData.latitude}
                     onChange={handleChange}
-                    readOnly={!!isReadOnly}
+                    readOnly={readOnly}
                   />
                   <input
                     type="text"
@@ -137,7 +139,7 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated }) {
                     placeholder="Długość geograficzna (lng)"
                     value={formData.longitude}
                     onChange={handleChange}
-                    readOnly={!!isReadOnly}
+                    readOnly={readOnly}
                   />
                 </div>
 
@@ -183,64 +185,64 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated }) {
             <div className='grid2col'>
               <div className="flexColumn">
                 <label className='text-neutral-800'>{t('addClientModal.engoTeamContact')}
-                    <input type="text" name="engo_team_contact" placeholder="Pracownik Engo" value={formData.engo_team_contact} onChange={handleChange} readOnly={!!isReadOnly}/>
+                    <input type="text" name="engo_team_contact" placeholder="Pracownik Engo" value={formData.engo_team_contact} onChange={handleChange} readOnly={readOnly}/>
                 </label>
                     <label className='text-neutral-800'>{t('addClientModal.branches')}
-                    <input type="text" name="number_of_branches" placeholder="" value={formData.number_of_branches} onChange={handleChange} readOnly={!!isReadOnly}/>
+                    <input type="text" name="number_of_branches" placeholder="" value={formData.number_of_branches} onChange={handleChange} readOnly={readOnly}/>
                     </label>
                     <label className='text-neutral-800'>{t('addClientModal.salesReps')}
-                    <input type="text" name="number_of_sales_reps" placeholder="" value={formData.number_of_sales_reps} onChange={handleChange} readOnly={!!isReadOnly}/>
+                    <input type="text" name="number_of_sales_reps" placeholder="" value={formData.number_of_sales_reps} onChange={handleChange} readOnly={readOnly}/>
                     </label>
                     <label className='text-neutral-800'>{t('addClientModal.www')}
-                    <input type="text" name="www" placeholder="" value={formData.www} onChange={handleChange} readOnly={!!isReadOnly}/>
+                    <input type="text" name="www" placeholder="" value={formData.www} onChange={handleChange} readOnly={readOnly}/>
                     </label>
                     <label className='text-neutral-800'>{t('addClientModal.facebook')}
-                    <input type="text" name="facebook" placeholder="" value={formData.facebook} onChange={handleChange} readOnly={!!isReadOnly}/>
+                    <input type="text" name="facebook" placeholder="" value={formData.facebook} onChange={handleChange} readOnly={readOnly}/>
                     </label>
                     <label className='text-neutral-800'>{t('addClientModal.auctionService')}
-                    <input type="text" name="auction_service" placeholder="" value={formData.auction_service} onChange={handleChange} readOnly={!!isReadOnly}/>
+                    <input type="text" name="auction_service" placeholder="" value={formData.auction_service} onChange={handleChange} readOnly={readOnly}/>
                     </label>
                     <label className='text-neutral-800'>
-                    <input type="checkbox" name="private_brand" checked={formData.private_brand === 1} onChange={handleChange} disabled={!!isReadOnly}/>
+                    <input type="checkbox" name="private_brand" checked={formData.private_brand === 1} onChange={handleChange} disabled={readOnly}/>
                     {t('addClientModal.privateBrand')}
                     </label>
                       {formData.private_brand === 1 && (
-                        <input type="text" name="private_brand_details" placeholder="Nazwa marki własnej" value={formData.private_brand_details} onChange={handleChange} readOnly={!!isReadOnly}/>
+                        <input type="text" name="private_brand_details" placeholder="Nazwa marki własnej" value={formData.private_brand_details} onChange={handleChange} readOnly={readOnly}/>
                       )}
 
                     <label className='text-neutral-800'>
-                      <input type="checkbox" name="loyalty_program" checked={formData.loyalty_program === 1} onChange={handleChange} disabled={!!isReadOnly}/>
+                      <input type="checkbox" name="loyalty_program" checked={formData.loyalty_program === 1} onChange={handleChange} disabled={readOnly}/>
                       {t('addClientModal.loyaltyProgram')}
                     </label>
                       {formData.loyalty_program === 1 && (
-                        <input type="text" name="loyalty_program_details" placeholder="Nazwa programu lojalnościowego" value={formData.loyalty_program_details} onChange={handleChange} readOnly={!!isReadOnly}/>
+                        <input type="text" name="loyalty_program_details" placeholder="Nazwa programu lojalnościowego" value={formData.loyalty_program_details} onChange={handleChange} readOnly={readOnly}/>
                       )}
               </div>
               
               <div className="flexColumn">
                     <label className='text-neutral-800'>{t('addClientModal.turnoverPln')}
-                    <input type="text" name="turnover_pln" placeholder="" value={formData.turnover_pln} onChange={handleChange} readOnly={!!isReadOnly}/>
+                    <input type="text" name="turnover_pln" placeholder="" value={formData.turnover_pln} onChange={handleChange} readOnly={readOnly}/>
                     </label>
                     <label className='text-neutral-800'>{t('addClientModal.turnoverEur')}
-                    <input type="text" name="turnover_eur" placeholder="" value={formData.turnover_eur} onChange={handleChange} readOnly={!!isReadOnly}/>
+                    <input type="text" name="turnover_eur" placeholder="" value={formData.turnover_eur} onChange={handleChange} readOnly={readOnly}/>
                     </label>
                     <label className='text-neutral-800'>{t('addClientModal.installationSales')}
-                    <input type="text" name="installation_sales_share" placeholder="" value={formData.installation_sales_share} onChange={handleChange} readOnly={!!isReadOnly}/>
+                    <input type="text" name="installation_sales_share" placeholder="" value={formData.installation_sales_share} onChange={handleChange} readOnly={readOnly}/>
                     </label>
                     <label className='text-neutral-800'>{t('addClientModal.automationSales')}
-                    <input type="text" name="automatic_sales_share" placeholder="" value={formData.automatic_sales_share} onChange={handleChange} readOnly={!!isReadOnly}/>
+                    <input type="text" name="automatic_sales_share" placeholder="" value={formData.automatic_sales_share} onChange={handleChange} readOnly={readOnly}/>
                     </label>
                     <label className='text-neutral-800'>{t('addClientModal.salesPotential')}
-                    <input type="text" name="sales_potential" placeholder="" value={formData.sales_potential} onChange={handleChange} readOnly={!!isReadOnly}/>
+                    <input type="text" name="sales_potential" placeholder="" value={formData.sales_potential} onChange={handleChange} readOnly={readOnly}/>
                     </label>
                     <label className='text-neutral-800'>{t('addClientModal.webstore')}
-                    <input type="text" name="has_webstore" placeholder="" value={formData.has_webstore} onChange={handleChange} readOnly={!!isReadOnly}/>
+                    <input type="text" name="has_webstore" placeholder="" value={formData.has_webstore} onChange={handleChange} readOnly={readOnly}/>
                     </label>
                     <label className='text-neutral-800'>{t('addClientModal.b2b')}
-                    <input type="text" name="has_b2b_platform" placeholder="" value={formData.has_b2b_platform} onChange={handleChange} readOnly={!!isReadOnly}/>
+                    <input type="text" name="has_b2b_platform" placeholder="" value={formData.has_b2b_platform} onChange={handleChange} readOnly={readOnly}/>
                     </label>
                     <label className='text-neutral-800'>{t('addClientModal.b2c')}
-                    <input type="text" name="has_b2c_platform" placeholder="" value={formData.has_b2c_platform} onChange={handleChange} readOnly={!!isReadOnly}/>
+                    <input type="text" name="has_b2c_platform" placeholder="" value={formData.has_b2c_platform} onChange={handleChange} readOnly={readOnly}/>
                     </label>
               </div>
               
@@ -254,19 +256,19 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated }) {
 
 <div className="flexColumn mb-7">
   <label className='text-neutral-800'>{t('addClientModal.structure.installer')}<br />
-      <input type="number" name="structure_installer" value={formData.structure_installer} onChange={handleChange} readOnly={!!isReadOnly}/>
+      <input type="number" name="structure_installer" value={formData.structure_installer} onChange={handleChange} readOnly={readOnly}/>
     </label>
     <label className='text-neutral-800'>{t('addClientModal.structure.wholesaler')}<br />
-      <input type="number" name="structure_wholesaler" value={formData.structure_wholesaler} onChange={handleChange} readOnly={!!isReadOnly}/>
+      <input type="number" name="structure_wholesaler" value={formData.structure_wholesaler} onChange={handleChange} readOnly={readOnly}/>
     </label>
     <label className='text-neutral-800'>{t('addClientModal.structure.ecommerce')}<br />
-      <input type="number" name="structure_ecommerce" value={formData.structure_ecommerce} onChange={handleChange} readOnly={!!isReadOnly}/>
+      <input type="number" name="structure_ecommerce" value={formData.structure_ecommerce} onChange={handleChange} readOnly={readOnly}/>
     </label>
     <label className='text-neutral-800'>{t('addClientModal.structure.retail')}<br />
-      <input type="number" name="structure_retail" value={formData.structure_retail} onChange={handleChange} readOnly={!!isReadOnly}/>
+      <input type="number" name="structure_retail" value={formData.structure_retail} onChange={handleChange} readOnly={readOnly}/>
     </label>
     <label className='text-neutral-800'>{t('addClientModal.structure.other')}<br />
-      <input type="number" name="structure_other" value={formData.structure_other} onChange={handleChange} readOnly={!!isReadOnly}/>
+      <input type="number" name="structure_other" value={formData.structure_other} onChange={handleChange} readOnly={readOnly}/>
     </label> 
 </div>
 
@@ -288,7 +290,7 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated }) {
   )
   .map((c, i) => (
   <div key={i} className='contactBlock'>
-    <select name="department" value={c.department} onChange={(e) => handleContactChange(i, e)} className="contactSelect mb-4" disabled={!!isReadOnly}>
+    <select name="department" value={c.department} onChange={(e) => handleContactChange(i, e)} className="contactSelect mb-4" disabled={readOnly}>
     <option value="">{t('addClientModal.selectDepartment')}</option>
     <option value="Zarząd">{t('addClientModal.departments.management')}</option>
     <option value="Sprzedaż">{t('addClientModal.departments.sales')}</option>
@@ -303,43 +305,43 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated }) {
 
     <div className='flex gap-2'>
     <label className='text-neutral-800'>{t('addClientModal.position')}
-      <input type="text" name="position" placeholder="" value={c.position} onChange={(e) => handleContactChange(i, e)}  className="contactInput" readOnly={!!isReadOnly}/>
+      <input type="text" name="position" placeholder="" value={c.position} onChange={(e) => handleContactChange(i, e)}  className="contactInput" readOnly={readOnly}/>
     </label>
     <label className='text-neutral-800'> {t('addClientModal.name')}
-      <input type="text" name="name" placeholder="" value={c.name} onChange={(e) => handleContactChange(i, e)}  className="contactInput" readOnly={!!isReadOnly}/>
+      <input type="text" name="name" placeholder="" value={c.name} onChange={(e) => handleContactChange(i, e)}  className="contactInput" readOnly={readOnly}/>
     </label>
     <label className='text-neutral-800'>{t('addClientModal.phone')}
-      <input type="text" name="phone" placeholder="" value={c.phone} onChange={(e) => handleContactChange(i, e)}  className="contactInput" readOnly={!!isReadOnly}/>
+      <input type="text" name="phone" placeholder="" value={c.phone} onChange={(e) => handleContactChange(i, e)}  className="contactInput" readOnly={readOnly}/>
     </label>
     <label className='text-neutral-800'>{t('addClientModal.email')}Email
-      <input type="email" name="email" placeholder="" value={c.email} onChange={(e) => handleContactChange(i, e)}  className="contactInput" readOnly={!!isReadOnly}/>
+      <input type="email" name="email" placeholder="" value={c.email} onChange={(e) => handleContactChange(i, e)}  className="contactInput" readOnly={readOnly}/>
     </label>
     <label className='text-neutral-800'>{t('addClientModal.functionNotes')}
-      <input type="text" name="function_notes" placeholder="" value={c.function_notes} onChange={(e) => handleContactChange(i, e)}  className="contactInput" readOnly={!!isReadOnly}/>
+      <input type="text" name="function_notes" placeholder="" value={c.function_notes} onChange={(e) => handleContactChange(i, e)}  className="contactInput" readOnly={readOnly}/>
     </label>
     <label className='text-neutral-800'> {t('addClientModal.decisionLevel')}
-      <select name="decision_level" value={c.decision_level} onChange={(e) => handleContactChange(i, e)}  className="contactSelect text-neutral-800" readOnly={!!isReadOnly}>
+      <select name="decision_level" value={c.decision_level} onChange={(e) => handleContactChange(i, e)}  className="contactSelect text-neutral-800" readOnly={readOnly}>
       <option value="">{t('addClientModal.decisionLevel')}</option>
       <option value="wysoka">{t('addClientModal.decision.high')}</option>
       <option value="średnia">{t('addClientModal.decision.medium')}</option>
       <option value="nie ma">{t('addClientModal.decision.none')}</option>
     </select>
     </label>
-    <button className='buttonRed' type="button" onClick={() => handleRemoveContact(i)}>{t('addClientModal.remove')}</button>
+    <button className='buttonRed' type="button" onClick={() => handleRemoveContact(i)} disabled={readOnly}>{t('addClientModal.remove')}</button>
     </div>
   </div>
 ))}
-<button className='buttonGreenNeg' type="button" onClick={handleAddContact}>{t('addClientModal.addContact')}</button>
+{!isReadOnly(user) && (<button className='buttonGreenNeg' type="button" onClick={handleAddContact}>{t('addClientModal.addContact')}</button>)}
 
 
-          <div className='flex justify-end mt-5'>
+{!isReadOnly(user) && (<div className='flex justify-end mt-5'>
             <button className='buttonGreen' type="submit" disabled={isSaving || isStructureInvalid}>
               {isSaving ? t('addClientModal.saving') : t('addClientModal.save')}
             </button>
             <button className='buttonRed' type="button" onClick={onClose} style={{ marginLeft: '10px' }}>
             {t('addClientModal.cancel')}
             </button>
-          </div>
+          </div>)}
         </form>
       </div>
     </div>
