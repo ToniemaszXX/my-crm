@@ -253,7 +253,11 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated }) {
 </div>
 
 <h4 className='header2'>{t('addClientModal.salesStructure')}</h4>
-
+{isStructureInvalid && (
+  <div style={{ color: 'red', fontWeight: 'bold', marginBottom: '10px' }}>
+    {t('addClientModal.structureSumError')}
+  </div>
+)}
 <div className="flexColumn mb-7">
   <label className='text-neutral-800'>{t('addClientModal.structure.installer')}<br />
       <input type="number" name="structure_installer" value={formData.structure_installer} onChange={handleChange} readOnly={readOnly}/>

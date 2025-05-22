@@ -53,11 +53,6 @@ function Customers() {
       : (contactField || '').split(';');
   
     const normalizedList = contactList.map(name => normalizeText(name));
-  
-    console.log('👤 SZUKAMY:', normalizedUser);
-    console.log('📋 LISTA:', normalizedList);
-    console.log('✅ PASUJE?', normalizedList.includes(normalizedUser));
-  
     return normalizedList.includes(normalizedUser);
   };
   
