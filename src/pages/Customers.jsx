@@ -4,6 +4,7 @@ import AddClientModal from '../components/AddClientModal';
 import EditClientModal from '../components/EditClientModal';
 import { useTranslation } from 'react-i18next';
 import { isAdmin, isZarzad } from '../utils/roles';
+import { europeanCountries } from '../components/CountrySelect';
 
 function Customers() {
   const { user, loading } = useAuth();
@@ -15,6 +16,11 @@ function Customers() {
   const [selectedClient, setSelectedClient] = useState(null);
   const { t } = useTranslation();
   const [meModeOnly, setMeModeOnly] = useState(false);
+  const [filterStatus, setFilterStatus] = useState('');
+  const [filterCountry, setFilterCountry] = useState('');
+  const [filterCategory, setFilterCategory] = useState('');
+  const [filterEngoTeamContact, setfilterEngoTeamContact] = useState('');
+
 
 
   useEffect(() => {
@@ -70,11 +76,29 @@ function Customers() {
     if (meModeOnly && currentUserName) {
       baseClients = baseClients.filter(client => {
         const result = isAssignedToUser(client.engo_team_contact, currentUserName);
-        console.log('👤 User:', normalizeText(currentUserName));
-        console.log('📋 Contact list:', client.engo_team_contact);
-        console.log('✅ Pasuje?', result);
         return result;
       });
+    }
+
+    // Filter by status
+    if (filterStatus !== '') {
+      baseClients = baseClients.filter(client => client.status === filterStatus);
+    }
+
+    // Filter by country
+    if (filterCountry !== '') {
+      baseClients = baseClients.filter(client => client.country === filterCountry);
+    }
+
+    // Filter by client category
+    if (filterCategory !== '') {
+      baseClients = baseClients.filter(client => client.client_category === filterCategory);
+    }
+
+     // Filter by Engo team contact
+     if (filterEngoTeamContact !== '') {
+      baseClients = baseClients.filter(client =>
+        isAssignedToUser(client.engo_team_contact, filterEngoTeamContact));
     }
   
     // Then apply search query on top of that
@@ -85,6 +109,9 @@ function Customers() {
       const filtered = baseClients.filter(
         (client) =>
           (client.company_name || '').toLowerCase().includes(lowerQuery) ||
+          (client.client_code_erp || '').toLowerCase().includes(lowerQuery) ||
+          (client.status || '').includes(lowerQuery) ||
+          (client.data_veryfication || '').includes(lowerQuery) ||
           (client.city || '').toLowerCase().includes(lowerQuery) ||
           (client.engo_team_contact || '').toLowerCase().includes(lowerQuery) ||
           (client.country || '').toLowerCase().includes(lowerQuery) ||
@@ -118,16 +145,35 @@ function Customers() {
       );
       setFilteredClients(filtered);
     }
-  }, [clients, searchQuery, meModeOnly, user]);
+  }, [clients, searchQuery, meModeOnly, user, filterStatus, filterCountry, filterCategory, filterEngoTeamContact]);
   
+  const resetFilters = () => {
+    setFilterStatus('');
+    setFilterCountry('');
+    setFilterCategory('');
+    setfilterEngoTeamContact('');
+    setSearchQuery('');
+  };
 
   const fetchClients = async () => {
     const response = await fetch(`${import.meta.env.VITE_API_URL}/customers/list.php`);
     const data = await response.json();
     if (data.success) {
-      setClients(data.clients);
+      const sortedClients = [...data.clients].sort((a, b) => {
+        // Najpierw według statusu (Nowy na górze)
+        if (a.status === "1" && b.status !== "1") return -1;
+        if (a.status !== "1" && b.status === "1") return 1;
+  
+        // Potem alfabetycznie po nazwie firmy (case-insensitive)
+        const nameA = (a.company_name || '').toLowerCase();
+        const nameB = (b.company_name || '').toLowerCase();
+        return nameA.localeCompare(nameB);
+      });
+  
+      setClients(sortedClients);
     }
   };
+  
 
   const handleSearch = (query) => {
     setSearchQuery(query);
@@ -165,6 +211,18 @@ function Customers() {
       alert(t('clientDeleteClientError'));
     }
   };
+
+  const uniqueEngoContacts = [
+    ...new Set(
+      clients
+        .flatMap(c =>
+          (c.engo_team_contact || '')
+            .split(';')
+            .map(name => name.trim())
+            .filter(Boolean)
+        )
+    )
+  ];
   
   
 
@@ -180,7 +238,7 @@ function Customers() {
         {t('addClient')}
       </button>)}
 
-      <label className="flex items-center gap-2 mb-2">
+      <label className="flex items-center gap-2">
         <input
           className='mb-0'
           type="checkbox"
@@ -190,12 +248,60 @@ function Customers() {
         {t('meMode')}
       </label>
 
+      <div className="flex gap-4">
+        <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className='pl-1 pr-1 pt-2 pb-2'>
+          <option value="">{t('filter.chooseStatus')}</option>
+          <option value="1">{t('filter.new')}</option>
+          <option value="0">{t('filter.verified')}</option>
+        </select>
+
+        <select value={filterCountry} onChange={(e) => setFilterCountry(e.target.value)} className='pl-1 pr-1 pt-2 pb-2'>
+          <option value="">{t('filter.chooseContry')}</option>
+          {europeanCountries.map((country) => (
+            <option key={country} value={country}>
+              {t('countries.' + country)}
+            </option>
+          ))}
+        </select>
+
+        <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className='pl-1 pr-1 pt-2 pb-2'>
+          
+          <option value="">{t('addClientModal.selectCategory')}</option>
+            <option value="CENTRALA_SIEĆ">{t('addClientModal.categories.CENTRALA_SIEĆ')}</option>
+            <option value="DEWELOPER">{t('addClientModal.categories.DEWELOPER')}</option>
+            <option value="DYSTRYBUTOR">{t('addClientModal.categories.DYSTRYBUTOR')}</option>
+            <option value="DYSTRYBUTOR_CENTRALA">{t('addClientModal.categories.DYSTRYBUTOR_CENTRALA')}</option>
+            <option value="DYSTRYBUTOR_MAGAZYN">{t('addClientModal.categories.DYSTRYBUTOR_MAGAZYN')}</option>
+            <option value="DYSTRYBUTOR_ODDZIAŁ">{t('addClientModal.categories.DYSTRYBUTOR_ODDZIAŁ')}</option>
+            <option value="ENGO_PLUS">{t('addClientModal.categories.ENGO_PLUS')}</option>
+            <option value="INSTALATOR">{t('addClientModal.categories.INSTALATOR')}</option>
+            <option value="PODHURT">{t('addClientModal.categories.PODHURT')}</option>
+            <option value="PODHURT_ELEKTRYKA">{t('addClientModal.categories.PODHURT_ELEKTRYKA')}</option>
+            <option value="PROJEKTANT">{t('addClientModal.categories.PROJEKTANT')}</option>
+        </select>
+
+        <select value={filterEngoTeamContact} onChange={(e) => setfilterEngoTeamContact(e.target.value)} className='pl-1 pr-1 pt-2 pb-2'>
+          <option value="">{t('addClientModal.chooseMember')}</option>
+          {uniqueEngoContacts.map((contact) => (
+            <option key={contact} value={contact}>
+              {contact}
+            </option>
+          ))}
+        </select>
+
+      </div>
+
+      <button onClick={resetFilters} className="buttonRed">
+        {t('filter.reset')}
+      </button>
+
+
       <input
         type="text"
         placeholder={t('searchPlaceholder')}
         value={searchQuery}
         onChange={(e) => handleSearch(e.target.value)}
-        className="p-2 w-72 border rounded"
+        className="p-2 w-72 border rounded m-0"
       />
     </div>
 
@@ -222,6 +328,9 @@ function Customers() {
         <thead className='bg-neutral-600'>
           <tr>
             <th>{t('tableHeaders.number')}</th>
+            <th>Kod kontrahenta</th>
+            <th>Status klienta</th>
+            <th>Status danych</th>
             <th>{t('tableHeaders.company')}</th>
             <th>{t('tableHeaders.country')}</th>
             <th className='portrait:hidden'>{t('tableHeaders.city')}</th>
@@ -234,6 +343,9 @@ function Customers() {
             filteredClients.map((client, index) => (
               <tr key={client.id} className='border-b border-b-neutral-300 text-center'>
                 <td>{index + 1}</td>
+                <td>{client.client_code_erp || '-'}</td>
+                <td className={client.status === "1" ? "text-green-600 font-semibold" : "text-neutral-300 font-semibold"}>{client.status === "1" ? "Nowy" : "Zweryfikowany"}</td>
+                <td className={client.data_veryfication === "1" ? "text-neutral-300 font-semibold" : "text-red-600 font-semibold"}>{client.data_veryfication === "1" ? "Gotowe" : "Brak danych"}</td>
                 <td>{client.company_name || '-'}</td>
                 <td>{client.country || '-'}</td>
                 <td className='portrait:hidden'>{client.city || '-'}</td>

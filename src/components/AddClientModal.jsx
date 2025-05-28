@@ -4,6 +4,7 @@ import useClientForm from '../hooks/useClientForm';
 import LocationPicker from './LocationPicker';
 import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
+import CountrySelect from './CountrySelect';
 import { isAdmin, isZarzad } from '../utils/roles';
 
 function AddClientModal({ isOpen, onClose, onClientAdded }) {
@@ -26,6 +27,7 @@ function AddClientModal({ isOpen, onClose, onClientAdded }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSaving(true);
+
 
     const response = await fetch(`${import.meta.env.VITE_API_URL}/customers/add.php`, {
       method: 'POST',
@@ -57,9 +59,10 @@ function AddClientModal({ isOpen, onClose, onClientAdded }) {
 
   return (
     <div className='fixed inset-0 bg-black/50 flex justify-center items-center z-[99]'>
-      <div className='bg-neutral-100 p-8 rounded-lg w-[1100px] max-h-[90vh] overflow-y-auto'>
-      <div className='flex justify-between items-center mb-5'>
-        <h2 className="text-lime-500 text-xl font-extrabold mb-5">{t('addClientModal.title')}</h2>
+      
+      <div className='bg-neutral-100 pb-8 rounded-lg w-[1100px] max-h-[90vh] overflow-y-auto'>
+      <div className="bg-neutral-100 flex justify-between items-center sticky top-0 z-50 p-4 border-b border-neutral-300">
+        <h2 className="text-lime-500 text-xl font-extrabold">{t('addClientModal.title')}</h2>
         <button
           className="text-black hover:text-red-500 text-2xl font-bold bg-neutral-300 rounded-lg w-10 h-10 flex items-center justify-center leading-none"
           onClick={onClose}
@@ -68,7 +71,8 @@ function AddClientModal({ isOpen, onClose, onClientAdded }) {
           <X size={20} />
         </button>
         </div>
-        <form onSubmit={handleSubmit} className="text-white flex flex-col gap-3">
+
+        <form onSubmit={handleSubmit} className="text-white flex flex-col gap-3  pl-8 pr-8">
           {/* Podstawowe informacje */}
           <div className="flex-col">
             <h4 className='header2'>{t('addClientModal.companyData')}</h4>
@@ -77,25 +81,23 @@ function AddClientModal({ isOpen, onClose, onClientAdded }) {
                 <label className="text-neutral-800">{t('addClientModal.companyName')}<br/>
                   <input type="text" name="company_name" value={formData.company_name} onChange={handleChange} />
                 </label>
+                <label className="text-neutral-800">{t('addClientModal.client_code_erp')}<br/>
+                  <input type="text" name="client_code_erp" value={formData.client_code_erp} onChange={handleChange} />
+                </label>
+                <label className="text-neutral-800">{t('addClientModal.status')}<br/>
+                  <select name="status" className='AddSelectClient' value={formData.status} onChange={handleChange}>
+                  <option value="1">Nowy</option>
+                  <option value="0">Zweryfikowany</option>
+                  </select>
+                </label>
+                <label className="text-neutral-800">{t('addClientModal.data_veryfication')}<br/>
+                  <select name="data_veryfication" className='AddSelectClient' value={formData.data_veryfication}  onChange={handleChange}>
+                  <option value="0">Brak danych</option>
+                  <option value="1">Gotowe</option>
+                  </select>
+                </label>
                 <label className="text-neutral-800">{t('addClientModal.nip')}<br/>
                   <input type="text" name="nip" value={formData.nip} onChange={handleChange} />
-                </label>
-                <label className="text-neutral-800">{t('addClientModal.street')}<br/>
-                  <input type="text" name="street" value={formData.street} onChange={handleChange} />
-                </label>
-                <label className="text-neutral-800">{t('addClientModal.city')}<br/>
-                  <input type="text" name="city" value={formData.city} onChange={handleChange} />
-                </label>
-              </div>
-              <div className="flexColumn">
-                <label className="text-neutral-800">{t('addClientModal.voivodeship')}<br/>
-                  <input type="text" name="voivodeship" value={formData.voivodeship} onChange={handleChange} />
-                </label>
-                <label className="text-neutral-800">{t('addClientModal.country')}<br/>
-                  <input type="text" name="country" value={formData.country} onChange={handleChange} />
-                </label>
-                <label className="text-neutral-800">{t('addClientModal.postalCode')}<br/>
-                  <input type="text" name="postal_code" value={formData.postal_code} onChange={handleChange} />
                 </label>
                 <label className="text-neutral-800">{t('addClientModal.clientCategory')}<br/>
                   <select name="client_category" value={formData.client_category} onChange={handleChange} className='AddSelectClient'>
@@ -113,6 +115,27 @@ function AddClientModal({ isOpen, onClose, onClientAdded }) {
                     <option value="PROJEKTANT">{t('addClientModal.categories.PROJEKTANT')}</option>
                   </select>
                 </label>
+              </div>
+              <div className="flexColumn">
+              
+                <label className="text-neutral-800">{t('addClientModal.street')}<br/>
+                  <input type="text" name="street" value={formData.street} onChange={handleChange} />
+                </label>
+                <label className="text-neutral-800">{t('addClientModal.city')}<br/>
+                  <input type="text" name="city" value={formData.city} onChange={handleChange} />
+                </label>
+                <label className="text-neutral-800">{t('addClientModal.voivodeship')}<br/>
+                  <input type="text" name="voivodeship" value={formData.voivodeship} onChange={handleChange} />
+                </label>
+                <CountrySelect
+                    label={t('addClientModal.country')}
+                    value={formData.country}
+                    onChange={handleChange}
+                  />
+                <label className="text-neutral-800">{t('addClientModal.postalCode')}<br/>
+                  <input type="text" name="postal_code" value={formData.postal_code} onChange={handleChange} />
+                </label>
+                
               </div>
             </div>
           </div>
@@ -152,9 +175,19 @@ function AddClientModal({ isOpen, onClose, onClientAdded }) {
             <h4 className='header2'>{t('addClientModal.accounts')}</h4>
             <div className='grid2col'>
               <div className="flexColumn">
-                <label className="text-neutral-800">{t('addClientModal.engoTeamContact')}<br/>
-                  <input type="text" name="engo_team_contact" value={formData.engo_team_contact} onChange={handleChange} />
+
+              <label className="text-neutral-800">{t('addClientModal.engoTeamContact')}<br/>
+                  <select name="engo_team_contact" value={formData.engo_team_contact} onChange={handleChange} className='AddSelectClient'>
+                    <option value="">{t('addClientModal.chooseMember')}</option>
+                    <option value="Pawel Kulpa; DOK">Pawel Kulpa, DOK</option>
+                    <option value="Bartosz Jamruszkiewicz">Bartosz Jamruszkiewicz</option>
+                    <option value="Arna Cizmovic; Bartosz Jamruszkiewicz">Arna Cizmovic, Bartosz Jamruszkiewicz</option>
+                    <option value="Lukasz Apanel">Lukasz Apanel</option>
+                    <option value="Damian Krzyzanowski; Lukasz Apanel">Damian Krzyzanowski, Lukasz Apanel</option>
+                    <option value="Egidijus Karitonis; Lukasz Apane">Egidijus Karitonis, Lukasz Apane</option>
+                  </select>
                 </label>
+
                 <label className="text-neutral-800">{t('addClientModal.branches')}<br/>
                   <input type="text" name="number_of_branches" value={formData.number_of_branches} onChange={handleChange} />
                 </label>

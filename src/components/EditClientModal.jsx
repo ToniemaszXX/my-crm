@@ -3,7 +3,8 @@ import { useAuth } from '../context/AuthContext';
 import { useState, useEffect } from 'react';
 import LocationPicker from './LocationPicker';
 import { useTranslation } from 'react-i18next';
-import { isReadOnly } from '../utils/roles';
+import { isReadOnly, isBok } from '../utils/roles';
+import CountrySelect from './CountrySelect';
 import { X } from 'lucide-react';
 
 
@@ -32,14 +33,39 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated }) {
     e.preventDefault();
     setIsSaving(true);
 
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/customers/edit.php`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ ...formData, contacts })
-    });
+    let data;
 
-    const data = await response.json();
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/customers/edit.php`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ ...formData, contacts })
+      });
+    
+      const text = await response.text();
+    
+
+
+      try {
+        data = JSON.parse(text);
+      } catch {
+        throw new Error(`Invalid JSON response: ${text}`);
+      }
+    
+      if (response.ok && data.success) {
+        onClientUpdated();
+        onClose();
+      } else {
+        alert(data?.message || 'Server error occurred');
+      }
+    } catch (error) {
+      console.error('Error submitting client:', error);
+      alert(`Error submitting client: ${error.message}`);
+    } finally {
+      setIsSaving(false);
+    }
+    
     setIsSaving(false);
 
     if (data.success) {
@@ -54,20 +80,22 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated }) {
 
   return (
 
-    <div className='fixed inset-0 bg-black/50 flex justify-center items-center  z-[99]'> 
-      <div className='bg-neutral-100 p-8 rounded-lg w-[1100px] max-h-[90vh] overflow-y-auto'>
-        <div className='flex justify-between items-center mb-5'>
-        <h2 className="text-lime-500 text-xl font-extrabold">{t('editClientModal.editLead')}</h2>
-        <button
-          className="text-black hover:text-red-500 text-2xl font-bold bg-neutral-300 rounded-lg w-10 h-10 flex items-center justify-center leading-none"
-          onClick={onClose}
-          aria-label="Close modal"
-        >
-          <X size={20} />
-        </button>
+    <div className='fixed inset-0 bg-black/50 flex justify-center items-center z-[99]'> 
+
+      <div className='bg-neutral-100 pb-8 rounded-lg w-[1100px] max-h-[90vh] overflow-y-auto'>
+
+      <div className="bg-neutral-100 flex justify-between items-center sticky top-0 z-50 p-4 border-b border-neutral-300">
+          <h2 className="text-lime-500 text-xl font-extrabold">{t('editClientModal.editLead')}</h2>
+          <button
+            className="text-black hover:text-red-500 text-2xl font-bold bg-neutral-300 rounded-lg w-10 h-10 flex items-center justify-center leading-none"
+            onClick={onClose}
+            aria-label="Close modal"
+          >
+            <X size={20} />
+          </button>
         </div>
 
-          <form onSubmit={handleSubmit} className="text-white flex flex-col gap-3">
+          <form onSubmit={handleSubmit} className="text-white flex flex-col gap-3 mt-2 pl-8 pr-8">
 
           <div className="flex-col">
             <h4 className='header2'>{t('addClientModal.companyData')}</h4>
@@ -76,30 +104,27 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated }) {
                   <div className="flexColumn">
                     <label className="text-neutral-800">{t('addClientModal.companyName')}
                       <input type="text" name="company_name" value={formData.company_name} onChange={handleChange} readOnly={readOnly}/>
-                    </label>
+                  </label>
+
+                  <label className="text-neutral-800">{t('addClientModal.client_code_erp')}<br/>
+                    <input type="text" name="client_code_erp" value={formData.client_code_erp} onChange={handleChange} readOnly={readOnly}/>
+                  </label>
+                  {!isBok(user) && (<label className="text-neutral-800">{t('addClientModal.status')}<br/>
+                    <select name="status" className='AddSelectClient' value={formData.status} onChange={handleChange} readOnly={readOnly}>
+                      <option value="1">Nowy</option>
+                      <option value="0">Zweryfikowany</option>
+                    </select>
+                  </label>)}
+                  <label className="text-neutral-800">{t('addClientModal.data_veryfication')}<br/>
+                    <select name="data_veryfication" className='AddSelectClient' value={formData.data_veryfication} onChange={handleChange} readOnly={readOnly}>
+                      <option value="0">Brak danych</option>
+                      <option value="1">Gotowe</option>
+                    </select>
+                  </label>
+
+
                   <label className="text-neutral-800">{t('addClientModal.nip')}
                   <input type="text" name="nip" value={formData.nip} onChange={handleChange} readOnly={readOnly}/>
-                  </label>
-                  <label className="text-neutral-800">{t('addClientModal.street')}
-                  <input type="text" name="street" value={formData.street} onChange={handleChange} readOnly={readOnly}/>
-                  </label>
-                  <label className="text-neutral-800">{t('addClientModal.city')}
-                  <input type="text" name="city" value={formData.city} onChange={handleChange} readOnly={readOnly}/>
-                  </label>
-            </div>
-
-            <div className='flexColumn'>
-                  <label className='text-neutral-800'>
-                  {t('addClientModal.postalCode')}
-                  <input type="text" name="postal_code" value={formData.postal_code} onChange={handleChange} readOnly={readOnly}/>
-                  </label>
-                  <label className='text-neutral-800'>
-                  {t('addClientModal.voivodeship')}
-                  <input type="text" name="voivodeship" placeholder="" value={formData.voivodeship} onChange={handleChange} readOnly={readOnly}/>
-                  </label>
-                  <label className='text-neutral-800'>
-                  {t('addClientModal.country')}
-                  <input type="text" name="country" placeholder="" value={formData.country} onChange={handleChange} readOnly={readOnly}/>
                   </label>
                   <label className='text-neutral-800'>
                   {t('addClientModal.clientCategory')}
@@ -118,6 +143,30 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated }) {
                     <option value="PROJEKTANT">{t('addClientModal.categories.PROJEKTANT')}</option>
                     </select>
                   </label>
+                 
+            </div>
+
+            <div className='flexColumn'>
+                  <label className="text-neutral-800">{t('addClientModal.street')}
+                  <input type="text" name="street" value={formData.street} onChange={handleChange} readOnly={readOnly}/>
+                  </label>
+                  <label className="text-neutral-800">{t('addClientModal.city')}
+                  <input type="text" name="city" value={formData.city} onChange={handleChange} readOnly={readOnly}/>
+                  </label>
+                  <label className='text-neutral-800'>
+                  {t('addClientModal.postalCode')}
+                  <input type="text" name="postal_code" value={formData.postal_code} onChange={handleChange} readOnly={readOnly}/>
+                  </label>
+                  <label className='text-neutral-800'>
+                  {t('addClientModal.voivodeship')}
+                  <input type="text" name="voivodeship" placeholder="" value={formData.voivodeship} onChange={handleChange} readOnly={readOnly}/>
+                  </label>
+                  <CountrySelect
+                    label={t('addClientModal.country')}
+                    value={formData.country}
+                    onChange={handleChange}
+                  />
+                  
             </div>
           </div>
 
@@ -125,22 +174,24 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated }) {
                 <h4 className="header2">{t('addClientModal.location')}</h4>
 
                 <div className="grid2col mb-4">
+                  <label  className='text-neutral-800'>Szerokość geograficzna (lat)
                   <input
                     type="text"
                     name="latitude"
-                    placeholder="Szerokość geograficzna (lat)"
                     value={formData.latitude}
                     onChange={handleChange}
                     readOnly={readOnly}
                   />
+                  </label>
+                  <label  className='text-neutral-800'>Długość geograficzna (lng)
                   <input
                     type="text"
                     name="longitude"
-                    placeholder="Długość geograficzna (lng)"
                     value={formData.longitude}
                     onChange={handleChange}
                     readOnly={readOnly}
                   />
+                  </label>
                 </div>
 
                 <div className='bg-neutral-100 p-8 rounded-lg w-full max-w-[90%] max-h-[90vh] overflow-y-auto'>
@@ -184,8 +235,16 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated }) {
 
             <div className='grid2col'>
               <div className="flexColumn">
-                <label className='text-neutral-800'>{t('addClientModal.engoTeamContact')}
-                    <input type="text" name="engo_team_contact" placeholder="Pracownik Engo" value={formData.engo_team_contact} onChange={handleChange} readOnly={readOnly}/>
+              <label className="text-neutral-800">{t('addClientModal.engoTeamContact')}<br/>
+                  <select name="engo_team_contact" value={formData.engo_team_contact} onChange={handleChange} className='AddSelectClient' disabled={readOnly}>
+                    <option value="">{t('addClientModal.chooseMember')}</option>
+                    <option value="Paweł Kulpa; DOK">Paweł Kulpa, DOK</option>
+                    <option value="Bartosz Jamruszkiewicz;">Bartosz Jamruszkiewicz</option>
+                    <option value="Arna Cizmovic; Bartosz Jamruszkiewicz">Arna Cizmovic, Bartosz Jamruszkiewicz</option>
+                    <option value="Lukasz Apanel;">Łukasz Apanel</option>
+                    <option value="Lukasz Apanel; Damian Krzyżanowski">Damian Krzyżanowski, Łukasz Apanel</option>
+                    <option value="Lukasz Apanel; Egidijus Karitonis">Egidijus Karitonis, Łukasz Apanel</option>
+                  </select>
                 </label>
                     <label className='text-neutral-800'>{t('addClientModal.branches')}
                     <input type="text" name="number_of_branches" placeholder="" value={formData.number_of_branches} onChange={handleChange} readOnly={readOnly}/>

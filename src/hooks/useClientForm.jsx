@@ -4,6 +4,9 @@ export default function useClientForm(initialData = {}) {
   const [formData, setFormData] = useState({
     id: null,
     company_name: '',
+    client_code_erp: '',
+    status: '',
+    data_veryfication: '',
     street: '',
     city: '',
     postal_code: '',
@@ -47,6 +50,9 @@ export default function useClientForm(initialData = {}) {
       setFormData({
         id: initialData.id || null,
         company_name: initialData.company_name || '',
+        client_code_erp: initialData.client_code_erp || '',
+        status: initialData.status || '',
+        data_veryfication: initialData.data_veryfication || '',
         street: initialData.street || '',
         city: initialData.city || '',
         postal_code: initialData.postal_code || '',
@@ -54,7 +60,7 @@ export default function useClientForm(initialData = {}) {
         country: initialData.country || '',
         nip: initialData.nip || '',
         client_category: initialData.client_category || '',
-        engo_team_contact: initialData.engo_team_contact || '',
+        engo_team_contact: (initialData.engo_team_contact || '').trim(),
         number_of_branches: initialData.number_of_branches || '',
         number_of_sales_reps: initialData.number_of_sales_reps || '',
         www: initialData.www || '',
@@ -87,7 +93,14 @@ export default function useClientForm(initialData = {}) {
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    let newValue = type === 'checkbox' ? (checked ? 1 : 0) : value;
+    let newValue;
+
+    newValue = type === 'checkbox' ? (checked ? 1 : 0) : value;
+
+    // Jeśli typ to select z wartościami liczbowymi
+    if (name === 'status' || name === 'data_veryfication') {
+      newValue = parseInt(value, 10); // konwersja na number
+    }
 
     if ([
       'structure_installer',
@@ -129,6 +142,9 @@ export default function useClientForm(initialData = {}) {
     setFormData({
       id: null,
       company_name: '',
+      client_code_erp: '',
+      status: '',
+      data_veryfication: '',
       street: '',
       city: '',
       postal_code: '',
