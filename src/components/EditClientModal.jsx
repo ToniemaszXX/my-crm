@@ -132,12 +132,13 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated }) {
                   <option value="">{t('addClientModal.selectCategory')}</option>
                     <option value="CENTRALA_SIEĆ">{t('addClientModal.categories.CENTRALA_SIEĆ')}</option>
                     <option value="DEWELOPER">{t('addClientModal.categories.DEWELOPER')}</option>
-                    <option value="DYSTRYBUTOR">{t('addClientModal.categories.DYSTRYBUTOR')}</option>
+                    {/* <option value="DYSTRYBUTOR">{t('addClientModal.categories.DYSTRYBUTOR')}</option> */}
                     <option value="DYSTRYBUTOR_CENTRALA">{t('addClientModal.categories.DYSTRYBUTOR_CENTRALA')}</option>
                     <option value="DYSTRYBUTOR_MAGAZYN">{t('addClientModal.categories.DYSTRYBUTOR_MAGAZYN')}</option>
                     <option value="DYSTRYBUTOR_ODDZIAŁ">{t('addClientModal.categories.DYSTRYBUTOR_ODDZIAŁ')}</option>
-                    <option value="ENGO_PLUS">{t('addClientModal.categories.ENGO_PLUS')}</option>
+                    <option value="INSTALATOR_ENGO_PLUS">{t('addClientModal.categories.ENGO_PLUS')}</option>
                     <option value="INSTALATOR">{t('addClientModal.categories.INSTALATOR')}</option>
+                    <option value="INSTALATOR_FIRMA">{t('addClientModal.categories.INSTALATOR_FIRMA')}</option>
                     <option value="PODHURT">{t('addClientModal.categories.PODHURT')}</option>
                     <option value="PODHURT_ELEKTRYKA">{t('addClientModal.categories.PODHURT_ELEKTRYKA')}</option>
                     <option value="PROJEKTANT">{t('addClientModal.categories.PROJEKTANT')}</option>
