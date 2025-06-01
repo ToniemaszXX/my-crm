@@ -76,6 +76,16 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated }) {
     }
   };
 
+  const formatNumberWithSpaces = (value) => {
+    if (!value) return '';
+    return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  };
+
+  const parseNumber = (value) => {
+    return value.replace(/\s/g, '');
+  };
+  
+
   if (!isOpen || !formData) return null;
 
   return (
@@ -281,10 +291,40 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated }) {
               
               <div className="flexColumn">
                     <label className='text-neutral-800'>{t('addClientModal.turnoverPln')}
-                    <input type="text" name="turnover_pln" placeholder="" value={formData.turnover_pln} onChange={handleChange} readOnly={readOnly}/>
+                    <input
+                      type="text"
+                      name="turnover_pln"
+                      placeholder=""
+                      value={formatNumberWithSpaces(formData.turnover_pln)}
+                      onChange={(e) => {
+                        const numeric = parseNumber(e.target.value);
+                        handleChange({
+                          target: {
+                            name: 'turnover_pln',
+                            value: numeric,
+                          }
+                        });
+                      }}
+                      readOnly={readOnly}
+                    />
                     </label>
                     <label className='text-neutral-800'>{t('addClientModal.turnoverEur')}
-                    <input type="text" name="turnover_eur" placeholder="" value={formData.turnover_eur} onChange={handleChange} readOnly={readOnly}/>
+                    <input
+                      type="text"
+                      name="turnover_eur"
+                      placeholder=""
+                      value={formatNumberWithSpaces(formData.turnover_eur)}
+                      onChange={(e) => {
+                        const numeric = parseNumber(e.target.value);
+                        handleChange({
+                          target: {
+                            name: 'turnover_eur',
+                            value: numeric,
+                          }
+                        });
+                      }}
+                      readOnly={readOnly}
+                    />
                     </label>
                     <label className='text-neutral-800'>{t('addClientModal.installationSales')}
                     <input type="text" name="installation_sales_share" placeholder="" value={formData.installation_sales_share} onChange={handleChange} readOnly={readOnly}/>
@@ -320,19 +360,19 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated }) {
 )}
 <div className="flexColumn mb-7">
   <label className='text-neutral-800'>{t('addClientModal.structure.installer')}<br />
-      <input type="number" name="structure_installer" value={formData.structure_installer} onChange={handleChange} readOnly={readOnly}/>
+      <input type="number" name="structure_installer" value={formData.structure_installer} onChange={handleChange} onFocus={(e) => {if (e.target.value === '0') e.target.value = '';}} readOnly={readOnly}/>
     </label>
     <label className='text-neutral-800'>{t('addClientModal.structure.wholesaler')}<br />
-      <input type="number" name="structure_wholesaler" value={formData.structure_wholesaler} onChange={handleChange} readOnly={readOnly}/>
+      <input type="number" name="structure_wholesaler" value={formData.structure_wholesaler} onChange={handleChange} onFocus={(e) => {if (e.target.value === '0') e.target.value = '';}} readOnly={readOnly}/>
     </label>
     <label className='text-neutral-800'>{t('addClientModal.structure.ecommerce')}<br />
-      <input type="number" name="structure_ecommerce" value={formData.structure_ecommerce} onChange={handleChange} readOnly={readOnly}/>
+      <input type="number" name="structure_ecommerce" value={formData.structure_ecommerce} onChange={handleChange} onFocus={(e) => {if (e.target.value === '0') e.target.value = '';}} readOnly={readOnly}/>
     </label>
     <label className='text-neutral-800'>{t('addClientModal.structure.retail')}<br />
-      <input type="number" name="structure_retail" value={formData.structure_retail} onChange={handleChange} readOnly={readOnly}/>
+      <input type="number" name="structure_retail" value={formData.structure_retail} onChange={handleChange} onFocus={(e) => {if (e.target.value === '0') e.target.value = '';}} readOnly={readOnly}/>
     </label>
     <label className='text-neutral-800'>{t('addClientModal.structure.other')}<br />
-      <input type="number" name="structure_other" value={formData.structure_other} onChange={handleChange} readOnly={readOnly}/>
+      <input type="number" name="structure_other" value={formData.structure_other} onChange={handleChange} onFocus={(e) => {if (e.target.value === '0') e.target.value = '';}} readOnly={readOnly}/>
     </label> 
 </div>
 
