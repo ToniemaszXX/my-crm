@@ -146,7 +146,7 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated }) {
                     <option value="DYSTRYBUTOR_CENTRALA">{t('addClientModal.categories.DYSTRYBUTOR_CENTRALA')}</option>
                     <option value="DYSTRYBUTOR_MAGAZYN">{t('addClientModal.categories.DYSTRYBUTOR_MAGAZYN')}</option>
                     <option value="DYSTRYBUTOR_ODDZIAŁ">{t('addClientModal.categories.DYSTRYBUTOR_ODDZIAŁ')}</option>
-                    <option value="INSTALATOR_ENGO_PLUS">{t('addClientModal.categories.ENGO_PLUS')}</option>
+                    <option value="INSTALATOR_ENGO_PLUS">{t('addClientModal.categories.INSTALATOR_ENGO_PLUS')}</option>
                     <option value="INSTALATOR">{t('addClientModal.categories.INSTALATOR')}</option>
                     <option value="INSTALATOR_FIRMA">{t('addClientModal.categories.INSTALATOR_FIRMA')}</option>
                     <option value="PODHURT">{t('addClientModal.categories.PODHURT')}</option>
