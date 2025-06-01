@@ -184,7 +184,7 @@ function AddClientModal({ isOpen, onClose, onClientAdded }) {
                     <option value="Arna Cizmovic; Bartosz Jamruszkiewicz">Arna Cizmovic, Bartosz Jamruszkiewicz</option>
                     <option value="Lukasz Apanel">Lukasz Apanel</option>
                     <option value="Damian Krzyzanowski; Lukasz Apanel">Damian Krzyzanowski, Lukasz Apanel</option>
-                    <option value="Egidijus Karitonis; Lukasz Apane">Egidijus Karitonis, Lukasz Apane</option>
+                    <option value="Egidijus Karitonis; Lukasz Apane">Egidijus Karitonis, Lukasz Apanel</option>
                   </select>
                 </label>
 
@@ -317,7 +317,7 @@ function AddClientModal({ isOpen, onClose, onClientAdded }) {
                     <option value="">{t('addClientModal.decisionLevel')}</option>
                     <option value="wysoka">{t('addClientModal.decision.high')}</option>
                     <option value="średnia">{t('addClientModal.decision.medium')}</option>
-                    <option value="nie ma">{t('addClientModal.decision.none')}</option>
+                    <option value="brak">{t('addClientModal.decision.none')}</option>
                   </select>
                 </label>
                 <button className='buttonRed' type="button" onClick={() => handleRemoveContact(index)}>{t('addClientModal.remove')}</button>

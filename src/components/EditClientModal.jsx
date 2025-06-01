@@ -388,7 +388,7 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated }) {
       <option value="">{t('addClientModal.decisionLevel')}</option>
       <option value="wysoka">{t('addClientModal.decision.high')}</option>
       <option value="średnia">{t('addClientModal.decision.medium')}</option>
-      <option value="nie ma">{t('addClientModal.decision.none')}</option>
+      <option value="brak">{t('addClientModal.decision.none')}</option>
     </select>
     </label>
     <button className='buttonRed' type="button" onClick={() => handleRemoveContact(i)} disabled={readOnly}>{t('addClientModal.remove')}</button>
