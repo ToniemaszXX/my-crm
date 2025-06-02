@@ -177,6 +177,8 @@ function Visits() {
                           <p><strong>{t('visit.whome')}:</strong> {visit.contact_person}</p>
                           <p><strong>{t('visit.type')}:</strong> {visit.meeting_type}</p>
                           <p><strong>{t('visit.goal')}:</strong> {visit.meeting_purpose}</p>
+                          <p><strong>Podsumowanie:</strong> {visit.post_meeting_summary}</p>
+                          <p><strong>Plan działań:</strong> {visit.action_plan}</p>
                         </div>
                         <button
                           onClick={handleEditClick}
