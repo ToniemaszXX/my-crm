@@ -213,7 +213,9 @@
       "new": "Nowy",
       "verified": "Zweryfikowany",
       "chooseContry": "Wybierz kraj",
-      "reset": "Resetuj filtry"
+      "reset": "Resetuj filtry",
+      "fromDate": "Od",
+      "toDate": "Do"
     }
   }
   

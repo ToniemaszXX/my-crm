@@ -11,7 +11,7 @@ import AddVisitModal from "./AddVisitModal";
 
 
 
-function EditClientModal({ isOpen, client, onClose, onClientUpdated }) {
+function EditClientModal({ isOpen, client, onClose, onClientUpdated, allClients }) {
     const {
         formData,
         setFormData,
@@ -33,6 +33,9 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated }) {
       const [searchTerm, setSearchTerm] = useState("");
       const [isAddVisitOpen, setIsAddVisitOpen] = useState(false);
       const [refreshFlag, setRefreshFlag] = useState(false); // do odświeżenia ClientVisits po dodaniu
+      const [selectedBranch, setSelectedBranch] = useState(null);
+      const [isBranchModalOpen, setIsBranchModalOpen] = useState(false);
+
 
 
   const handleSubmit = async (e) => {
@@ -80,6 +83,11 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated }) {
     } else {
       alert('Error saving changes');
     }
+  };
+
+  const handleBranchClick = (branch) => {
+  setSelectedBranch(branch);
+  setIsBranchModalOpen(true);
   };
 
   const formatNumberWithSpaces = (value) => {
@@ -160,6 +168,34 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated }) {
                     <option value="PODHURT_ELEKTRYKA">{t('addClientModal.categories.PODHURT_ELEKTRYKA')}</option>
                     <option value="PROJEKTANT">{t('addClientModal.categories.PROJEKTANT')}</option>
                     </select>
+
+                    {formData.client_category === 'DYSTRYBUTOR_ODDZIAŁ' && (
+                    <label className="text-neutral-800">Siedziba główna<br />
+                      <select
+                        name="index_of_parent"
+                        value={formData.index_of_parent || ''}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            index_of_parent: e.target.value,
+                          }))
+                        }
+                        className='AddSelectClient'
+                        disabled={readOnly}
+                      >
+                        <option value="">Wybierz centralę</option>
+                        {allClients
+                          .filter((c) => c.client_category === 'DYSTRYBUTOR_CENTRALA')
+                          .map((parent) => (
+                            <option key={parent.id} value={parent.client_code_erp}>
+                              {parent.company_name} ({parent.client_code_erp})
+                            </option>
+                          ))}
+                      </select>
+                    </label>
+                  )}
+
+
                   </label>
                  
             </div>
@@ -187,6 +223,29 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated }) {
                   
             </div>
           </div>
+
+          {formData.client_category === 'DYSTRYBUTOR_CENTRALA' && (
+            <div className="mb-6">
+              <h4 className="header2">Oddziały przypisane do tej centrali</h4>
+              <div className="text-black flex flex-col">
+                {allClients
+                  .filter((client) =>
+                    client.client_category === 'DYSTRYBUTOR_ODDZIAŁ' &&
+                    client.index_of_parent === formData.client_code_erp
+                  )
+                  .map((branch) => (
+                    <a
+                      key={branch.id}
+                      className="cursor-pointer hover:text-lime-500"
+                      onClick={() => handleBranchClick(branch)}
+                    >
+                      {branch.company_name}
+                    </a>
+                  ))}
+              </div>
+            </div>
+          )}
+
 
           <div className="flex-col mb-7">
                 <h4 className="header2">{t('addClientModal.location')}</h4>
@@ -475,6 +534,24 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated }) {
             clients={[{ id: client.id, company_name: client.company_name }]}
             fixedClientId={client.id}
           />
+
+          {selectedBranch && (
+            <EditClientModal
+              isOpen={isBranchModalOpen}
+              client={selectedBranch}
+              onClose={() => {
+                setIsBranchModalOpen(false);
+                setSelectedBranch(null);
+              }}
+              onClientUpdated={() => {
+                setIsBranchModalOpen(false);
+                setSelectedBranch(null);
+                onClientUpdated(); // odśwież listę po edycji
+              }}
+              allClients={allClients}
+            />
+          )}
+
 
 
         </div>

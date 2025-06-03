@@ -7,7 +7,7 @@ import { X } from 'lucide-react';
 import CountrySelect from './CountrySelect';
 import { isAdmin, isZarzad } from '../utils/roles';
 
-function AddClientModal({ isOpen, onClose, onClientAdded }) {
+function AddClientModal({ isOpen, onClose, onClientAdded, allClients }) {
   const {
     formData,
     contacts,
@@ -116,6 +116,33 @@ function AddClientModal({ isOpen, onClose, onClientAdded }) {
                     <option value="PODHURT_ELEKTRYKA">{t('addClientModal.categories.PODHURT_ELEKTRYKA')}</option>
                     <option value="PROJEKTANT">{t('addClientModal.categories.PROJEKTANT')}</option>
                   </select>
+
+                  {formData.client_category === 'DYSTRYBUTOR_ODDZIAŁ' && (
+                    <label className="text-neutral-800">Siedziba główna<br />
+                      <select
+                        name="index_of_parent"
+                        value={formData.index_of_parent || ''}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            index_of_parent: e.target.value,
+                          }))
+                        }
+                        className='AddSelectClient'
+                      >
+                        <option value="">Wybierz centralę</option>
+                        {allClients
+                          .filter((c) => c.client_category === 'DYSTRYBUTOR_CENTRALA')
+                          .map((parent) => (
+                            <option key={parent.id} value={parent.client_code_erp}>
+                              {parent.company_name} ({parent.client_code_erp})
+                            </option>
+                          ))}
+                      </select>
+                    </label>
+                  )}
+
+
                 </label>
               </div>
               <div className="flexColumn">

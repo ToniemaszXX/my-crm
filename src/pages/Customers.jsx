@@ -372,6 +372,7 @@ if (filterDateFrom !== '' || filterDateTo !== '') {
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         onClientAdded={fetchClients}
+        allClients={clients}
       />
 
       {selectedClient && (
@@ -383,6 +384,7 @@ if (filterDateFrom !== '' || filterDateTo !== '') {
             setSelectedClient(null);
           }}
           onClientUpdated={fetchClients}
+          allClients={clients}
         />
       )}
 
