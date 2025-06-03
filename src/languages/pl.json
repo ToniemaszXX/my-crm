@@ -51,6 +51,7 @@
       "postalCode": "Kod pocztowy",
       "clientCategory": "Kategoria klienta",
       "selectCategory": "Wybierz kategorie",
+      "categories.KLIENT_POTENCJALNY": "Klient potencjalny",
       "categories.CENTRALA_SIEĆ": "CENTRALA SIEĆ",
       "categories.DEWELOPER": "DEWELOPER",
       "categories.DYSTRYBUTOR_CENTRALA": "DYSTRYBUTOR CENTRALA",

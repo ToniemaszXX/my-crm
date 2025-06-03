@@ -7,21 +7,36 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
+
     const checkSession = async () => {
       try {
         const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/session_check.php`);
         const data = await res.json();
-        if (data.success) {
-          setUser(data.user);
+
+        if (isMounted) {
+          if (data.success) {
+            setUser(data.user);
+          } else {
+            setUser(null);
+          }
         }
       } catch (e) {
         console.error('Session check failed:', e);
+        if (isMounted) setUser(null);
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
 
-    checkSession();
+    checkSession(); // sprawdź przy starcie
+
+    const interval = setInterval(checkSession, 5 * 60 * 1000); // co 5 minut
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
   }, []);
 
   return (

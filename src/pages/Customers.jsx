@@ -20,6 +20,9 @@ function Customers() {
   const [filterCountry, setFilterCountry] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
   const [filterEngoTeamContact, setfilterEngoTeamContact] = useState('');
+  const [filterDateFrom, setFilterDateFrom] = useState('');
+  const [filterDateTo, setFilterDateTo] = useState('');
+
 
 
 
@@ -100,52 +103,80 @@ function Customers() {
       baseClients = baseClients.filter(client =>
         isAssignedToUser(client.engo_team_contact, filterEngoTeamContact));
     }
+
+      // Filter by date range (created_at format: "YYYY-MM-DD HH:MM:SS")
+if (filterDateFrom !== '' || filterDateTo !== '') {
+  baseClients = baseClients.filter(client => {
+    if (!client.created_at) return false;
+
+    const dateOnly = client.created_at.split(' ')[0]; // "2025-06-01"
+
+    if (filterDateFrom && dateOnly < filterDateFrom) return false;
+    if (filterDateTo && dateOnly > filterDateTo) return false;
+
+    return true;
+  });
+}
+
+
   
     // Then apply search query on top of that
     if (searchQuery.trim() === '') {
       setFilteredClients(baseClients);
     } else {
       const lowerQuery = searchQuery.toLowerCase();
-      const filtered = baseClients.filter(
-        (client) =>
-          (client.company_name || '').toLowerCase().includes(lowerQuery) ||
-          (client.client_code_erp || '').toLowerCase().includes(lowerQuery) ||
-          (client.status || '').includes(lowerQuery) ||
-          (client.data_veryfication || '').includes(lowerQuery) ||
-          (client.city || '').toLowerCase().includes(lowerQuery) ||
-          (client.engo_team_contact || '').toLowerCase().includes(lowerQuery) ||
-          (client.country || '').toLowerCase().includes(lowerQuery) ||
-          (client.nip || '').toLowerCase().includes(lowerQuery) ||
-          (client.street || '').toLowerCase().includes(lowerQuery) ||
-          (client.postal_code || '').toLowerCase().includes(lowerQuery) ||
-          (client.voivodeship || '').toLowerCase().includes(lowerQuery) ||
-          (client.client_category || '').toLowerCase().includes(lowerQuery) ||
-          (client.number_of_branches || '').toLowerCase().includes(lowerQuery) ||
-          (client.number_of_sales_reps || '').toLowerCase().includes(lowerQuery) ||
-          (client.www || '').toLowerCase().includes(lowerQuery) ||
-          (client.turnover_pln || '').toLowerCase().includes(lowerQuery) ||
-          (client.turnover_eur || '').toLowerCase().includes(lowerQuery) ||
-          (client.installation_sales_share || '').toLowerCase().includes(lowerQuery) ||
-          (client.automatic_sales_share || '').toLowerCase().includes(lowerQuery) ||
-          (client.sales_potential || '').toLowerCase().includes(lowerQuery) ||
-          (client.has_webstore || '').toLowerCase().includes(lowerQuery) ||
-          (client.has_b2b_platform || '').toLowerCase().includes(lowerQuery) ||
-          (client.has_b2c_platform || '').toLowerCase().includes(lowerQuery) ||
-          (client.facebook || '').toLowerCase().includes(lowerQuery) ||
-          (client.auction_service || '').toLowerCase().includes(lowerQuery) ||
-          (client.private_bran || '').toLowerCase().includes(lowerQuery) ||
-          (client.private_brand_details || '').toLowerCase().includes(lowerQuery) ||
-          (client.loyalty_progra || '').toLowerCase().includes(lowerQuery) ||
-          (client.loyalty_program_details || '').toLowerCase().includes(lowerQuery) ||
-          (client.structure_installe || '').toLowerCase().includes(lowerQuery) ||
-          (client.structure_wholesale || '').toLowerCase().includes(lowerQuery) ||
-          (client.structure_ecommerc || '').toLowerCase().includes(lowerQuery) ||
-          (client.structure_retai || '').toLowerCase().includes(lowerQuery) ||
-          (client.structure_oth || '').toLowerCase().includes(lowerQuery)
-      );
+      const filtered = baseClients.filter((client) => {
+        const query = lowerQuery;
+
+        const baseMatch =
+          (client.company_name || '').toLowerCase().includes(query) ||
+          (client.client_code_erp || '').toLowerCase().includes(query) ||
+          (client.status || '').includes(query) ||
+          (client.data_veryfication || '').includes(query) ||
+          (client.city || '').toLowerCase().includes(query) ||
+          (client.engo_team_contact || '').toLowerCase().includes(query) ||
+          (client.country || '').toLowerCase().includes(query) ||
+          (client.nip || '').toLowerCase().includes(query) ||
+          (client.street || '').toLowerCase().includes(query) ||
+          (client.postal_code || '').toLowerCase().includes(query) ||
+          (client.voivodeship || '').toLowerCase().includes(query) ||
+          (client.client_category || '').toLowerCase().includes(query) ||
+          (client.number_of_branches || '').toLowerCase().includes(query) ||
+          (client.number_of_sales_reps || '').toLowerCase().includes(query) ||
+          (client.www || '').toLowerCase().includes(query) ||
+          (client.turnover_pln || '').toLowerCase().includes(query) ||
+          (client.turnover_eur || '').toLowerCase().includes(query) ||
+          (client.installation_sales_share || '').toLowerCase().includes(query) ||
+          (client.automatic_sales_share || '').toLowerCase().includes(query) ||
+          (client.sales_potential || '').toLowerCase().includes(query) ||
+          (client.has_webstore || '').toLowerCase().includes(query) ||
+          (client.has_b2b_platform || '').toLowerCase().includes(query) ||
+          (client.has_b2c_platform || '').toLowerCase().includes(query) ||
+          (client.facebook || '').toLowerCase().includes(query) ||
+          (client.auction_service || '').toLowerCase().includes(query) ||
+          (client.private_bran || '').toLowerCase().includes(query) ||
+          (client.private_brand_details || '').toLowerCase().includes(query) ||
+          (client.loyalty_progra || '').toLowerCase().includes(query) ||
+          (client.loyalty_program_details || '').toLowerCase().includes(query) ||
+          (client.structure_installe || '').toLowerCase().includes(query) ||
+          (client.structure_wholesale || '').toLowerCase().includes(query) ||
+          (client.structure_ecommerc || '').toLowerCase().includes(query) ||
+          (client.structure_retai || '').toLowerCase().includes(query) ||
+          (client.structure_oth || '').toLowerCase().includes(query);
+
+        const contactsMatch = Array.isArray(client.contacts)
+          ? client.contacts.some(contact =>
+              Object.values(contact).some(
+                (val) => val && String(val).toLowerCase().includes(query)
+              )
+            )
+          : false;
+
+        return baseMatch || contactsMatch;
+      });
       setFilteredClients(filtered);
     }
-  }, [clients, searchQuery, meModeOnly, user, filterStatus, filterCountry, filterCategory, filterEngoTeamContact]);
+  }, [clients, searchQuery, meModeOnly, user, filterStatus, filterCountry, filterCategory, filterEngoTeamContact, filterDateFrom, filterDateTo]);
   
   const resetFilters = () => {
     setFilterStatus('');
@@ -153,6 +184,8 @@ function Customers() {
     setFilterCategory('');
     setfilterEngoTeamContact('');
     setSearchQuery('');
+    setFilterDateFrom('');
+    setFilterDateTo('');
   };
 
   const fetchClients = async () => {
@@ -233,10 +266,14 @@ function Customers() {
     <div className="w-full">
       <h1 className="text-2xl font-bold mb-4">{t('customersTitle')}</h1>
 
-          <div className="mb-5 flex justify-between gap-2 items-center">
-      {!isZarzad(user) && (<button onClick={() => setIsAddModalOpen(true)} className="buttonGreen">
-        {t('addClient')}
-      </button>)}
+          <div className="mb-6 space-y-4">
+  <div className="flex flex-wrap gap-4 items-center justify-between">
+    <div className="flex gap-3 items-center flex-wrap">
+      {!isZarzad(user) && (
+        <button onClick={() => setIsAddModalOpen(true)} className="buttonGreen">
+          {t('addClient')}
+        </button>
+      )}
 
       <label className="flex items-center gap-2">
         <input
@@ -248,62 +285,87 @@ function Customers() {
         {t('meMode')}
       </label>
 
-      <div className="flex gap-4">
-        <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className='pl-1 pr-1 pt-2 pb-2'>
-          <option value="">{t('filter.chooseStatus')}</option>
-          <option value="1">{t('filter.new')}</option>
-          <option value="0">{t('filter.verified')}</option>
-        </select>
+      
+    </div>
 
-        <select value={filterCountry} onChange={(e) => setFilterCountry(e.target.value)} className='pl-1 pr-1 pt-2 pb-2'>
-          <option value="">{t('filter.chooseContry')}</option>
-          {europeanCountries.map((country) => (
-            <option key={country} value={country}>
-              {t('countries.' + country)}
-            </option>
-          ))}
-        </select>
-
-        <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className='pl-1 pr-1 pt-2 pb-2'>
-          
-          <option value="">{t('addClientModal.selectCategory')}</option>
-            <option value="CENTRALA_SIEĆ">{t('addClientModal.categories.CENTRALA_SIEĆ')}</option>
-            <option value="DEWELOPER">{t('addClientModal.categories.DEWELOPER')}</option>
-            <option value="DYSTRYBUTOR">{t('addClientModal.categories.DYSTRYBUTOR')}</option>
-            <option value="DYSTRYBUTOR_CENTRALA">{t('addClientModal.categories.DYSTRYBUTOR_CENTRALA')}</option>
-            <option value="DYSTRYBUTOR_MAGAZYN">{t('addClientModal.categories.DYSTRYBUTOR_MAGAZYN')}</option>
-            <option value="DYSTRYBUTOR_ODDZIAŁ">{t('addClientModal.categories.DYSTRYBUTOR_ODDZIAŁ')}</option>
-            <option value="ENGO_PLUS">{t('addClientModal.categories.ENGO_PLUS')}</option>
-            <option value="INSTALATOR">{t('addClientModal.categories.INSTALATOR')}</option>
-            <option value="PODHURT">{t('addClientModal.categories.PODHURT')}</option>
-            <option value="PODHURT_ELEKTRYKA">{t('addClientModal.categories.PODHURT_ELEKTRYKA')}</option>
-            <option value="PROJEKTANT">{t('addClientModal.categories.PROJEKTANT')}</option>
-        </select>
-
-        <select value={filterEngoTeamContact} onChange={(e) => setfilterEngoTeamContact(e.target.value)} className='pl-1 pr-1 pt-2 pb-2'>
-          <option value="">{t('addClientModal.chooseMember')}</option>
-          {uniqueEngoContacts.map((contact) => (
-            <option key={contact} value={contact}>
-              {contact}
-            </option>
-          ))}
-        </select>
-
-      </div>
-
-      <button onClick={resetFilters} className="buttonRed">
-        {t('filter.reset')}
-      </button>
-
-
+    <div className="w-full sm:w-auto">
       <input
         type="text"
         placeholder={t('searchPlaceholder')}
         value={searchQuery}
         onChange={(e) => handleSearch(e.target.value)}
-        className="p-2 w-72 border rounded m-0"
+        className="p-2 w-full sm:w-72 border rounded"
       />
     </div>
+  </div>
+
+  <div className="flex flex-wrap gap-4 items-center">
+    <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className='pl-1 pr-1 pt-2 pb-2 rounded border'>
+      <option value="">{t('filter.chooseStatus')}</option>
+      <option value="1">{t('filter.new')}</option>
+      <option value="0">{t('filter.verified')}</option>
+    </select>
+
+    <select value={filterCountry} onChange={(e) => setFilterCountry(e.target.value)} className='pl-1 pr-1 pt-2 pb-2 rounded border'>
+      <option value="">{t('filter.chooseContry')}</option>
+      {europeanCountries.map((country) => (
+        <option key={country} value={country}>
+          {t('countries.' + country)}
+        </option>
+      ))}
+    </select>
+
+    <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className='pl-1 pr-1 pt-2 pb-2 rounded border'>
+      <option value="">{t('addClientModal.selectCategory')}</option>
+      <option value="CENTRALA_SIEĆ">{t('addClientModal.categories.CENTRALA_SIEĆ')}</option>
+      <option value="DEWELOPER">{t('addClientModal.categories.DEWELOPER')}</option>
+      <option value="DYSTRYBUTOR">{t('addClientModal.categories.DYSTRYBUTOR')}</option>
+      <option value="DYSTRYBUTOR_CENTRALA">{t('addClientModal.categories.DYSTRYBUTOR_CENTRALA')}</option>
+      <option value="DYSTRYBUTOR_MAGAZYN">{t('addClientModal.categories.DYSTRYBUTOR_MAGAZYN')}</option>
+      <option value="DYSTRYBUTOR_ODDZIAŁ">{t('addClientModal.categories.DYSTRYBUTOR_ODDZIAŁ')}</option>
+      <option value="ENGO_PLUS">{t('addClientModal.categories.ENGO_PLUS')}</option>
+      <option value="INSTALATOR">{t('addClientModal.categories.INSTALATOR')}</option>
+      <option value="PODHURT">{t('addClientModal.categories.PODHURT')}</option>
+      <option value="PODHURT_ELEKTRYKA">{t('addClientModal.categories.PODHURT_ELEKTRYKA')}</option>
+      <option value="PROJEKTANT">{t('addClientModal.categories.PROJEKTANT')}</option>
+    </select>
+
+    <select value={filterEngoTeamContact} onChange={(e) => setfilterEngoTeamContact(e.target.value)} className='pl-1 pr-1 pt-2 pb-2 rounded border'>
+      <option value="">{t('addClientModal.chooseMember')}</option>
+      {uniqueEngoContacts.map((contact) => (
+        <option key={contact} value={contact}>
+          {contact}
+        </option>
+      ))}
+    </select>
+
+    <div className="flex gap-4 items-center flex-wrap">
+      <div>
+        <label className="text-sm text-neutral-300 block">{t('filter.fromDate') || 'Data od'}</label>
+        <input
+          type="date"
+          value={filterDateFrom}
+          onChange={(e) => setFilterDateFrom(e.target.value)}
+          className="p-2 border rounded"
+        />
+      </div>
+      <div>
+        <label className="text-sm text-neutral-300 block">{t('filter.toDate') || 'Data do'}</label>
+        <input
+          type="date"
+          value={filterDateTo}
+          onChange={(e) => setFilterDateTo(e.target.value)}
+          className="p-2 border rounded"
+        />
+      </div>
+    </div>
+
+    <button onClick={resetFilters} className="buttonRed">
+        {t('filter.reset')}
+      </button>
+  </div>
+</div>
+
 
 
       <AddClientModal

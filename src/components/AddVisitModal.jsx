@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { isTsr } from '../utils/roles';
 
-function AddVisitModal({ isOpen, onClose, onVisitAdded, clients }) {
+function AddVisitModal({ isOpen, onClose, onVisitAdded, clients, fixedClientId }) {
   const [formData, setFormData] = useState({
     client_id: "",
     visit_date: "",
@@ -19,6 +19,16 @@ function AddVisitModal({ isOpen, onClose, onVisitAdded, clients }) {
 
   const { t } = useTranslation();
   const { user} = useAuth();
+
+  useEffect(() => {
+  if (isOpen) {
+      setFormData((prev) => ({
+        ...prev,
+        client_id: fixedClientId || prev.client_id || "",
+      }));
+    }
+  }, [isOpen, fixedClientId]);
+
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -85,22 +95,26 @@ function AddVisitModal({ isOpen, onClose, onVisitAdded, clients }) {
         <h2 className="text-xl font-bold mb-4">{t('addVisitModal.addVisit')}</h2>
         <form onSubmit={handleSubmit} className="space-y-3">
 
-        <label class="text-neutral-800">{t('addVisitModal.chooseClient')}
+        <label className="text-neutral-800">{t('addVisitModal.chooseClient')}
           <select
             name="client_id"
             value={formData.client_id}
             onChange={handleChange}
             className="w-full border p-2"
             required
+            disabled={!!fixedClientId}
           >
             <option value="">{t('addVisitModal.chooseClient')}</option>
-            {clients.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.company_name}
-              </option>
+            {[...clients]
+              .sort((a, b) => a.company_name.localeCompare(b.company_name))
+              .map((c) => (
+                <option key={c.id || c.client_id} value={c.id || c.client_id}>
+                  {c.company_name}
+                </option>
             ))}
           </select>
         </label>
+
 
         <label class="text-neutral-800">{t('addVisitModal.setDate')}
           <input

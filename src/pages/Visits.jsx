@@ -2,10 +2,8 @@ import { useState, useEffect } from "react";
 import { useAuth } from '../context/AuthContext';
 import AddVisitModal from "../components/AddVisitModal";
 import EditVisitModal from "../components/EditVisitModal";
-import i18n from '../languages/i18n';
 import { useTranslation } from 'react-i18next';
-import { isAdmin } from '../utils/roles';
-import { isTsr } from '../utils/roles';
+import ClientVisits from "../components/ClientVisits";
 
 function Visits() {
   const { user, loading } = useAuth();
@@ -16,41 +14,30 @@ function Visits() {
   const [selectedVisit, setSelectedVisit] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [allClients, setAllClients] = useState([]);
-  const [viewMode, setViewMode] = useState("all"); // 'all' or 'myVisits'
+  const [viewMode, setViewMode] = useState("all");
   const [expandedVisitId, setExpandedVisitId] = useState(null);
+  const [visitDateFilter, setVisitDateFilter] = useState("");
 
   const { t } = useTranslation();
 
-    useEffect(() => {
-    fetchAllClients();
-    }, []);
-
-    const fetchAllClients = async () => {
-    try {
-        const res = await fetch(`${import.meta.env.VITE_API_URL}/customers/list.php`, {
-        credentials: "include",
-        });
-        const data = await res.json();
-        if (data.success) {
-        setAllClients(data.clients);
-        }
-    } catch (err) {
-        console.error("Błąd pobierania wszystkich klientów", err);
-    }
-    };
-
-    const myVisitsSortedByDate = clients
-  .flatMap(client => 
-    client.visits
-      .filter(visit => visit.user_id === user.id) // zakładam, że `visit.created_by` zawiera ID użytkownika
-      .map(visit => ({ ...visit, clientName: client.company_name }))
-  )
-  .sort((a, b) => new Date(b.visit_date) - new Date(a.visit_date));
-
-
   useEffect(() => {
+    fetchAllClients();
     fetchClients();
   }, []);
+
+  const fetchAllClients = async () => {
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/customers/list.php`, {
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAllClients(data.clients);
+      }
+    } catch (err) {
+      console.error("Błąd pobierania wszystkich klientów", err);
+    }
+  };
 
   const fetchClients = async () => {
     try {
@@ -77,9 +64,40 @@ function Visits() {
     fetchClients();
   };
 
-  const filteredClients = clients.filter((c) =>
-    c.company_name.toLowerCase().includes(search.toLowerCase())
-  );
+  const getFilteredClients = () => {
+    return clients
+      .filter(client =>
+        client.company_name.toLowerCase().includes(search.toLowerCase())
+      )
+      .map(client => {
+        const filteredVisits = (client.visits || []).filter(visit => {
+          if (!visitDateFilter) return true;
+          const date = typeof visit.visit_date === 'string'
+            ? visit.visit_date.slice(0, 10)
+            : new Date(visit.visit_date).toISOString().split('T')[0];
+          return date === visitDateFilter;
+        });
+        return { ...client, visits: filteredVisits };
+      })
+      .filter(client => client.visits.length > 0);
+  };
+
+  const getFilteredMyVisits = () => {
+    return clients
+      .flatMap(client =>
+        client.visits
+          .filter(visit => visit.user_id === user.id)
+          .map(visit => ({ ...visit, clientName: client.company_name }))
+      )
+      .filter(visit => {
+        if (!visitDateFilter) return true;
+        const visitDate = typeof visit.visit_date === 'string'
+          ? visit.visit_date.slice(0, 10)
+          : new Date(visit.visit_date).toISOString().split('T')[0];
+        return visitDate === visitDateFilter;
+      })
+      .sort((a, b) => new Date(b.visit_date) - new Date(a.visit_date));
+  };
 
   if (loading) return <p>{t('loading')}</p>;
 
@@ -87,7 +105,7 @@ function Visits() {
     <div className="w-full">
       <h1 className="text-2xl font-bold mb-4 text-white">{t('visit.visitsLead')}</h1>
 
-      <div className="flex justify-between mb-4 items-center">
+      <div className="flex flex-wrap gap-4 justify-between mb-4 items-center">
         <button onClick={() => setIsAddModalOpen(true)} className="buttonGreen">
           {t('visit.addVisit')}
         </button>
@@ -108,6 +126,20 @@ function Visits() {
         </div>
 
         <input
+          type="date"
+          className="border p-2 rounded"
+          value={visitDateFilter}
+          onChange={(e) => setVisitDateFilter(e.target.value)}
+        />
+
+        <button
+          onClick={() => setVisitDateFilter('')}
+          className="buttonRed"
+        >
+          Reset daty
+        </button>
+
+        <input
           type="text"
           placeholder={t('searchClient')}
           className="border p-2 rounded w-64"
@@ -116,99 +148,43 @@ function Visits() {
         />
       </div>
 
-
       {viewMode === "all" ? (
-        filteredClients.length === 0 ? (
+        getFilteredClients().length === 0 ? (
           <p className="text-white">{t('visit.noClientsWithVisit')}</p>
         ) : (
           <ul className="text-white space-y-2">
-            {filteredClients.length === 0 ? (
-        <p className="text-white">{t('visit.noClientsWithVisit')}</p>
-      ) : (
-        <ul className="text-white space-y-2">
-          {filteredClients.map((client) => (
-            <li key={client.client_id}>
-              <div
-                className="bg-blue-100 text-black font-semibold px-4 py-2 rounded cursor-pointer"
-                onClick={() =>
-                  setSelectedClient(
-                    selectedClient?.client_id === client.client_id
-                      ? null
-                      : client
-                  )
-                }
-              >
-                {client.company_name}
-              </div>
+            {getFilteredClients().map((client) => (
+              <li key={client.client_id}>
+                <div
+                  className="bg-blue-100 text-black font-semibold px-4 py-2 rounded cursor-pointer"
+                  onClick={() =>
+                    setSelectedClient(
+                      selectedClient?.client_id === client.client_id
+                        ? null
+                        : client
+                    )
+                  }
+                >
+                  {client.company_name}
+                </div>
 
-              {selectedClient?.client_id === client.client_id && (
-                <div className="bg-white text-black p-4 rounded mt-2 space-y-2">
-                  {client.visits.map((visit) => {
-                    const createdAt = new Date(visit.created_at);
-                    const now = new Date();
-                    const diffInSeconds = (now - createdAt) / 1000;
-                    const isTsrUser = isTsr(user);
-                    const isAfter24h = diffInSeconds > 86400;
-                    
-                    const canEdit = !isTsrUser || (isTsrUser && !isAfter24h); // tylko TSR ma limit
-
-                    // console.log('visit:', visit);
-                    // console.log('created_at:', visit.created_at);
-                    // console.log('user:', user);
-                    // console.log('isTsr:', isTsr(user));
-
-                    console.log("Zalogowany użytkownik ID:", user?.id);
-                    console.log("Dane klientów z wizytami:", clients);
-                    
-
-                    const handleEditClick = () => {
-                      if (isTsrUser && isAfter24h) {
-                        alert("Nie możesz edytować wizyty po 24 godzinach od jej dodania.");
-                        return;
-                      }
+                {selectedClient?.client_id === client.client_id && (
+                  <ClientVisits
+                    client={client}
+                    onEdit={(visit) => {
                       setSelectedVisit(visit);
                       setIsEditModalOpen(true);
-                    };
-
-                    return (
-                      <div key={visit.visit_id} className="border p-2 rounded flex justify-between items-center">
-                        <div>
-                          <p><strong>{t('visit.date')}:</strong> {visit.visit_date}</p>
-                          <p><strong>{t('visit.whome')}:</strong> {visit.contact_person}</p>
-                          <p><strong>{t('visit.type')}:</strong> {visit.meeting_type}</p>
-                          <p><strong>{t('visit.goal')}:</strong> {visit.meeting_purpose}</p>
-                          <p><strong>Podsumowanie:</strong> {visit.post_meeting_summary}</p>
-                          <p><strong>Plan działań:</strong> {visit.action_plan}</p>
-                        </div>
-                        <button
-                          onClick={handleEditClick}
-                          className={`px-3 py-1 rounded ${
-                            isTsrUser && isAfter24h
-                              ? 'bg-gray-400 text-white cursor-not-allowed'
-                              : 'bg-yellow-400 text-black hover:bg-yellow-500'
-                          }`}
-                        >
-                          Edytuj
-                        </button>
-
-                      </div>
-                    );
-                  })}
-
-
-                </div>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
+                    }}
+                  />
+                )}
+              </li>
+            ))}
           </ul>
         )
       ) : (
         <div className="text-white space-y-2">
-          {myVisitsSortedByDate.map((visit) => {
+          {getFilteredMyVisits().map((visit) => {
             const isExpanded = expandedVisitId === visit.visit_id;
-
             return (
               <div key={visit.visit_id} className="border rounded bg-white text-black">
                 <div
@@ -220,29 +196,30 @@ function Visits() {
 
                 {isExpanded && (
                   <div className="p-4 space-y-1">
-                    <p><strong>Osoba kontaktowa:</strong> {visit.contact_person}</p>
-                    <p><strong>Typ spotkania:</strong> {visit.meeting_type}</p>
+                    <p><strong>Data:</strong> {visit.visit_date}</p>
+                    <p><strong>Utworzono:</strong> {visit.created_at}</p>
+                    <p><strong>Z kim odbyła się wizyta:</strong> {visit.contact_person}</p>
+                    <p><strong>Rodzaj spotkania:</strong> {visit.meeting_type}</p>
                     <p><strong>Cel spotkania:</strong> {visit.meeting_purpose}</p>
-                    {/* Możesz dodać inne pola tutaj: post_meeting_summary, action_plan itd. */}
+                    <p><strong>Podsumowanie po spotkaniu:</strong> {visit.post_meeting_summary}</p>
+                    <p><strong>Zadania marketingowe:</strong> {visit.marketing_tasks}</p>
+                    <p><strong>Plan działania:</strong> {visit.action_plan}</p>
+                    <p><strong>Konkurencja:</strong> {visit.competition_info}</p>
+                    <p><strong>Dodatkowe uwagi:</strong> {visit.additional_notes}</p>
                   </div>
                 )}
               </div>
             );
-          })
-          }
+          })}
         </div>
       )}
 
-
-
-      
-
-        <AddVisitModal
+      <AddVisitModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         onVisitAdded={handleVisitAdded}
         clients={allClients}
-        />
+      />
 
       {selectedVisit && (
         <EditVisitModal

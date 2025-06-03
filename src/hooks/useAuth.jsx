@@ -6,22 +6,35 @@ export default function useAuth() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    let isMounted = true;
+
     const checkSession = async () => {
       try {
         const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/session_check.php`);
         const data = await response.json();
 
-        if (!data.success) {
+        if (isMounted && !data.success) {
           navigate('/login');
         }
       } catch (error) {
-        navigate('/login');
+        if (isMounted) {
+          console.error('Session validation failed:', error);
+          navigate('/login');
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
-    checkSession();
+    checkSession(); // initial check
+
+    const interval = setInterval(checkSession, 5 * 60 * 1000); // co 5 minut
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
   }, [navigate]);
 
   return loading;

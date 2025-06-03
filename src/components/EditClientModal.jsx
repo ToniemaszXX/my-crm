@@ -6,6 +6,9 @@ import { useTranslation } from 'react-i18next';
 import { isReadOnly, isBok } from '../utils/roles';
 import CountrySelect from './CountrySelect';
 import { X } from 'lucide-react';
+import ClientVisits from "./ClientVisits";
+import AddVisitModal from "./AddVisitModal";
+
 
 
 function EditClientModal({ isOpen, client, onClose, onClientUpdated }) {
@@ -28,6 +31,9 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated }) {
       const { user } = useAuth();
       const readOnly = isReadOnly(user);
       const [searchTerm, setSearchTerm] = useState("");
+      const [isAddVisitOpen, setIsAddVisitOpen] = useState(false);
+      const [refreshFlag, setRefreshFlag] = useState(false); // do odświeżenia ClientVisits po dodaniu
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -140,6 +146,7 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated }) {
                   {t('addClientModal.clientCategory')}
                   <select name="client_category" value={formData.client_category} onChange={handleChange} disabled={readOnly} className='AddSelectClient'>
                   <option value="">{t('addClientModal.selectCategory')}</option>
+                    <option value="KLIENT POTENCJALNY">{t('addClientModal.categories.KLIENT_POTENCJALNY')}</option>
                     <option value="CENTRALA_SIEĆ">{t('addClientModal.categories.CENTRALA_SIEĆ')}</option>
                     <option value="DEWELOPER">{t('addClientModal.categories.DEWELOPER')}</option>
                     {/* <option value="DYSTRYBUTOR">{t('addClientModal.categories.DYSTRYBUTOR')}</option> */}
@@ -447,6 +454,30 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated }) {
             </button>
           </div>)}
         </form>
+
+        <div className="mt-10 px-8">
+          <h4 className="header2">{t('editClientModal.visits')}</h4>
+          <button
+            className="buttonGreen"
+            onClick={() => setIsAddVisitOpen(true)}
+          >
+            {t('visit.addVisit')}
+          </button>
+          <ClientVisits clientId={client?.id} key={refreshFlag}/>
+        
+          <AddVisitModal
+            isOpen={isAddVisitOpen}
+            onClose={() => setIsAddVisitOpen(false)}
+            onVisitAdded={() => {
+              setIsAddVisitOpen(false);
+              setRefreshFlag(prev => !prev);
+            }}
+            clients={[{ id: client.id, company_name: client.company_name }]}
+            fixedClientId={client.id}
+          />
+
+
+        </div>
       </div>
     </div>
   );
