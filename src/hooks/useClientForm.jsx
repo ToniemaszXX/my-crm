@@ -93,33 +93,36 @@ export default function useClientForm(initialData = {}) {
     }
   }, [initialData]);
 
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    let newValue;
+ const handleChange = (e) => {
+  const { name, value, type, checked } = e.target;
+  let newValue = type === 'checkbox' ? (checked ? 1 : 0) : value;
 
-    newValue = type === 'checkbox' ? (checked ? 1 : 0) : value;
+  // Przytnij spacje z przodu i końca dla tekstowych pól
+  if (typeof newValue === 'string' && ['country', 'company_name', 'city', 'street', 'nip'].includes(name)) {
+    newValue = newValue.trim();
+  }
 
-    // Jeśli typ to select z wartościami liczbowymi
-    if (name === 'status' || name === 'data_veryfication') {
-      newValue = parseInt(value, 10); // konwersja na number
-    }
+  if (name === 'status' || name === 'data_veryfication') {
+    newValue = parseInt(value, 10);
+  }
 
-    if ([
-      'structure_installer',
-      'structure_wholesaler',
-      'structure_ecommerce',
-      'structure_retail',
-      'structure_other'
-    ].includes(name)) {
-      const numeric = parseInt(newValue, 10);
-      newValue = isNaN(numeric) ? 0 : Math.min(Math.max(numeric, 0), 100);
-    }
+  if ([
+    'structure_installer',
+    'structure_wholesaler',
+    'structure_ecommerce',
+    'structure_retail',
+    'structure_other'
+  ].includes(name)) {
+    const numeric = parseInt(newValue, 10);
+    newValue = isNaN(numeric) ? 0 : Math.min(Math.max(numeric, 0), 100);
+  }
 
-    setFormData((prev) => ({
-      ...prev,
-      [name]: newValue,
-    }));
-  };
+  setFormData((prev) => ({
+    ...prev,
+    [name]: newValue,
+  }));
+};
+
 
   const handleContactChange = (index, e) => {
     const { name, value } = e.target;
