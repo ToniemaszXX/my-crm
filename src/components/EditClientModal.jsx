@@ -9,7 +9,7 @@ import { X } from 'lucide-react';
 import ClientVisits from "./ClientVisits";
 import AddVisitModal from "./AddVisitModal";
 
-const normalizeCategory = (cat) => (cat || '').trim().replace(/\s+/g, '_');
+const normalizeCategory = cat => (cat ? cat.toString() : '').trim().replace(/\s+/g, '_');
 
 function EditClientModal({ isOpen, client, onClose, onClientUpdated, allClients }) {
     const {
@@ -185,7 +185,10 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated, allClients 
                       >
                         <option value="">Wybierz centralę</option>
                         {allClients
-                          .filter((c) => normalizeCategory(c.client_category) === 'DYSTRYBUTOR_CENTRALA')
+                          .filter((c) =>
+                            normalizeCategory(c.client_category) === 'DYSTRYBUTOR_CENTRALA' &&
+                            (c.client_code_erp && c.client_code_erp.trim() !== '')
+                          )
                           .map((parent) => (
                             <option key={parent.id} value={(parent.client_code_erp || '').trim()}>
                               {parent.company_name} ({(parent.client_code_erp || '').trim()})
@@ -224,13 +227,14 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated, allClients 
             </div>
           </div>
 
-          {formData.client_category === 'DYSTRYBUTOR_CENTRALA' && (
+          {normalizeCategory(formData.client_category) === 'DYSTRYBUTOR_CENTRALA' && (
             <div className="mb-6">
               <h4 className="header2">Oddziały przypisane do tej centrali</h4>
               <div className="text-black flex flex-col">
                 {allClients
                   .filter((client) =>
                     normalizeCategory(client.client_category) === 'DYSTRYBUTOR_ODDZIAŁ' &&
+                    (formData.client_code_erp && client.index_of_parent) && // oba muszą być ustawione i nie puste/null
                     (client.index_of_parent || '').trim() === (formData.client_code_erp || '').trim()
                   )
                   .map((branch) => (
@@ -245,6 +249,7 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated, allClients 
               </div>
             </div>
           )}
+
 
 
           <div className="flex-col mb-7">
