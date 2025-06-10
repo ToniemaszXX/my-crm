@@ -7,6 +7,8 @@ import { X } from 'lucide-react';
 import CountrySelect from './CountrySelect';
 import { isAdmin, isZarzad } from '../utils/roles';
 
+const normalizeCategory = cat => (cat ? cat.toString() : '').trim().replace(/\s+/g, '_');
+
 function AddClientModal({ isOpen, onClose, onClientAdded, allClients }) {
   const {
     formData,
@@ -121,23 +123,26 @@ function AddClientModal({ isOpen, onClose, onClientAdded, allClients }) {
                     <label className="text-neutral-800">Siedziba główna<br />
                       <select
                         name="index_of_parent"
-                        value={formData.index_of_parent || ''}
+                        value={(formData.index_of_parent || '').trim()}
                         onChange={(e) =>
                           setFormData((prev) => ({
                             ...prev,
-                            index_of_parent: e.target.value,
+                            index_of_parent: e.target.value.trim(),
                           }))
                         }
                         className='AddSelectClient'
                       >
                         <option value="">Wybierz centralę</option>
                         {allClients
-                          .filter((c) => c.client_category === 'DYSTRYBUTOR_CENTRALA')
+                          .filter((c) =>
+                            normalizeCategory(c.client_category) === 'DYSTRYBUTOR_CENTRALA' &&
+                            (c.client_code_erp && c.client_code_erp.trim() !== '')
+                          )
                           .map((parent) => (
-                            <option key={parent.id} value={parent.client_code_erp}>
-                              {parent.company_name} ({parent.client_code_erp})
+                            <option key={parent.id} value={(parent.client_code_erp || '').trim()}>
+                              {parent.company_name} ({(parent.client_code_erp || '').trim()})
                             </option>
-                          ))}
+                        ))}
                       </select>
                     </label>
                   )}
@@ -343,7 +348,7 @@ function AddClientModal({ isOpen, onClose, onClientAdded, allClients }) {
                 </label>
                 <label className='text-neutral-800'>{t('addClientModal.decisionLevel')}
                   <select name="decision_level" value={contact.decision_level} onChange={(e) => handleContactChange(index, e)} className="contactSelect text-neutral-800">
-                    <option value="">{t('addClientModal.decisionLevel')}</option>
+                    <option value="-">{t('addClientModal.decisionLevel')}</option>
                     <option value="wysoka">{t('addClientModal.decision.high')}</option>
                     <option value="średnia">{t('addClientModal.decision.medium')}</option>
                     <option value="brak">{t('addClientModal.decision.none')}</option>

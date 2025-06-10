@@ -5,7 +5,7 @@ export default function useClientForm(initialData = {}) {
     id: null,
     company_name: '',
     client_code_erp: '',
-    status: '',
+    status: 1,
     data_veryfication: '',
     street: '',
     city: '',
