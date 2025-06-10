@@ -95,8 +95,12 @@ function Customers() {
 
     // Filter by client category
     if (filterCategory !== '') {
-      baseClients = baseClients.filter(client => client.client_category === filterCategory);
+      const normalizedCategory = filterCategory.trim().replace(/\s+/g, '_');
+      baseClients = baseClients.filter(client =>
+        (client.client_category || '').trim().replace(/\s+/g, '_') === normalizedCategory
+      );
     }
+
 
      // Filter by Engo team contact
      if (filterEngoTeamContact !== '') {

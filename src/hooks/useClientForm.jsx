@@ -60,9 +60,9 @@ export default function useClientForm(initialData = {}) {
         voivodeship: initialData.voivodeship || '',
         country: initialData.country || '',
         nip: initialData.nip || '',
-        client_category: initialData.client_category || '',
+        client_category: (initialData.client_category || '').trim().replace(/\s+/g, '_'),
         index_of_parent:  initialData.index_of_parent || '',
-        engo_team_contact: (initialData.engo_team_contact || '').trim(),
+        engo_team_contact: (initialData.engo_team_contact || '').trim() || '',
         number_of_branches: initialData.number_of_branches || '',
         number_of_sales_reps: initialData.number_of_sales_reps || '',
         www: initialData.www || '',
@@ -122,7 +122,6 @@ export default function useClientForm(initialData = {}) {
     [name]: newValue,
   }));
 };
-
 
   const handleContactChange = (index, e) => {
     const { name, value } = e.target;

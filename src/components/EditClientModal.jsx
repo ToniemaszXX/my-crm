@@ -9,7 +9,7 @@ import { X } from 'lucide-react';
 import ClientVisits from "./ClientVisits";
 import AddVisitModal from "./AddVisitModal";
 
-
+const normalizeCategory = (cat) => (cat || '').trim().replace(/\s+/g, '_');
 
 function EditClientModal({ isOpen, client, onClose, onClientUpdated, allClients }) {
     const {
@@ -173,11 +173,11 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated, allClients 
                     <label className="text-neutral-800">Siedziba główna<br />
                       <select
                         name="index_of_parent"
-                        value={formData.index_of_parent || ''}
+                        value={(formData.index_of_parent || '').trim()}
                         onChange={(e) =>
                           setFormData((prev) => ({
                             ...prev,
-                            index_of_parent: e.target.value,
+                            index_of_parent: e.target.value.trim(),
                           }))
                         }
                         className='AddSelectClient'
@@ -185,12 +185,12 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated, allClients 
                       >
                         <option value="">Wybierz centralę</option>
                         {allClients
-                          .filter((c) => c.client_category === 'DYSTRYBUTOR_CENTRALA')
+                          .filter((c) => normalizeCategory(c.client_category) === 'DYSTRYBUTOR_CENTRALA')
                           .map((parent) => (
-                            <option key={parent.id} value={parent.client_code_erp}>
-                              {parent.company_name} ({parent.client_code_erp})
+                            <option key={parent.id} value={(parent.client_code_erp || '').trim()}>
+                              {parent.company_name} ({(parent.client_code_erp || '').trim()})
                             </option>
-                          ))}
+                        ))}
                       </select>
                     </label>
                   )}
@@ -230,8 +230,8 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated, allClients 
               <div className="text-black flex flex-col">
                 {allClients
                   .filter((client) =>
-                    client.client_category === 'DYSTRYBUTOR_ODDZIAŁ' &&
-                    client.index_of_parent === formData.client_code_erp
+                    normalizeCategory(client.client_category) === 'DYSTRYBUTOR_ODDZIAŁ' &&
+                    (client.index_of_parent || '').trim() === (formData.client_code_erp || '').trim()
                   )
                   .map((branch) => (
                     <a
