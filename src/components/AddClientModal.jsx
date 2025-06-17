@@ -30,7 +30,7 @@ function AddClientModal({ isOpen, onClose, onClientAdded, allClients }) {
     e.preventDefault();
     setIsSaving(true);
 
-    const fieldsToTrim = ['company_name', 'country', 'city', 'street', 'nip'];
+    const fieldsToTrim = ['company_name', 'client_code_erp', 'voivodeship', 'country', 'city', 'street', 'nip'];
 
     const cleanedFormData = { ...formData };
     fieldsToTrim.forEach((field) => {

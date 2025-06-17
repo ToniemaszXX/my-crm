@@ -44,7 +44,7 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated, allClients 
 
     let data;
 
-        const fieldsToTrim = ['company_name', 'country', 'city', 'street', 'nip'];
+        const fieldsToTrim = ['company_name', 'client_code_erp', 'voivodeship', 'country', 'city', 'street', 'nip'];
 
     const cleanedFormData = { ...formData };
     fieldsToTrim.forEach((field) => {
