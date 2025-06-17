@@ -30,6 +30,16 @@ function AddClientModal({ isOpen, onClose, onClientAdded, allClients }) {
     e.preventDefault();
     setIsSaving(true);
 
+    const fieldsToTrim = ['company_name', 'country', 'city', 'street', 'nip'];
+
+    const cleanedFormData = { ...formData };
+    fieldsToTrim.forEach((field) => {
+      if (typeof cleanedFormData[field] === 'string') {
+        cleanedFormData[field] = cleanedFormData[field].trim();
+      }
+    });
+
+
 
     const response = await fetch(`${import.meta.env.VITE_API_URL}/customers/add.php`, {
       method: 'POST',
@@ -37,7 +47,7 @@ function AddClientModal({ isOpen, onClose, onClientAdded, allClients }) {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        ...formData,
+        ...cleanedFormData,
         contacts: contacts
       }),
       credentials: 'include'

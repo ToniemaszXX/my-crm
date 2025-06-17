@@ -98,9 +98,9 @@ export default function useClientForm(initialData = {}) {
   let newValue = type === 'checkbox' ? (checked ? 1 : 0) : value;
 
   // Przytnij spacje z przodu i końca dla tekstowych pól
-  if (typeof newValue === 'string' && ['country', 'company_name', 'city', 'street', 'nip'].includes(name)) {
-    newValue = newValue.trim();
-  }
+  // if (typeof newValue === 'string' && ['country', 'company_name', 'city', 'street', 'nip'].includes(name)) {
+  //   newValue = newValue.trim();
+  // }
 
   if (name === 'status' || name === 'data_veryfication') {
     newValue = parseInt(value, 10);

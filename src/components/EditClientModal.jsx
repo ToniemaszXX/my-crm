@@ -44,12 +44,21 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated, allClients 
 
     let data;
 
+        const fieldsToTrim = ['company_name', 'country', 'city', 'street', 'nip'];
+
+    const cleanedFormData = { ...formData };
+    fieldsToTrim.forEach((field) => {
+      if (typeof cleanedFormData[field] === 'string') {
+        cleanedFormData[field] = cleanedFormData[field].trim();
+      }
+    });
+
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/customers/edit.php`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ ...formData, contacts })
+        body: JSON.stringify({ ...cleanedFormData, contacts })
       });
     
       const text = await response.text();
