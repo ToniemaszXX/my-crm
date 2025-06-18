@@ -17,6 +17,8 @@ function Visits() {
   const [viewMode, setViewMode] = useState("all");
   const [expandedVisitId, setExpandedVisitId] = useState(null);
   const [visitDateFilter, setVisitDateFilter] = useState("");
+  const [userFilter, setUserFilter] = useState("");
+
 
   const { t } = useTranslation();
 
@@ -24,6 +26,31 @@ function Visits() {
     fetchAllClients();
     fetchClients();
   }, []);
+
+  const [users, setUsers] = useState([]);
+
+  useEffect(() => {
+    fetch(`${import.meta.env.VITE_API_URL}/users/list.php`, {
+      credentials: "include",
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          setUsers(data.users);
+        }
+      })
+      .catch(err => {
+        console.error("Błąd pobierania użytkowników:", err);
+      });
+  }, []);
+
+  const formatUsername = (username) => {
+    return username
+      .split('.') // rozdziel po kropce
+      .map(part => part.charAt(0).toUpperCase() + part.slice(1)) // wielka litera
+      .join(' '); // połącz spacją
+  };
+
 
   const fetchAllClients = async () => {
     try {
@@ -38,8 +65,6 @@ function Visits() {
       console.error("Błąd pobierania wszystkich klientów", err);
     }
   };
-
-  console.log("Ładowani klienci:", allClients);
 
   const fetchClients = async () => {
     try {
@@ -73,13 +98,18 @@ function Visits() {
       )
       .map(client => {
         const filteredVisits = (client.visits || []).filter(visit => {
-          if (!visitDateFilter) return true;
-          const date = typeof visit.visit_date === 'string'
-            ? visit.visit_date.slice(0, 10)
-            : new Date(visit.visit_date).toISOString().split('T')[0];
-          return date === visitDateFilter;
+          const dateMatch = !visitDateFilter || (
+            typeof visit.visit_date === 'string'
+              ? visit.visit_date.slice(0, 10)
+              : new Date(visit.visit_date).toISOString().split('T')[0]
+          ) === visitDateFilter;
+
+          const userMatch = !userFilter || String(visit.user_id) === String(userFilter);
+
+          return dateMatch && userMatch;
         });
-        return { ...client, visits: filteredVisits };
+
+        return { ...client, visits: filteredVisits }; // <-- ten return był pominięty
       })
       .filter(client => client.visits.length > 0);
   };
@@ -126,6 +156,22 @@ function Visits() {
             Moje wizyty wg daty
           </button>
         </div>
+
+        <select
+          value={userFilter}
+          onChange={(e) => setUserFilter(e.target.value)}
+          className="border p-2 rounded mb-4"
+        >
+          <option value="">{t('visit.allUsers')}</option>
+          {users
+            .filter((u) => u.role === 'tsr' || u.role === 'manager')
+            .map((u) => (
+              <option key={u.id} value={u.id}>
+                 {formatUsername(u.username)}
+              </option>
+          ))}
+        </select>
+
 
         <input
           type="date"

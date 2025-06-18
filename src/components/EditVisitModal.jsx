@@ -106,6 +106,11 @@ useEffect(() => {
     });
 
     const text = await response.text();
+
+    console.log("Wysłano do API:", formData);
+    console.log("Odpowiedź serwera (raw):", text);
+
+
     let data;
     try {
       data = JSON.parse(text);

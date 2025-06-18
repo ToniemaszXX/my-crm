@@ -22,10 +22,6 @@ function AddVisitModal({ isOpen, onClose, onVisitAdded, clients, fixedClientId }
   const [formErrors, setFormErrors] = useState({});
   const [serverError, setServerError] = useState("");
 
-  useEffect(() => {
-  console.log("Klienci w AddVisitModal:", clients);
-  }, [clients]);
-
   const validateForm = () => {
   const errors = {};
   
