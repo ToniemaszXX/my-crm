@@ -19,6 +19,24 @@ function AddVisitModal({ isOpen, onClose, onVisitAdded, clients, fixedClientId }
 
   const { t } = useTranslation();
   const { user} = useAuth();
+  const [formErrors, setFormErrors] = useState({});
+  const [serverError, setServerError] = useState("");
+
+  useEffect(() => {
+  console.log("Klienci w AddVisitModal:", clients);
+  }, [clients]);
+
+  const validateForm = () => {
+  const errors = {};
+  
+  if (!formData.client_id) errors.client_id = t('addVisitModal.errors.requiredClient');
+  if (!formData.visit_date) errors.visit_date = t('addVisitModal.errors.requiredDate');
+  if (!formData.contact_person || formData.contact_person.length < 3)
+    errors.contact_person = t('addVisitModal.errors.invalidContactPerson');
+  
+  return errors;
+};
+
 
   useEffect(() => {
   if (isOpen) {
@@ -27,7 +45,14 @@ function AddVisitModal({ isOpen, onClose, onVisitAdded, clients, fixedClientId }
         client_id: fixedClientId || prev.client_id || "",
       }));
     }
+
+    if (!isOpen) {
+    setServerError("");
+    setFormErrors({});
+  }
+
   }, [isOpen, fixedClientId]);
+
 
 
   const handleChange = (e) => {
@@ -36,43 +61,69 @@ function AddVisitModal({ isOpen, onClose, onVisitAdded, clients, fixedClientId }
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-  
+  e.preventDefault();
+
+  // 1. Frontendowa walidacja
+  const errors = validateForm();
+  if (Object.keys(errors).length > 0) {
+    setFormErrors(errors);
+    setServerError(""); // wyczyść błędy ogólne
+    return;
+  }
+
+  setFormErrors({});
+  setServerError("");
+
+  try {
     const response = await fetch(`${import.meta.env.VITE_API_URL}/visits/add.php`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
       body: JSON.stringify(formData),
     });
-  
+
     const text = await response.text();
-  
+
+    let data;
     try {
-      const data = JSON.parse(text);
-  
-      if (data.success) {
-        onVisitAdded();
-        onClose();
-        setFormData({
-          client_id: "",
-          visit_date: "",
-          contact_person: "",
-          meeting_type: "meeting",
-          meeting_purpose: "",
-          post_meeting_summary: "",
-          marketing_tasks: "",
-          action_plan: "",
-          competition_info: "",
-          additional_notes: "",
-        });
-      } else {
-        alert("Błąd: " + data.message);
-      }
+      data = JSON.parse(text);
     } catch (err) {
-      console.error("Nieprawidłowa odpowiedź serwera:", text);
-      alert("Błąd serwera: " + response.status);
+      console.error("Nieprawidłowa odpowiedź JSON:", text);
+      setServerError("Błąd serwera – nieprawidłowa odpowiedź.");
+      return;
     }
-  };
+
+    if (data.success) {
+      onVisitAdded();
+      onClose();
+      setFormData({
+        client_id: "",
+        visit_date: "",
+        contact_person: "",
+        meeting_type: "meeting",
+        meeting_purpose: "",
+        post_meeting_summary: "",
+        marketing_tasks: "",
+        action_plan: "",
+        competition_info: "",
+        additional_notes: "",
+      });
+      setFormErrors({});
+      setServerError("");
+    } else {
+      if (data.errors) {
+        setFormErrors(data.errors);
+      } else {
+        setServerError(data.message || "Wystąpił błąd serwera.");
+      }
+    }
+  } catch (err) {
+    console.error("Błąd połączenia:", err);
+    setServerError("Błąd połączenia z serwerem. Spróbuj ponownie.");
+  }
+};
+
+
 
   const fields = [
     { name: "meeting_purpose", label: t('addVisitModal.meetingPurpose') },
@@ -101,7 +152,6 @@ function AddVisitModal({ isOpen, onClose, onVisitAdded, clients, fixedClientId }
             value={formData.client_id}
             onChange={handleChange}
             className="w-full border p-2"
-            required
             disabled={!!fixedClientId}
           >
             <option value="">{t('addVisitModal.chooseClient')}</option>
@@ -113,21 +163,26 @@ function AddVisitModal({ isOpen, onClose, onVisitAdded, clients, fixedClientId }
                 </option>
             ))}
           </select>
+          {formErrors.client_id && (
+              <p className="text-red-600 text-sm mt-1">{formErrors.client_id}</p>
+          )}
         </label>
 
 
-        <label class="text-neutral-800">{t('addVisitModal.setDate')}
+        <label className="text-neutral-800">{t('addVisitModal.setDate')}
           <input
             type="date"
             name="visit_date"
             value={formData.visit_date}
             onChange={handleChange}
             className="w-full border p-2"
-            required
           />
+          {formErrors.visit_date && (
+              <p className="text-red-600 text-sm mt-1">{formErrors.visit_date}</p>
+          )}
         </label>
 
-        <label class="text-neutral-800">{t('addVisitModal.contactPerson')}
+        <label className="text-neutral-800">{t('addVisitModal.contactPerson')}
           <input
             type="text"
             name="contact_person"
@@ -135,11 +190,13 @@ function AddVisitModal({ isOpen, onClose, onVisitAdded, clients, fixedClientId }
             value={formData.contact_person}
             onChange={handleChange}
             className="w-full border p-2"
-            required
           />
+            {formErrors.contact_person && (
+              <p className="text-red-600 text-sm mt-1">{formErrors.contact_person}</p>
+            )}
         </label>
 
-        <label class="text-neutral-800">{t('addVisitModal.kindOfMeeting')}
+        <label className="text-neutral-800">{t('addVisitModal.kindOfMeeting')}
           <select
             name="meeting_type"
             value={formData.meeting_type}
@@ -154,7 +211,7 @@ function AddVisitModal({ isOpen, onClose, onVisitAdded, clients, fixedClientId }
           </label> 
 
           {fields.map(({name, label}) => (
-            <label class="text-neutral-800">{label}
+            <label className="text-neutral-800">{label}
             <textarea
               key={name}
               name={name}
@@ -164,6 +221,12 @@ function AddVisitModal({ isOpen, onClose, onVisitAdded, clients, fixedClientId }
             />
             </label>
           ))}
+
+          {serverError && (
+            <div className="text-red-600 font-semibold p-2 border border-red-400 bg-red-100 rounded">
+              {serverError}
+            </div>
+          )}
 
           <div className="flex justify-end gap-2">
             <button type="button" onClick={onClose} className="buttonRed">

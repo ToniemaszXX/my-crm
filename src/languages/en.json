@@ -140,7 +140,12 @@
     "marketingTasks": "Marketing tasks",
     "actionPlan": "Action plan",
     "competitionInfo": "Competition",
-    "additionalNotes": "Additional notes"
+    "additionalNotes": "Additional notes",
+    "errors":{
+        "requiredClient": "Choose client.",
+        "requiredDate": "Choose date.",
+        "invalidContactPerson": "Write contact person (min. 3 signs)."
+      }
   },
   "editVisitModal.editVisit": "Edit visit",
   "visit": {

@@ -17,6 +17,35 @@ function EditVisitModal({ isOpen, onClose, onVisitUpdated, visit, clients }) {
   });
 
   const { t } = useTranslation();
+  const [formErrors, setFormErrors] = useState({});
+  const [serverError, setServerError] = useState("");
+
+  const validateForm = () => {
+  const errors = {};
+  if (!formData.client_id) errors.client_id = t('addVisitModal.errors.requiredClient');
+  if (!formData.visit_date) errors.visit_date = t('addVisitModal.errors.requiredDate');
+  if (!formData.contact_person || formData.contact_person.length < 3)
+    errors.contact_person = t('addVisitModal.errors.invalidContactPerson');
+  return errors;
+};
+
+const [allClients, setAllClients] = useState([]);
+
+useEffect(() => {
+  fetch(`${import.meta.env.VITE_API_URL}/customers/list.php`, {
+    credentials: "include",
+  })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        setAllClients(data.clients);
+      }
+    })
+    .catch(err => {
+      console.error("Błąd pobierania klientów:", err);
+    });
+}, []);
+
 
   useEffect(() => {
     if (isOpen && visit?.visit_id) {
@@ -56,8 +85,19 @@ function EditVisitModal({ isOpen, onClose, onVisitUpdated, visit, clients }) {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
+  const errors = validateForm();
+  if (Object.keys(errors).length > 0) {
+    setFormErrors(errors);
+    setServerError("");
+    return;
+  }
+
+  setFormErrors({});
+  setServerError("");
+
+  try {
     const response = await fetch(`${import.meta.env.VITE_API_URL}/visits/edit.php`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -66,19 +106,31 @@ function EditVisitModal({ isOpen, onClose, onVisitUpdated, visit, clients }) {
     });
 
     const text = await response.text();
+    let data;
     try {
-      const data = JSON.parse(text);
-      if (data.success) {
-        onVisitUpdated();
-        onClose();
-      } else {
-        alert("Błąd: " + data.message);
-      }
+      data = JSON.parse(text);
     } catch (err) {
-      console.error("Nieprawidłowa odpowiedź serwera:", text);
-      alert("Błąd serwera");
+      console.error("Nieprawidłowa odpowiedź JSON:", text);
+      setServerError("Błąd serwera – nieprawidłowa odpowiedź.");
+      return;
     }
-  };
+
+    if (data.success) {
+      onVisitUpdated();
+      onClose();
+    } else {
+      if (data.errors) {
+        setFormErrors(data.errors);
+      } else {
+        setServerError(data.message || "Wystąpił błąd serwera.");
+      }
+    }
+  } catch (err) {
+    console.error("Błąd połączenia:", err);
+    setServerError("Błąd połączenia z serwerem.");
+  }
+};
+
 
   if (!isOpen || !visit) return null;
 
@@ -98,12 +150,19 @@ function EditVisitModal({ isOpen, onClose, onVisitUpdated, visit, clients }) {
             required
           >
             <option value="">{t('addVisitModal.chooseClient')}</option>
-            {clients.map((c) => (
-              <option key={c.id || c.client_id} value={c.id || c.client_id}>
-              {c.company_name}
-            </option>
-            ))}
+            {allClients
+                .filter(c => c.id && c.company_name)
+                .sort((a, b) => a.company_name.localeCompare(b.company_name))
+                .map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.company_name}
+                  </option>
+              ))}
           </select>
+
+          {formErrors.client_id && (
+            <p className="text-red-600 text-sm mt-1">{formErrors.client_id}</p>
+          )}
           </label>
 
           <label class="text-neutral-800">{t('addVisitModal.setDate')} 
@@ -113,8 +172,10 @@ function EditVisitModal({ isOpen, onClose, onVisitUpdated, visit, clients }) {
             value={formData.visit_date}
             onChange={handleChange}
             className="w-full border p-2"
-            required
           />
+          {formErrors.visit_date && (
+            <p className="text-red-600 text-sm mt-1">{formErrors.visit_date}</p>
+          )}
           </label>
 
           <label class="text-neutral-800">{t('addVisitModal.contactPerson')}
@@ -125,8 +186,10 @@ function EditVisitModal({ isOpen, onClose, onVisitUpdated, visit, clients }) {
             value={formData.contact_person}
             onChange={handleChange}
             className="w-full border p-2"
-            required
           />
+          {formErrors.contact_person && (
+            <p className="text-red-600 text-sm mt-1">{formErrors.contact_person}</p>
+          )}
           </label>
 
           <label class="text-neutral-800">{t('addVisitModal.kindOfMeeting')}

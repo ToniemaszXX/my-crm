@@ -136,7 +136,12 @@
       "marketingTasks": "Zadania marketingowe",
       "actionPlan": "Plan działania",
       "competitionInfo": "Konkurencja",
-      "additionalNotes": "Dodatkowe uwagi"
+      "additionalNotes": "Dodatkowe uwagi",
+      "errors":{
+        "requiredClient": "Wybierz klienta.",
+        "requiredDate": "Wybierz datę wizyty.",
+        "invalidContactPerson": "Wpisz osobę kontaktową (min. 3 znaki)."
+      }
     },
     "editClientModal": {
       "editLead": "Edycja klienta",

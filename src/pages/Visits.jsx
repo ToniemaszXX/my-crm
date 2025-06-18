@@ -39,6 +39,8 @@ function Visits() {
     }
   };
 
+  console.log("Ładowani klienci:", allClients);
+
   const fetchClients = async () => {
     try {
       const res = await fetch(`${import.meta.env.VITE_API_URL}/visits/get_visits_by_clients.php`, {

@@ -8,6 +8,8 @@ import CountrySelect from './CountrySelect';
 import { X } from 'lucide-react';
 import ClientVisits from "./ClientVisits";
 import AddVisitModal from "./AddVisitModal";
+import EditVisitModal from './EditVisitModal';
+
 
 const normalizeCategory = cat => (cat ? cat.toString() : '').trim().replace(/\s+/g, '_');
 
@@ -35,6 +37,9 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated, allClients 
       const [refreshFlag, setRefreshFlag] = useState(false); // do odświeżenia ClientVisits po dodaniu
       const [selectedBranch, setSelectedBranch] = useState(null);
       const [isBranchModalOpen, setIsBranchModalOpen] = useState(false);
+      const [selectedVisit, setSelectedVisit] = useState(null);
+      const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
 
 
 
@@ -536,7 +541,18 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated, allClients 
           >
             {t('visit.addVisit')}
           </button>
-          <ClientVisits clientId={client?.id} key={refreshFlag}/>
+          
+          <ClientVisits
+            client={client}
+            clientId={client?.id}
+            key={refreshFlag}
+            onEdit={(visit) => {
+              setSelectedVisit(visit);
+              setIsEditModalOpen(true);
+            }}
+          />
+
+
         
           <AddVisitModal
             isOpen={isAddVisitOpen}
@@ -548,6 +564,24 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated, allClients 
             clients={[{ id: client.id, company_name: client.company_name }]}
             fixedClientId={client.id}
           />
+
+                  {selectedVisit && (
+          <EditVisitModal
+            isOpen={isEditModalOpen}
+            onClose={() => {
+              setIsEditModalOpen(false);
+              setSelectedVisit(null);
+            }}
+            onVisitUpdated={() => {
+              setIsEditModalOpen(false);
+              setSelectedVisit(null);
+              setRefreshFlag(prev => !prev); // odśwież listę
+            }}
+            visit={selectedVisit}
+            clients={[{ id: client.id, company_name: client.company_name }]}
+          />
+        )}
+
 
           {selectedBranch && (
             <EditClientModal
