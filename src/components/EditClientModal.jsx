@@ -99,6 +99,11 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated, allClients 
     }
   };
 
+  function handleNumericWithDotAndSpaceOnly(e) {
+    const cleaned = e.target.value.replace(/[^\d. ]+/g, '');
+    e.target.value = cleaned;
+  }
+
   const handleBranchClick = (branch) => {
   setSelectedBranch(branch);
   setIsBranchModalOpen(true);
@@ -379,6 +384,7 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated, allClients 
                     <input
                       type="text"
                       name="turnover_pln"
+                      onInput={handleNumericWithDotAndSpaceOnly}
                       placeholder=""
                       value={formatNumberWithSpaces(formData.turnover_pln)}
                       onChange={(e) => {
@@ -397,6 +403,7 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated, allClients 
                     <input
                       type="text"
                       name="turnover_eur"
+                      onInput={handleNumericWithDotAndSpaceOnly}
                       placeholder=""
                       value={formatNumberWithSpaces(formData.turnover_eur)}
                       onChange={(e) => {
@@ -412,13 +419,13 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated, allClients 
                     />
                     </label>
                     <label className='text-neutral-800'>{t('addClientModal.installationSales')}
-                    <input type="text" name="installation_sales_share" placeholder="" value={formData.installation_sales_share} onChange={handleChange} readOnly={readOnly}/>
+                    <input type="text" name="installation_sales_share" placeholder="" onInput={handleNumericWithDotAndSpaceOnly} value={formData.installation_sales_share} onChange={handleChange} readOnly={readOnly}/>
                     </label>
                     <label className='text-neutral-800'>{t('addClientModal.automationSales')}
-                    <input type="text" name="automatic_sales_share" placeholder="" value={formData.automatic_sales_share} onChange={handleChange} readOnly={readOnly}/>
+                    <input type="text" name="automatic_sales_share" placeholder="" onInput={handleNumericWithDotAndSpaceOnly} value={formData.automatic_sales_share} onChange={handleChange} readOnly={readOnly}/>
                     </label>
                     <label className='text-neutral-800'>{t('addClientModal.salesPotential')}
-                    <input type="text" name="sales_potential" placeholder="" value={formData.sales_potential} onChange={handleChange} readOnly={readOnly}/>
+                    <input type="text" name="sales_potential" placeholder="" onInput={handleNumericWithDotAndSpaceOnly} value={formData.sales_potential} onChange={handleChange} readOnly={readOnly}/>
                     </label>
                     <label className='text-neutral-800'>{t('addClientModal.webstore')}
                     <input type="text" name="has_webstore" placeholder="" value={formData.has_webstore} onChange={handleChange} readOnly={readOnly}/>

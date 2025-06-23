@@ -39,7 +39,10 @@ function AddClientModal({ isOpen, onClose, onClientAdded, allClients }) {
       }
     });
 
-
+    function handleNumericWithDotAndSpaceOnly(e) {
+      const cleaned = e.target.value.replace(/[^\d. ]+/g, '');
+      e.target.value = cleaned;
+    }
 
     const response = await fetch(`${import.meta.env.VITE_API_URL}/customers/add.php`, {
       method: 'POST',
@@ -267,19 +270,19 @@ function AddClientModal({ isOpen, onClose, onClientAdded, allClients }) {
 
               <div className="flexColumn">
                 <label className="text-neutral-800">{t('addClientModal.turnoverPln')}<br/>
-                  <input type="text" name="turnover_pln" value={formData.turnover_pln} onChange={handleChange} />
+                  <input type="text" name="turnover_pln" onInput={handleNumericWithDotAndSpaceOnly} value={formData.turnover_pln} onChange={handleChange} />
                 </label>
                 <label className="text-neutral-800">{t('addClientModal.turnoverEur')}<br/>
-                  <input type="text" name="turnover_eur" value={formData.turnover_eur} onChange={handleChange} />
+                  <input type="text" name="turnover_eur" onInput={handleNumericWithDotAndSpaceOnly} value={formData.turnover_eur} onChange={handleChange} />
                 </label>
                 <label className="text-neutral-800">{t('addClientModal.installationSales')}<br/>
-                  <input type="text" name="installation_sales_share" value={formData.installation_sales_share} onChange={handleChange} />
+                  <input type="text" name="installation_sales_share" onInput={handleNumericWithDotAndSpaceOnly} value={formData.installation_sales_share} onChange={handleChange} />
                 </label>
                 <label className="text-neutral-800">{t('addClientModal.automationSales')}<br/>
-                  <input type="text" name="automatic_sales_share" value={formData.automatic_sales_share} onChange={handleChange} />
+                  <input type="text" name="automatic_sales_share" onInput={handleNumericWithDotAndSpaceOnly} value={formData.automatic_sales_share} onChange={handleChange} />
                 </label>
                 <label className="text-neutral-800">{t('addClientModal.salesPotential')}<br/>
-                  <input type="text" name="sales_potential" value={formData.sales_potential} onChange={handleChange} />
+                  <input type="text" name="sales_potential" onInput={handleNumericWithDotAndSpaceOnly} value={formData.sales_potential} onChange={handleChange} />
                 </label>
                 <label className="text-neutral-800">{t('addClientModal.webstore')}<br/>
                   <input type="text" name="has_webstore" value={formData.has_webstore} onChange={handleChange} />
