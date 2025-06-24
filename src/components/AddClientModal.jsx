@@ -229,6 +229,7 @@ function AddClientModal({ isOpen, onClose, onClientAdded, allClients }) {
                     <option value="Pawel Kulpa; DOK">Pawel Kulpa, DOK</option>
                     <option value="Bartosz Jamruszkiewicz">Bartosz Jamruszkiewicz</option>
                     <option value="Arna Cizmovic; Bartosz Jamruszkiewicz">Arna Cizmovic, Bartosz Jamruszkiewicz</option>
+                    <option value="Bogdan Iacob; Bartosz Jamruszkiewicz">Bogdan Iacob, Bartosz Jamruszkiewicz</option>
                     <option value="Lukasz Apanel">Lukasz Apanel</option>
                     <option value="Damian Krzyzanowski; Lukasz Apanel">Damian Krzyzanowski, Lukasz Apanel</option>
                     <option value="Egidijus Karitonis; Lukasz Apane">Egidijus Karitonis, Lukasz Apanel</option>
