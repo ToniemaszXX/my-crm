@@ -39,11 +39,6 @@ function AddClientModal({ isOpen, onClose, onClientAdded, allClients }) {
       }
     });
 
-    function handleNumericWithDotAndSpaceOnly(e) {
-      const cleaned = e.target.value.replace(/[^\d. ]+/g, '');
-      e.target.value = cleaned;
-    }
-
     const response = await fetch(`${import.meta.env.VITE_API_URL}/customers/add.php`, {
       method: 'POST',
       headers: {
@@ -71,6 +66,11 @@ function AddClientModal({ isOpen, onClose, onClientAdded, allClients }) {
   };
 
   if (!isOpen) return null;
+
+      function handleNumericWithDotAndSpaceOnly(e) {
+      const cleaned = e.target.value.replace(/[^\d. ]+/g, '');
+      e.target.value = cleaned;
+    }
 
   return (
     <div className='fixed inset-0 bg-black/50 flex justify-center items-center z-[99]'>
