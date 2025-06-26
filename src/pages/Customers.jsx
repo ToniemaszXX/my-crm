@@ -5,6 +5,11 @@ import EditClientModal from '../components/EditClientModal';
 import { useTranslation } from 'react-i18next';
 import { isAdmin, isZarzad } from '../utils/roles';
 import { europeanCountries } from '../components/CountrySelect';
+import useSessionChecker from '../hooks/useSessionChecker';
+import { fetchWithAuth } from '../utils/fetchWithAuth';
+import { checkSessionBeforeSubmit } from '../utils/checkSessionBeforeSubmit';
+
+
 
 function Customers() {
   const { user, loading } = useAuth();
@@ -193,7 +198,7 @@ if (filterDateFrom !== '' || filterDateTo !== '') {
   };
 
   const fetchClients = async () => {
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/customers/list.php`);
+    const response = await fetchWithAuth(`${import.meta.env.VITE_API_URL}/customers/list.php`);
     const data = await response.json();
     if (data.success) {
       const sortedClients = [...data.clients].sort((a, b) => {
@@ -226,17 +231,21 @@ if (filterDateFrom !== '' || filterDateTo !== '') {
   const handleDelete = async (id) => {
     const confirm = window.confirm(t('alertClientRemove'));
     if (!confirm) return;
-  
+
+    const canProceed = await checkSessionBeforeSubmit(); // 🔐 sprawdzenie sesji
+    if (!canProceed) return;
+
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/customers/delete.php`, {
+      const response = await fetchWithAuth(`${import.meta.env.VITE_API_URL}/customers/delete.php`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({ id })
       });
-  
+
+      if (!response) return; // sesja mogła wygasnąć — fetchWithAuth zrobił redirect
+
       const data = await response.json();
-  
+
       if (data.success) {
         alert(t('clientDeleted'));
         fetchClients();
@@ -248,6 +257,7 @@ if (filterDateFrom !== '' || filterDateTo !== '') {
       alert(t('clientDeleteClientError'));
     }
   };
+
 
   const uniqueEngoContacts = [
     ...new Set(

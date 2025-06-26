@@ -13,39 +13,46 @@ function Login() {
   const { setUser } = useAuth();
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
+  try {
     const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/login.php`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ username, password })
     });
 
     const data = await response.json();
 
     if (data.success) {
-      // Pobieramy dane użytkownika z sesji
-      const sessionRes = await fetch(`${import.meta.env.VITE_API_URL}/auth/session_check.php`);
+      const sessionRes = await fetch(`${import.meta.env.VITE_API_URL}/auth/session_check.php`, {
+        credentials: 'include'
+      });
+
       const sessionData = await sessionRes.json();
 
       if (sessionData.success) {
-        setUser(sessionData.user); // <-- ustawiamy użytkownika w kontekście
+        setUser(sessionData.user);
 
         if (data.language) {
           i18n.changeLanguage(data.language);
           localStorage.setItem('lang', data.language);
         }
 
-        navigate('/'); // przekierowanie na dashboard
+        navigate('/');
       } else {
-        setError('Login session failed');
+        setError('Wystąpił błąd sesji. Spróbuj ponownie.');
       }
     } else {
-      setError('Invalid username or password');
+      setError('Nieprawidłowy login lub hasło.');
     }
-  };
+  } catch (err) {
+    console.error('Login error:', err);
+    setError('Błąd połączenia z serwerem.');
+  }
+};
+
 
   return (
     <div className='flex justify-center items-center h-screen w-screen box-border bg-neutral-900'>

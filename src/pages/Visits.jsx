@@ -4,6 +4,9 @@ import AddVisitModal from "../components/AddVisitModal";
 import EditVisitModal from "../components/EditVisitModal";
 import { useTranslation } from 'react-i18next';
 import ClientVisits from "../components/ClientVisits";
+import useSessionChecker from '../hooks/useSessionChecker';
+import { fetchWithAuth } from '../utils/fetchWithAuth';
+
 
 function Visits() {
   const { user, loading } = useAuth();
@@ -19,8 +22,10 @@ function Visits() {
   const [visitDateFilter, setVisitDateFilter] = useState("");
   const [userFilter, setUserFilter] = useState("");
 
-
   const { t } = useTranslation();
+
+  useSessionChecker(); // 🔐 aktywuje sesję
+
 
   useEffect(() => {
     fetchAllClients();
@@ -30,8 +35,7 @@ function Visits() {
   const [users, setUsers] = useState([]);
 
   useEffect(() => {
-    fetch(`${import.meta.env.VITE_API_URL}/users/list.php`, {
-      credentials: "include",
+    fetchWithAuth(`${import.meta.env.VITE_API_URL}/users/list.php`, {
     })
       .then(res => res.json())
       .then(data => {
@@ -54,8 +58,7 @@ function Visits() {
 
   const fetchAllClients = async () => {
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/customers/list.php`, {
-        credentials: "include",
+      const res = await fetchWithAuth(`${import.meta.env.VITE_API_URL}/customers/list.php`, {
       });
       const data = await res.json();
       if (data.success) {
@@ -68,8 +71,7 @@ function Visits() {
 
   const fetchClients = async () => {
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/visits/get_visits_by_clients.php`, {
-        credentials: "include",
+      const res = await fetchWithAuth(`${import.meta.env.VITE_API_URL}/visits/get_visits_by_clients.php`, {
       });
       const data = await res.json();
       if (data.success) {

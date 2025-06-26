@@ -1,5 +1,8 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from 'react-i18next';
+import { checkSessionBeforeSubmit } from '../utils/checkSessionBeforeSubmit';
+import { fetchWithAuth } from '../utils/fetchWithAuth';
+
 
 function EditVisitModal({ isOpen, onClose, onVisitUpdated, visit, clients }) {
   const [formData, setFormData] = useState({
@@ -32,8 +35,7 @@ function EditVisitModal({ isOpen, onClose, onVisitUpdated, visit, clients }) {
 const [allClients, setAllClients] = useState([]);
 
 useEffect(() => {
-  fetch(`${import.meta.env.VITE_API_URL}/customers/list.php`, {
-    credentials: "include",
+  fetchWithAuth(`${import.meta.env.VITE_API_URL}/customers/list.php`, {
   })
     .then(res => res.json())
     .then(data => {
@@ -49,8 +51,7 @@ useEffect(() => {
 
   useEffect(() => {
     if (isOpen && visit?.visit_id) {
-      fetch(`${import.meta.env.VITE_API_URL}/visits/get_visit_by_id.php?id=${visit.visit_id}`, {
-        credentials: "include",
+      fetchWithAuth(`${import.meta.env.VITE_API_URL}/visits/get_visit_by_id.php?id=${visit.visit_id}`, {
       })
         .then((res) => res.json())
         .then((data) => {
@@ -87,6 +88,10 @@ useEffect(() => {
   const handleSubmit = async (e) => {
   e.preventDefault();
 
+  const isSessionOk = await checkSessionBeforeSubmit();
+  if (!isSessionOk) return;
+
+
   const errors = validateForm();
   if (Object.keys(errors).length > 0) {
     setFormErrors(errors);
@@ -98,24 +103,18 @@ useEffect(() => {
   setServerError("");
 
   try {
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/visits/edit.php`, {
+    const response = await fetchWithAuth(`${import.meta.env.VITE_API_URL}/visits/edit.php`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      credentials: "include",
       body: JSON.stringify(formData),
     });
 
     const text = await response.text();
 
-    console.log("Wysłano do API:", formData);
-    console.log("Odpowiedź serwera (raw):", text);
-
-
     let data;
     try {
       data = JSON.parse(text);
     } catch (err) {
-      console.error("Nieprawidłowa odpowiedź JSON:", text);
       setServerError("Błąd serwera – nieprawidłowa odpowiedź.");
       return;
     }
@@ -131,7 +130,6 @@ useEffect(() => {
       }
     }
   } catch (err) {
-    console.error("Błąd połączenia:", err);
     setServerError("Błąd połączenia z serwerem.");
   }
 };
@@ -146,7 +144,7 @@ useEffect(() => {
         <form onSubmit={handleSubmit} className="space-y-3">
           
           
-        <label class="text-neutral-800">{t('addVisitModal.chooseClient')}
+        <label className="text-neutral-800">{t('addVisitModal.chooseClient')}
           <select
             name="client_id"
             value={formData.client_id}
@@ -170,7 +168,7 @@ useEffect(() => {
           )}
           </label>
 
-          <label class="text-neutral-800">{t('addVisitModal.setDate')} 
+          <label className="text-neutral-800">{t('addVisitModal.setDate')} 
           <input
             type="date"
             name="visit_date"
@@ -183,7 +181,7 @@ useEffect(() => {
           )}
           </label>
 
-          <label class="text-neutral-800">{t('addVisitModal.contactPerson')}
+          <label className="text-neutral-800">{t('addVisitModal.contactPerson')}
           <input
             type="text"
             name="contact_person"
@@ -197,7 +195,7 @@ useEffect(() => {
           )}
           </label>
 
-          <label class="text-neutral-800">{t('addVisitModal.kindOfMeeting')}
+          <label className="text-neutral-800">{t('addVisitModal.kindOfMeeting')}
           <select
             name="meeting_type"
             value={formData.meeting_type}

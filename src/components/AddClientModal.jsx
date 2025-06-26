@@ -6,6 +6,9 @@ import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
 import CountrySelect from './CountrySelect';
 import { isAdmin, isZarzad } from '../utils/roles';
+import { checkSessionBeforeSubmit } from '../utils/checkSessionBeforeSubmit';
+import { fetchWithAuth } from '../utils/fetchWithAuth';
+
 
 const normalizeCategory = cat => (cat ? cat.toString() : '').trim().replace(/\s+/g, '_');
 
@@ -30,6 +33,12 @@ function AddClientModal({ isOpen, onClose, onClientAdded, allClients }) {
     e.preventDefault();
     setIsSaving(true);
 
+    const isSessionOk = await checkSessionBeforeSubmit();
+    if (!isSessionOk) {
+      setIsSaving(false);
+      return;
+    }
+
     const fieldsToTrim = ['company_name', 'client_code_erp', 'voivodeship', 'country', 'city', 'street', 'nip'];
 
     const cleanedFormData = { ...formData };
@@ -39,7 +48,7 @@ function AddClientModal({ isOpen, onClose, onClientAdded, allClients }) {
       }
     });
 
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/customers/add.php`, {
+    const response = await fetchWithAuth(`${import.meta.env.VITE_API_URL}/customers/add.php`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -48,7 +57,6 @@ function AddClientModal({ isOpen, onClose, onClientAdded, allClients }) {
         ...cleanedFormData,
         contacts: contacts
       }),
-      credentials: 'include'
     });
 
     const data = await response.json();

@@ -9,6 +9,9 @@ import { X } from 'lucide-react';
 import ClientVisits from "./ClientVisits";
 import AddVisitModal from "./AddVisitModal";
 import EditVisitModal from './EditVisitModal';
+import { checkSessionBeforeSubmit } from '../utils/checkSessionBeforeSubmit';
+import { fetchWithAuth } from '../utils/fetchWithAuth';
+
 
 
 const normalizeCategory = cat => (cat ? cat.toString() : '').trim().replace(/\s+/g, '_');
@@ -47,6 +50,13 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated, allClients 
     e.preventDefault();
     setIsSaving(true);
 
+    const isSessionOk = await checkSessionBeforeSubmit();
+    if (!isSessionOk) {
+      setIsSaving(false);
+      return;
+    }
+
+
     let data;
 
         const fieldsToTrim = ['company_name', 'client_code_erp', 'voivodeship', 'country', 'city', 'street', 'nip'];
@@ -59,7 +69,7 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated, allClients 
     });
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/customers/edit.php`, {
+      const response = await fetchWithAuth(`${import.meta.env.VITE_API_URL}/customers/edit.php`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -88,15 +98,7 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated, allClients 
     } finally {
       setIsSaving(false);
     }
-    
-    setIsSaving(false);
 
-    if (data.success) {
-      onClientUpdated();
-      onClose();
-    } else {
-      alert('Error saving changes');
-    }
   };
 
   function handleNumericWithDotAndSpaceOnly(e) {

@@ -1,10 +1,13 @@
-import useAuth from '../hooks/useAuth';
+import { useAuth } from '../context/AuthContext';
+import useSessionChecker from '../hooks/useSessionChecker';
 import { useTranslation } from 'react-i18next';
+
 
 function Dashboard() {
     const { t } = useTranslation();
+    const { loading } = useAuth();
 
-    const loading = useAuth();
+    useSessionChecker(); // 🔐 pilnuje sesji
 
     if (loading) {
         return <p>{t('loading')}</p>;

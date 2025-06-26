@@ -2,6 +2,9 @@ import { useState, useEffect } from "react";
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { isTsr } from '../utils/roles';
+import { checkSessionBeforeSubmit } from '../utils/checkSessionBeforeSubmit';
+import { fetchWithAuth } from '../utils/fetchWithAuth';
+
 
 function AddVisitModal({ isOpen, onClose, onVisitAdded, clients, fixedClientId }) {
   const [formData, setFormData] = useState({
@@ -57,26 +60,28 @@ function AddVisitModal({ isOpen, onClose, onVisitAdded, clients, fixedClientId }
   };
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  // 1. Frontendowa walidacja
-  const errors = validateForm();
-  if (Object.keys(errors).length > 0) {
-    setFormErrors(errors);
-    setServerError(""); // wyczyść błędy ogólne
-    return;
-  }
+    const errors = validateForm();
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      setServerError("");
+      return;
+    }
 
-  setFormErrors({});
-  setServerError("");
+    setFormErrors({});
+    setServerError("");
 
-  try {
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/visits/add.php`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify(formData),
-    });
+    // 🔐 Dodaj to!
+    const isSessionValid = await checkSessionBeforeSubmit();
+    if (!isSessionValid) return;
+
+    try {
+      const response = await fetchWithAuth(`${import.meta.env.VITE_API_URL}/visits/add.php`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
 
     const text = await response.text();
 
