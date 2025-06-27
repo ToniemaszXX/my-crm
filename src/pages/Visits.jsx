@@ -341,7 +341,7 @@ function Visits() {
             />
 
 
-            <select value={userFilter} onChange={e => setUserFilter(e.target.value)} className="border p-2 rounded">
+            <select value={userFilter} onChange={e => setUserFilter(e.target.value)} className="border p-2 rounded mb-3">
               <option value="">Wybierz handlowca</option>
               {users
                 .filter(u => u.role === 'tsr' || u.role === 'manager')
