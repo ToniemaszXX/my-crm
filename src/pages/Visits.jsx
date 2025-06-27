@@ -360,7 +360,7 @@ function Visits() {
                 setDateToFilter("");
                 setSearch("");
               }}
-              className="buttonRed"
+              className="buttonRed mb-3"
             >
               Reset
             </button>
