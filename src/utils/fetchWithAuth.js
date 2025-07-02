@@ -6,8 +6,17 @@ export function setUnauthorizedHandler(fn) {
 }
 
 export async function fetchWithAuth(url, options = {}) {
+
+  const { bearerToken, headers = {}, ...restOptions } = options;
+
+   const finalHeaders = {
+    ...headers,
+    ...(bearerToken ? { Authorization: `Bearer ${bearerToken}` } : {}),
+  };
+
   const res = await fetch(url, {
     ...options,
+    headers: finalHeaders,
     credentials: 'include',
   });
 

@@ -13,6 +13,11 @@ export default defineConfig({
         target: 'https://qlcontrols.nazwa.pl/engo/CRM', // <-- Twój backend PHP tutaj
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, '/api')
+      },
+      '/ai': {
+        target: 'https://engocontrols.com/AI',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/ai/, ''),
       }
     }
   }

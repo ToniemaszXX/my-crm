@@ -32,6 +32,9 @@ function Sidebar() {
             <Link to="/visits">{t('menu.visits')}</Link>
           </li>
           <li className='mb-3'>
+            <Link to="/trainings">{t('menu.trainings')}</Link>
+          </li>
+          <li className='mb-3'>
             <Link to="/logout">{t('menu.logout')}</Link>
           </li>
         </ul>

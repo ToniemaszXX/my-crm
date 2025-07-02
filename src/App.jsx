@@ -3,6 +3,7 @@ import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
 import Customers from './pages/Customers';
 import Visits from './pages/Visits';
+import Trainings from './pages/Trainings';
 import Login from './pages/Login';
 import Logout from './pages/Logout';
 import { useAuth } from './context/AuthContext';
@@ -51,6 +52,7 @@ function Layout() {
           <Route path="/customers" element={<Customers />} />
           <Route path="/visits" element={<Visits />} />
           <Route path="/logout" element={<Logout />} />
+          <Route path="/trainings" element={<Trainings />} />
         </Routes>
       </div>
 
