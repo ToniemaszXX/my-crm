@@ -308,7 +308,7 @@ if (filterDateFrom !== '' || filterDateTo !== '') {
         placeholder={t('searchPlaceholder')}
         value={searchQuery}
         onChange={(e) => handleSearch(e.target.value)}
-        className="p-2 w-full sm:w-72 border rounded"
+        className="p-2 w-full sm:w-72 border rounded mb-0"
       />
     </div>
   </div>

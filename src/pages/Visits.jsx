@@ -243,8 +243,8 @@ function Visits() {
 
   return (
     <div className="w-full">
-      <div className="flex flex-wrap justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-white mb-4">Wizyty</h1>
+      <div className="flex flex-wrap justify-between items-center mb-4">
+        <h1 className="text-2xl font-bold text-white">Wizyty</h1>
       </div>
       <div className="flex flex-wrap justify-between items-center mb-6 gap-2">
         <button onClick={() => setIsAddModalOpen(true)} className="buttonGreen">

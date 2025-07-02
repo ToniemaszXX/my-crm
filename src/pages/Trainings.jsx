@@ -4,6 +4,12 @@ import useSessionChecker from '../hooks/useSessionChecker';
 import { fetchWithAuth } from '../utils/fetchWithAuth';
 import { useTranslation } from 'react-i18next';
 
+// Pomocniczy lokalny helper do API trainings
+const getTrainingsUrl = (path) => {
+  const base = import.meta.env.VITE_API_TRAININGS;
+  return `${base}${path.startsWith('/') ? '' : '/'}${path}`;
+};
+
 function Trainings() {
   useSessionChecker();
   const { user, loading } = useAuth();
@@ -14,15 +20,16 @@ function Trainings() {
   useEffect(() => {
     const fetchTrainings = async () => {
       try {
-        const response = await fetchWithAuth('/ai/API/szkolenia/list.php', {
-          bearerToken: 'xw9@T3#z7L!uPv2H$r8NmCq5%YdKeF61^AoBjXs3&Zg0WfVtMRyLnJphUEGbDki*',
+        const response = await fetchWithAuth(getTrainingsUrl('/API/szkolenia/list.php'), {
+          bearerToken: import.meta.env.VITE_API_TOKEN,
         });
 
         if (response.ok) {
           const data = await response.json();
           setTrainings(data);
         } else {
-          console.error('Failed to fetch trainings');
+          const error = await response.json();
+          console.error('Failed to fetch trainings:', error);
         }
       } catch (error) {
         console.error('Fetch error:', error);
