@@ -11,6 +11,8 @@ import AddVisitModal from "./AddVisitModal";
 import EditVisitModal from './EditVisitModal';
 import { checkSessionBeforeSubmit } from '../utils/checkSessionBeforeSubmit';
 import { fetchWithAuth } from '../utils/fetchWithAuth';
+import { canEditVisit } from '../utils/visitUtils';
+
 
 
 
@@ -557,6 +559,10 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated, allClients 
             clientId={client?.id}
             key={refreshFlag}
             onEdit={(visit) => {
+              if (!canEditVisit(visit, user)) {
+                alert("Edycja wizyty jest możliwa tylko do 24 godzin od jej utworzenia.");
+                return;
+              }
               setSelectedVisit(visit);
               setIsEditModalOpen(true);
             }}

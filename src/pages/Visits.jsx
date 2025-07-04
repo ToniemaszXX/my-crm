@@ -9,6 +9,8 @@ import { fetchWithAuth } from '../utils/fetchWithAuth';
 import ClientVisitCard from "../components/ClientVisitCard";
 import AllClientVisitsModal from "../components/AllClientVisitsModal";
 import VisitDetails from "../components/VisitDetails";
+import { canEditVisit } from "../utils/visitUtils";
+
 
 
 function Visits() {
@@ -119,6 +121,10 @@ function Visits() {
 
 
   const handleEdit = (visit) => {
+     if (!canEditVisit(visit, user)) {
+    alert("Edycja wizyty jest możliwa tylko do 24 godzin od jej utworzenia.");
+    return;
+  }
     setSelectedVisit(visit);
     setIsEditModalOpen(true);
   };
