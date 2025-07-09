@@ -528,11 +528,11 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated, allClients 
       <option value="brak">{t('addClientModal.decision.none')}</option>
     </select>
     </label>
-    <button className='buttonRed' type="button" onClick={() => handleRemoveContact(i)} disabled={readOnly}>{t('addClientModal.remove')}</button>
+    {!isReadOnly(user) && (<button className='buttonRed' type="button" onClick={() => handleRemoveContact(i)} disabled={readOnly}>{t('addClientModal.remove')}</button>)}
     </div>
   </div>
 ))}
-{!isReadOnly(user) && (<button className='buttonGreenNeg' type="button" onClick={handleAddContact}>{t('addClientModal.addContact')}</button>)}
+<button className='buttonGreenNeg' type="button" onClick={handleAddContact}>{t('addClientModal.addContact')}</button>
 
 
 {!isReadOnly(user) && (<div className='flex justify-end mt-5'>
@@ -546,7 +546,7 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated, allClients 
         </form>
 
         <div className="mt-10 px-8">
-          <h4 className="header2">{t('editClientModal.visits')}</h4>
+          <h4 className="header2">{t('visitsPage.allVisits')}</h4>
           <button
             className="buttonGreen"
             onClick={() => setIsAddVisitOpen(true)}
@@ -560,7 +560,7 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated, allClients 
             key={refreshFlag}
             onEdit={(visit) => {
               if (!canEditVisit(visit, user)) {
-                alert("Edycja wizyty jest możliwa tylko do 24 godzin od jej utworzenia.");
+                alert(t("visitsPage.editRestricted"));
                 return;
               }
               setSelectedVisit(visit);

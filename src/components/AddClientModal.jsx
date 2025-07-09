@@ -186,6 +186,7 @@ function AddClientModal({ isOpen, onClose, onClientAdded, allClients }) {
                     label={t('addClientModal.country')}
                     value={formData.country}
                     onChange={handleChange}
+                    className='AddSelectClient'
                   />
                 <label className="text-neutral-800">{t('addClientModal.postalCode')}<br/>
                   <input type="text" name="postal_code" value={formData.postal_code} onChange={handleChange} />

@@ -40,7 +40,7 @@ function ClientVisits({ client, clientId: propClientId, onEdit }) {
 
   if (!clientId) return null;
   if (loading) return <p>{t('loading')}</p>;
-  if (!visits || visits.length === 0) return <p>{t('visit.noVisits')}</p>;
+  if (!visits || visits.length === 0) return <p>{t('visitsPage.noVisit')}</p>;
 
   return (
     <ul className="bg-white text-black p-4 rounded mt-2 space-y-2">

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import VisitDetails from "./VisitDetails";
+import { useTranslation } from "react-i18next";
 
 // Funkcja pomocnicza do formatowania username → Imię Nazwisko
 const formatUsername = (username) => {
@@ -22,6 +23,7 @@ function ClientVisitCard({ visit, client, onExpand, isExpanded, onEdit, onShowAl
     const country = company?.country || "-";
 
     const toggle = () => setIsOpen(prev => !prev);
+    const { t } = useTranslation();
 
     return (
         <div className="bg-blue-100 text-black font-semibold rounded shadow mb-2">
@@ -41,7 +43,7 @@ function ClientVisitCard({ visit, client, onExpand, isExpanded, onEdit, onShowAl
                         }}
                         className="text-sm bg-white text-gray-800 px-1 py-1 rounded shadow hover:bg-gray-100 transition min-w-[120px]"
                     >
-                        Zobacz historie
+                        {t("visitsPage.showHistory")}
                     </button>
                 )}
             </div>
@@ -57,7 +59,7 @@ function ClientVisitCard({ visit, client, onExpand, isExpanded, onEdit, onShowAl
                                         onClick={() => onEdit(v)}
                                         className="absolute top-2 right-2 text-sm text-white bg-gray-500 hover:bg-gray-700 px-3 py-1 rounded"
                                     >
-                                        Edytuj
+                                        {t("visitsPage.edit")}
                                     </button>
                                 )}
 

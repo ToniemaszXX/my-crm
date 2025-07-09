@@ -10,31 +10,41 @@ const europeanCountries = [
   "Latvia", "Liechtenstein", "Lithuania", "Luxembourg", "Malta", "Moldova", "Monaco",
   "Montenegro", "Netherlands", "North Macedonia", "Norway", "Poland", "Portugal",
   "Romania", "Russia", "San Marino", "Serbia", "Slovakia", "Slovenia", "Spain",
-  "Sweden", "Switzerland", "Turkey", "Ukraine", "UK", "Vatican City"
+  "Sweden", "Switzerland", "Turkey", "Ukraine", "UK", "Vatican City", "Uzbekistan",
+  "Uruguay", "Israel", "Jordan", "Argentina", "Australia", "Azerbaijan", "Brazil",
+  "China", "Georgia", "Hong Kong", "Canada", "South Korea", "India", "Iraq"
 ];
 
-function CountrySelect({ value, onChange, name = 'country', label = 'Country', className = '' }) {
+function CountrySelect({ value, onChange, name = 'country', label = 'Country', className = '', hideLabel = false}) {
 
-    const { t } = useTranslation();
+  const { t } = useTranslation();
 
-    
+  // Mapuj do par [klucz, przetłumaczona nazwa], potem sortuj po tłumaczeniu
+  const sortedCountries = europeanCountries
+    .map((country) => ({
+      key: country,
+      label: t('countries.' + country)
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+
+
   return (
-    <label className="text-neutral-800">
-      {label}<br />
+    <div className="text-neutral-800">
+    {!hideLabel && <label htmlFor={name}>{label}</label>}
       <select
         name={name}
         value={value}
         onChange={onChange}
-        className={`AddSelectClient ${className}`}
+        className={`${className}`}
       >
         <option value="">-- Select a country --</option>
-        {europeanCountries.map((country) => (
-          <option key={country} value={country}>
-            {t('countries.' + country)}
+        {sortedCountries.map((country) => (
+          <option key={country.key} value={country.key}>
+            {country.label}
           </option>
         ))}
       </select>
-    </label>
+      </div>
   );
 }
 

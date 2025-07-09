@@ -122,7 +122,7 @@ function Visits() {
 
   const handleEdit = (visit) => {
      if (!canEditVisit(visit, user)) {
-    alert("Edycja wizyty jest możliwa tylko do 24 godzin od jej utworzenia.");
+    alert(t("visitsPage.editRestricted"));
     return;
   }
     setSelectedVisit(visit);
@@ -250,11 +250,11 @@ function Visits() {
   return (
     <div className="w-full">
       <div className="flex flex-wrap justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold text-white">Wizyty</h1>
+        <h1 className="text-2xl font-bold text-white">{t("visitsTitle")}</h1>
       </div>
       <div className="flex flex-wrap justify-between items-center mb-6 gap-2">
         <button onClick={() => setIsAddModalOpen(true)} className="buttonGreen">
-          Dodaj wizytę
+          {t("addVisit")}
         </button>
         <button
           onClick={toggleOnlyMine}
@@ -263,7 +263,7 @@ function Visits() {
             : "bg-gray-700 text-white border-gray-600 hover:bg-gray-600"
             }`}
         >
-          {onlyMine ? "Tryb: Moje wizyty" : "Tryb: Wszystkie wizyty"}
+          {onlyMine ? t("visitsPage.mineMode") : t("visitsPage.allMode")}
         </button>
 
       </div>
@@ -275,11 +275,11 @@ function Visits() {
         {/* Wizyty z dzisiaj */}
         <section className="bg-gray-800 border border-gray-600 rounded max-h-[450px] overflow-y-auto relative">
           <h2 className="text-lg font-semibold text-white sticky top-0 bg-gray-800 p-4 border-b border-gray-700 z-10">
-            Wizyty z dzisiaj
+            {t('visitsPage.todaysVisit')}
           </h2>
           <div className="p-4 pt-2">
             {getTodayVisits().length === 0 ? (
-              <p className="text-white">Brak wizyt</p>
+              <p className="text-white">{t('visitsPage.noVisit')}</p>
             ) : (
               getTodayVisits().map(visit => (
                 <ClientVisitCard
@@ -296,11 +296,11 @@ function Visits() {
         {/* Wizyty z tego tygodnia */}
         <section className="bg-gray-800 border border-gray-600 rounded max-h-[450px] overflow-y-auto relative">
           <h2 className="text-lg font-semibold text-white sticky top-0 bg-gray-800 p-4 border-b border-gray-700 z-10">
-            Wizyty z tego tygodnia
+            {t('visitsPage.weeksVisit')}
           </h2>
           <div className="p-4 pt-2">
             {getWeekVisits().length === 0 ? (
-              <p className="text-white">Brak wizyt</p>
+              <p className="text-white">{t('visitsPage.noVisit')}</p>
             ) : (
               getWeekVisits().map(visit => (
                 <ClientVisitCard
@@ -324,14 +324,14 @@ function Visits() {
         <div className=" bg-gray-800 p-4 border-b border-gray-700 z-20 flex justify-between">
 
           <h2 className="text-xl font-semibold text-white sticky top-0">
-            Wszystkie wizyty
+           {t('visitsPage.allVisit')}
           </h2>
 
           <button
             onClick={toggleSortMode}
             className="px-4 py-2 rounded border font-medium transition bg-gray-700 text-white border-gray-600 hover:bg-gray-600"
           >
-            Sortuj: {sortMode === "alphabetical" ? "A-Z" : "po dacie"}
+            {t("visitsPage.sortBy")} {sortMode === "alphabetical" ? t("visitsPage.sortAZ") : t("visitsPage.sortDate")}
           </button>
         </div>
 
@@ -342,13 +342,13 @@ function Visits() {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Wyszukaj klienta..."
+              placeholder={t("visitsPage.searchPlaceholder")}
               className="border p-2 rounded w-64"
             />
 
 
             <select value={userFilter} onChange={e => setUserFilter(e.target.value)} className="border p-2 rounded mb-3">
-              <option value="">Wybierz handlowca</option>
+              <option value="">{t("visitsPage.selectUser")}</option>
               {users
                 .filter(u => u.role === 'tsr' || u.role === 'manager')
                 .map(u => (
