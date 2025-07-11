@@ -54,6 +54,8 @@
     "country": "Kraj",
     "postalCode": "Kod pocztowy",
     "clientCategory": "Kategoria klienta",
+    "fairs": "Targi",
+    "competition": "Konkurencja",
     "selectCategory": "Wybierz kategorie",
     "categories.KLIENT_POTENCJALNY": "Klient potencjalny",
     "categories.CENTRALA_SIEĆ": "CENTRALA SIEĆ",

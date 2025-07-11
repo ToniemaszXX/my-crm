@@ -8,6 +8,7 @@ import CountrySelect from './CountrySelect';
 import { isAdmin, isZarzad } from '../utils/roles';
 import { checkSessionBeforeSubmit } from '../utils/checkSessionBeforeSubmit';
 import { fetchWithAuth } from '../utils/fetchWithAuth';
+import { usePreventDoubleSubmit } from '../utils/preventDoubleSubmit';
 
 
 const normalizeCategory = cat => (cat ? cat.toString() : '').trim().replace(/\s+/g, '_');
@@ -73,56 +74,59 @@ function AddClientModal({ isOpen, onClose, onClientAdded, allClients }) {
     setIsSaving(false);
   };
 
+    const wrapSubmit = usePreventDoubleSubmit(); // <== poprawne
+  const safeSubmit = wrapSubmit(handleSubmit);
+
   if (!isOpen) return null;
 
-      function handleNumericWithDotAndSpaceOnly(e) {
-      const cleaned = e.target.value.replace(/[^\d. ]+/g, '');
-      e.target.value = cleaned;
-    }
+  function handleNumericWithDotAndSpaceOnly(e) {
+    const cleaned = e.target.value.replace(/[^\d. ]+/g, '');
+    e.target.value = cleaned;
+  }
 
   return (
     <div className='fixed inset-0 bg-black/50 flex justify-center items-center z-[99]'>
-      
+
       <div className='bg-neutral-100 pb-8 rounded-lg w-[1100px] max-h-[90vh] overflow-y-auto'>
-      <div className="bg-neutral-100 flex justify-between items-center sticky top-0 z-50 p-4 border-b border-neutral-300">
-        <h2 className="text-lime-500 text-xl font-extrabold">{t('addClientModal.title')}</h2>
-        <button
-          className="text-black hover:text-red-500 text-2xl font-bold bg-neutral-300 rounded-lg w-10 h-10 flex items-center justify-center leading-none"
-          onClick={onClose}
-          aria-label="Close modal"
-        >
-          <X size={20} />
-        </button>
+        <div className="bg-neutral-100 flex justify-between items-center sticky top-0 z-50 p-4 border-b border-neutral-300">
+          <h2 className="text-lime-500 text-xl font-extrabold">{t('addClientModal.title')}</h2>
+          <button
+            className="text-black hover:text-red-500 text-2xl font-bold bg-neutral-300 rounded-lg w-10 h-10 flex items-center justify-center leading-none"
+            onClick={onClose}
+            aria-label="Close modal"
+          >
+            <X size={20} />
+          </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="text-white flex flex-col gap-3  pl-8 pr-8">
+        <form onSubmit={safeSubmit} className="text-white flex flex-col gap-3  pl-8 pr-8">
           {/* Podstawowe informacje */}
           <div className="flex-col">
             <h4 className='header2'>{t('addClientModal.companyData')}</h4>
             <div className="grid2col mb-7">
               <div className="flexColumn">
-                <label className="text-neutral-800">{t('addClientModal.companyName')}<br/>
+                <label className="text-neutral-800">{t('addClientModal.companyName')}<br />
                   <input type="text" name="company_name" value={formData.company_name} onChange={handleChange} />
                 </label>
-                <label className="text-neutral-800">{t('addClientModal.client_code_erp')}<br/>
+                <label className="text-neutral-800">{t('addClientModal.client_code_erp')}<br />
                   <input type="text" name="client_code_erp" value={formData.client_code_erp} onChange={handleChange} />
                 </label>
-                <label className="text-neutral-800">{t('addClientModal.status')}<br/>
+                <label className="text-neutral-800">{t('addClientModal.status')}<br />
                   <select name="status" className='AddSelectClient' value={formData.status} onChange={handleChange}>
-                  <option value="1">Nowy</option>
-                  <option value="0">Zweryfikowany</option>
+                    <option value="1">Nowy</option>
+                    <option value="0">Zweryfikowany</option>
                   </select>
                 </label>
-                <label className="text-neutral-800">{t('addClientModal.data_veryfication')}<br/>
-                  <select name="data_veryfication" className='AddSelectClient' value={formData.data_veryfication}  onChange={handleChange}>
-                  <option value="0">Brak danych</option>
-                  <option value="1">Gotowe</option>
+                <label className="text-neutral-800">{t('addClientModal.data_veryfication')}<br />
+                  <select name="data_veryfication" className='AddSelectClient' value={formData.data_veryfication} onChange={handleChange}>
+                    <option value="0">Brak danych</option>
+                    <option value="1">Gotowe</option>
                   </select>
                 </label>
-                <label className="text-neutral-800">{t('addClientModal.nip')}<br/>
+                <label className="text-neutral-800">{t('addClientModal.nip')}<br />
                   <input type="text" name="nip" value={formData.nip} onChange={handleChange} />
                 </label>
-                <label className="text-neutral-800">{t('addClientModal.clientCategory')}<br/>
+                <label className="text-neutral-800">{t('addClientModal.clientCategory')}<br />
                   <select name="client_category" value={formData.client_category} onChange={handleChange} className='AddSelectClient'>
                     <option value="">{t('addClientModal.selectCategory')}</option>
                     <option value="KLIENT POTENCJALNY">{t('addClientModal.categories.KLIENT_POTENCJALNY')}</option>
@@ -163,7 +167,7 @@ function AddClientModal({ isOpen, onClose, onClientAdded, allClients }) {
                             <option key={parent.id} value={(parent.client_code_erp || '').trim()}>
                               {parent.company_name} ({(parent.client_code_erp || '').trim()})
                             </option>
-                        ))}
+                          ))}
                       </select>
                     </label>
                   )}
@@ -172,26 +176,34 @@ function AddClientModal({ isOpen, onClose, onClientAdded, allClients }) {
                 </label>
               </div>
               <div className="flexColumn">
-              
-                <label className="text-neutral-800">{t('addClientModal.street')}<br/>
+
+                <label className="text-neutral-800">{t('addClientModal.street')}<br />
                   <input type="text" name="street" value={formData.street} onChange={handleChange} />
                 </label>
-                <label className="text-neutral-800">{t('addClientModal.city')}<br/>
+                <label className="text-neutral-800">{t('addClientModal.city')}<br />
                   <input type="text" name="city" value={formData.city} onChange={handleChange} />
                 </label>
-                <label className="text-neutral-800">{t('addClientModal.voivodeship')}<br/>
+                <label className="text-neutral-800">{t('addClientModal.voivodeship')}<br />
                   <input type="text" name="voivodeship" value={formData.voivodeship} onChange={handleChange} />
                 </label>
                 <CountrySelect
-                    label={t('addClientModal.country')}
-                    value={formData.country}
-                    onChange={handleChange}
-                    className='AddSelectClient'
-                  />
-                <label className="text-neutral-800">{t('addClientModal.postalCode')}<br/>
+                  label={t('addClientModal.country')}
+                  value={formData.country}
+                  onChange={handleChange}
+                  className='AddSelectClient'
+                />
+                <label className="text-neutral-800">{t('addClientModal.postalCode')}<br />
                   <input type="text" name="postal_code" value={formData.postal_code} onChange={handleChange} />
                 </label>
-                
+
+                <label className="text-neutral-800">{t('addClientModal.fairs')}<br />
+                  <input type="text" name="fairs" value={formData.fairs} onChange={handleChange} />
+                </label>
+
+                <label className="text-neutral-800">{t('addClientModal.competition')}<br />
+                  <input type="text" name="competition" value={formData.competition} onChange={handleChange} />
+                </label>
+
               </div>
             </div>
           </div>
@@ -200,10 +212,10 @@ function AddClientModal({ isOpen, onClose, onClientAdded, allClients }) {
           <div className="flex-col mb-7">
             <h4 className="header2">{t('addClientModal.location')}</h4>
             <div className="grid2col mb-4">
-              <label className="text-neutral-800">{t('addClientModal.latitude')}<br/>
+              <label className="text-neutral-800">{t('addClientModal.latitude')}<br />
                 <input type="text" name="latitude" value={formData.latitude} onChange={handleChange} />
               </label>
-              <label className="text-neutral-800">{t('addClientModal.longitude')}<br/>
+              <label className="text-neutral-800">{t('addClientModal.longitude')}<br />
                 <input type="text" name="longitude" value={formData.longitude} onChange={handleChange} />
               </label>
             </div>
@@ -232,7 +244,7 @@ function AddClientModal({ isOpen, onClose, onClientAdded, allClients }) {
             <div className='grid2col'>
               <div className="flexColumn">
 
-              <label className="text-neutral-800">{t('addClientModal.engoTeamContact')}<br/>
+                <label className="text-neutral-800">{t('addClientModal.engoTeamContact')}<br />
                   <select name="engo_team_contact" value={formData.engo_team_contact} onChange={handleChange} className='AddSelectClient'>
                     <option value="">{t('addClientModal.chooseMember')}</option>
                     <option value="Pawel Kulpa; DOK">Pawel Kulpa, DOK</option>
@@ -245,19 +257,19 @@ function AddClientModal({ isOpen, onClose, onClientAdded, allClients }) {
                   </select>
                 </label>
 
-                <label className="text-neutral-800">{t('addClientModal.branches')}<br/>
+                <label className="text-neutral-800">{t('addClientModal.branches')}<br />
                   <input type="text" name="number_of_branches" value={formData.number_of_branches} onChange={handleChange} />
                 </label>
-                <label className="text-neutral-800">{t('addClientModal.salesReps')}<br/>
+                <label className="text-neutral-800">{t('addClientModal.salesReps')}<br />
                   <input type="text" name="number_of_sales_reps" value={formData.number_of_sales_reps} onChange={handleChange} />
                 </label>
-                <label className="text-neutral-800">{t('addClientModal.www')}<br/>
+                <label className="text-neutral-800">{t('addClientModal.www')}<br />
                   <input type="text" name="www" value={formData.www} onChange={handleChange} />
                 </label>
-                <label className="text-neutral-800">{t('addClientModal.facebook')}<br/>
+                <label className="text-neutral-800">{t('addClientModal.facebook')}<br />
                   <input type="text" name="facebook" value={formData.facebook} onChange={handleChange} />
                 </label>
-                <label className="text-neutral-800">{t('addClientModal.auctionService')}<br/>
+                <label className="text-neutral-800">{t('addClientModal.auctionService')}<br />
                   <input type="text" name="auction_service" value={formData.auction_service} onChange={handleChange} />
                 </label>
                 <label className="text-neutral-800">
@@ -269,38 +281,38 @@ function AddClientModal({ isOpen, onClose, onClientAdded, allClients }) {
                   </label>
                 )}
                 <label className="text-neutral-800">
-                  <input type="checkbox" name="loyalty_program" checked={formData.loyalty_program} onChange={handleChange} />{t('addClientModal.loyaltyProgram')}<br/>
+                  <input type="checkbox" name="loyalty_program" checked={formData.loyalty_program} onChange={handleChange} />{t('addClientModal.loyaltyProgram')}<br />
                 </label>
                 {formData.loyalty_program === 1 && (
-                  <label className="text-neutral-800">{t('addClientModal.loyaltyProgramDetails')}<br/>
+                  <label className="text-neutral-800">{t('addClientModal.loyaltyProgramDetails')}<br />
                     <input type="text" name="loyalty_program_details" value={formData.loyalty_program_details} onChange={handleChange} />
                   </label>
                 )}
               </div>
 
               <div className="flexColumn">
-                <label className="text-neutral-800">{t('addClientModal.turnoverPln')}<br/>
+                <label className="text-neutral-800">{t('addClientModal.turnoverPln')}<br />
                   <input type="text" name="turnover_pln" onInput={handleNumericWithDotAndSpaceOnly} value={formData.turnover_pln} onChange={handleChange} />
                 </label>
-                <label className="text-neutral-800">{t('addClientModal.turnoverEur')}<br/>
+                <label className="text-neutral-800">{t('addClientModal.turnoverEur')}<br />
                   <input type="text" name="turnover_eur" onInput={handleNumericWithDotAndSpaceOnly} value={formData.turnover_eur} onChange={handleChange} />
                 </label>
-                <label className="text-neutral-800">{t('addClientModal.installationSales')}<br/>
+                <label className="text-neutral-800">{t('addClientModal.installationSales')}<br />
                   <input type="text" name="installation_sales_share" onInput={handleNumericWithDotAndSpaceOnly} value={formData.installation_sales_share} onChange={handleChange} />
                 </label>
-                <label className="text-neutral-800">{t('addClientModal.automationSales')}<br/>
+                <label className="text-neutral-800">{t('addClientModal.automationSales')}<br />
                   <input type="text" name="automatic_sales_share" onInput={handleNumericWithDotAndSpaceOnly} value={formData.automatic_sales_share} onChange={handleChange} />
                 </label>
-                <label className="text-neutral-800">{t('addClientModal.salesPotential')}<br/>
+                <label className="text-neutral-800">{t('addClientModal.salesPotential')}<br />
                   <input type="text" name="sales_potential" onInput={handleNumericWithDotAndSpaceOnly} value={formData.sales_potential} onChange={handleChange} />
                 </label>
-                <label className="text-neutral-800">{t('addClientModal.webstore')}<br/>
+                <label className="text-neutral-800">{t('addClientModal.webstore')}<br />
                   <input type="text" name="has_webstore" value={formData.has_webstore} onChange={handleChange} />
                 </label>
-                <label className="text-neutral-800">{t('addClientModal.b2b')}<br/>
+                <label className="text-neutral-800">{t('addClientModal.b2b')}<br />
                   <input type="text" name="has_b2b_platform" value={formData.has_b2b_platform} onChange={handleChange} />
                 </label>
-                <label className="text-neutral-800">{t('addClientModal.b2c')}<br/>
+                <label className="text-neutral-800">{t('addClientModal.b2c')}<br />
                   <input type="text" name="has_b2c_platform" value={formData.has_b2c_platform} onChange={handleChange} />
                 </label>
               </div>
@@ -308,8 +320,8 @@ function AddClientModal({ isOpen, onClose, onClientAdded, allClients }) {
           </div>
 
 
-                
-                      {/* Sales Structure */}
+
+          {/* Sales Structure */}
           <h4 className='header2'>{t('addClientModal.salesStructure')}</h4>
           {isStructureInvalid && (
             <div style={{ color: 'red', fontWeight: 'bold', marginBottom: '10px' }}>
@@ -317,19 +329,19 @@ function AddClientModal({ isOpen, onClose, onClientAdded, allClients }) {
             </div>
           )}
           <div className="flexColumn mb-7">
-            <label className='text-neutral-800'>{t('addClientModal.structure.installer')}<br/>
+            <label className='text-neutral-800'>{t('addClientModal.structure.installer')}<br />
               <input type="number" name="structure_installer" value={formData.structure_installer} onChange={handleChange} />
             </label>
-            <label className='text-neutral-800'>{t('addClientModal.structure.wholesaler')}<br/>
+            <label className='text-neutral-800'>{t('addClientModal.structure.wholesaler')}<br />
               <input type="number" name="structure_wholesaler" value={formData.structure_wholesaler} onChange={handleChange} />
             </label>
-            <label className='text-neutral-800'>{t('addClientModal.structure.ecommerce')}<br/>
+            <label className='text-neutral-800'>{t('addClientModal.structure.ecommerce')}<br />
               <input type="number" name="structure_ecommerce" value={formData.structure_ecommerce} onChange={handleChange} />
             </label>
-            <label className='text-neutral-800'>{t('addClientModal.structure.retail')}<br/>
+            <label className='text-neutral-800'>{t('addClientModal.structure.retail')}<br />
               <input type="number" name="structure_retail" value={formData.structure_retail} onChange={handleChange} />
             </label>
-            <label className='text-neutral-800'>{t('addClientModal.structure.other')}<br/>
+            <label className='text-neutral-800'>{t('addClientModal.structure.other')}<br />
               <input type="number" name="structure_other" value={formData.structure_other} onChange={handleChange} />
             </label>
           </div>
@@ -338,7 +350,7 @@ function AddClientModal({ isOpen, onClose, onClientAdded, allClients }) {
           <h4 className='header2'>{t('addClientModal.contact')}</h4>
           {contacts.map((contact, index) => (
             <div key={index} className='contactBlock'>
-              <label className='text-neutral-800'> 
+              <label className='text-neutral-800'>
                 <select name="department" value={contact.department} onChange={(e) => handleContactChange(index, e)} className="contactSelect mb-4">
                   <option value="">{t('addClientModal.selectDepartment')}</option>
                   <option value="Zarząd">{t('addClientModal.departments.management')}</option>

@@ -151,6 +151,8 @@ function Customers() {
           (client.postal_code || '').toLowerCase().includes(query) ||
           (client.voivodeship || '').toLowerCase().includes(query) ||
           (client.client_category || '').toLowerCase().includes(query) ||
+          (client.fairs || '').toLowerCase().includes(query) ||
+          (client.competition || '').toLowerCase().includes(query) ||
           (client.number_of_branches || '').toLowerCase().includes(query) ||
           (client.number_of_sales_reps || '').toLowerCase().includes(query) ||
           (client.www || '').toLowerCase().includes(query) ||

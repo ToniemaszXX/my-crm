@@ -14,6 +14,8 @@ export default function useClientForm(initialData = {}) {
     country: '',
     nip: '',
     client_category: '',
+    fairs: '',
+    competition: '',
     index_of_parent: '',
     engo_team_contact: '',
     number_of_branches: '',
@@ -61,7 +63,9 @@ export default function useClientForm(initialData = {}) {
         country: initialData.country || '',
         nip: initialData.nip || '',
         client_category: (initialData.client_category || '').trim().replace(/\s+/g, '_'),
-        index_of_parent:  initialData.index_of_parent || '',
+        fairs: initialData.fairs || '',
+        competition: initialData.competition || '',
+        index_of_parent: initialData.index_of_parent || '',
         engo_team_contact: (initialData.engo_team_contact || '').trim() || '',
         number_of_branches: initialData.number_of_branches || '',
         number_of_sales_reps: initialData.number_of_sales_reps || '',
@@ -93,35 +97,35 @@ export default function useClientForm(initialData = {}) {
     }
   }, [initialData]);
 
- const handleChange = (e) => {
-  const { name, value, type, checked } = e.target;
-  let newValue = type === 'checkbox' ? (checked ? 1 : 0) : value;
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    let newValue = type === 'checkbox' ? (checked ? 1 : 0) : value;
 
-  // Przytnij spacje z przodu i końca dla tekstowych pól
-  // if (typeof newValue === 'string' && ['country', 'company_name', 'city', 'street', 'nip'].includes(name)) {
-  //   newValue = newValue.trim();
-  // }
+    // Przytnij spacje z przodu i końca dla tekstowych pól
+    // if (typeof newValue === 'string' && ['country', 'company_name', 'city', 'street', 'nip'].includes(name)) {
+    //   newValue = newValue.trim();
+    // }
 
-  if (name === 'status' || name === 'data_veryfication') {
-    newValue = parseInt(value, 10);
-  }
+    if (name === 'status' || name === 'data_veryfication') {
+      newValue = parseInt(value, 10);
+    }
 
-  if ([
-    'structure_installer',
-    'structure_wholesaler',
-    'structure_ecommerce',
-    'structure_retail',
-    'structure_other'
-  ].includes(name)) {
-    const numeric = parseInt(newValue, 10);
-    newValue = isNaN(numeric) ? 0 : Math.min(Math.max(numeric, 0), 100);
-  }
+    if ([
+      'structure_installer',
+      'structure_wholesaler',
+      'structure_ecommerce',
+      'structure_retail',
+      'structure_other'
+    ].includes(name)) {
+      const numeric = parseInt(newValue, 10);
+      newValue = isNaN(numeric) ? 0 : Math.min(Math.max(numeric, 0), 100);
+    }
 
-  setFormData((prev) => ({
-    ...prev,
-    [name]: newValue,
-  }));
-};
+    setFormData((prev) => ({
+      ...prev,
+      [name]: newValue,
+    }));
+  };
 
   const handleContactChange = (index, e) => {
     const { name, value } = e.target;
@@ -156,7 +160,9 @@ export default function useClientForm(initialData = {}) {
       country: '',
       nip: '',
       client_category: '',
-      index_of_parent:'',
+      fairs: '',
+      competition: '',
+      index_of_parent: '',
       engo_team_contact: '',
       number_of_branches: '',
       number_of_sales_reps: '',

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useTranslation } from 'react-i18next';
 import { checkSessionBeforeSubmit } from '../utils/checkSessionBeforeSubmit';
 import { fetchWithAuth } from '../utils/fetchWithAuth';
+import { usePreventDoubleSubmit } from '../utils/preventDoubleSubmit';
 
 
 function EditVisitModal({ isOpen, onClose, onVisitUpdated, visit, clients }) {
@@ -24,29 +25,29 @@ function EditVisitModal({ isOpen, onClose, onVisitUpdated, visit, clients }) {
   const [serverError, setServerError] = useState("");
 
   const validateForm = () => {
-  const errors = {};
-  if (!formData.client_id) errors.client_id = t('addVisitModal.errors.requiredClient');
-  if (!formData.visit_date) errors.visit_date = t('addVisitModal.errors.requiredDate');
-  if (!formData.contact_person || formData.contact_person.length < 3)
-    errors.contact_person = t('addVisitModal.errors.invalidContactPerson');
-  return errors;
-};
+    const errors = {};
+    if (!formData.client_id) errors.client_id = t('addVisitModal.errors.requiredClient');
+    if (!formData.visit_date) errors.visit_date = t('addVisitModal.errors.requiredDate');
+    if (!formData.contact_person || formData.contact_person.length < 3)
+      errors.contact_person = t('addVisitModal.errors.invalidContactPerson');
+    return errors;
+  };
 
-const [allClients, setAllClients] = useState([]);
+  const [allClients, setAllClients] = useState([]);
 
-useEffect(() => {
-  fetchWithAuth(`${import.meta.env.VITE_API_URL}/customers/list.php`, {
-  })
-    .then(res => res.json())
-    .then(data => {
-      if (data.success) {
-        setAllClients(data.clients);
-      }
+  useEffect(() => {
+    fetchWithAuth(`${import.meta.env.VITE_API_URL}/customers/list.php`, {
     })
-    .catch(err => {
-      console.error("Błąd pobierania klientów:", err);
-    });
-}, []);
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          setAllClients(data.clients);
+        }
+      })
+      .catch(err => {
+        console.error("Błąd pobierania klientów:", err);
+      });
+  }, []);
 
 
   useEffect(() => {
@@ -86,53 +87,56 @@ useEffect(() => {
   };
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  const isSessionOk = await checkSessionBeforeSubmit();
-  if (!isSessionOk) return;
+    const isSessionOk = await checkSessionBeforeSubmit();
+    if (!isSessionOk) return;
 
 
-  const errors = validateForm();
-  if (Object.keys(errors).length > 0) {
-    setFormErrors(errors);
-    setServerError("");
-    return;
-  }
-
-  setFormErrors({});
-  setServerError("");
-
-  try {
-    const response = await fetchWithAuth(`${import.meta.env.VITE_API_URL}/visits/edit.php`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(formData),
-    });
-
-    const text = await response.text();
-
-    let data;
-    try {
-      data = JSON.parse(text);
-    } catch (err) {
-      setServerError("Błąd serwera – nieprawidłowa odpowiedź.");
+    const errors = validateForm();
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      setServerError("");
       return;
     }
 
-    if (data.success) {
-      onVisitUpdated();
-      onClose();
-    } else {
-      if (data.errors) {
-        setFormErrors(data.errors);
-      } else {
-        setServerError(data.message || "Wystąpił błąd serwera.");
+    setFormErrors({});
+    setServerError("");
+
+    try {
+      const response = await fetchWithAuth(`${import.meta.env.VITE_API_URL}/visits/edit.php`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+
+      const text = await response.text();
+
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (err) {
+        setServerError("Błąd serwera – nieprawidłowa odpowiedź.");
+        return;
       }
+
+      if (data.success) {
+        onVisitUpdated();
+        onClose();
+      } else {
+        if (data.errors) {
+          setFormErrors(data.errors);
+        } else {
+          setServerError(data.message || "Wystąpił błąd serwera.");
+        }
+      }
+    } catch (err) {
+      setServerError("Błąd połączenia z serwerem.");
     }
-  } catch (err) {
-    setServerError("Błąd połączenia z serwerem.");
-  }
-};
+  };
+
+  const wrapSubmit = usePreventDoubleSubmit(); // <== poprawne
+  const safeSubmit = wrapSubmit(handleSubmit);
 
 
   if (!isOpen || !visit) return null;
@@ -141,72 +145,72 @@ useEffect(() => {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-start pt-20  z-[99]">
       <div className="bg-white text-black p-6 rounded-lg w-[600px] max-h-[90vh] overflow-y-auto">
         <h2 className="text-xl font-bold mb-4">{t('editVisitModal.editVisit')}</h2>
-        <form onSubmit={handleSubmit} className="space-y-3">
-          
-          
-        <label className="text-neutral-800">{t('addVisitModal.chooseClient')}
-          <select
-            name="client_id"
-            value={formData.client_id}
-            onChange={handleChange}
-            className="w-full border p-2"
-            required
-          >
-            <option value="">{t('addVisitModal.chooseClient')}</option>
-            {allClients
+        <form onSubmit={safeSubmit} className="space-y-3">
+
+
+          <label className="text-neutral-800">{t('addVisitModal.chooseClient')}
+            <select
+              name="client_id"
+              value={formData.client_id}
+              onChange={handleChange}
+              className="w-full border p-2"
+              required
+            >
+              <option value="">{t('addVisitModal.chooseClient')}</option>
+              {allClients
                 .filter(c => c.id && c.company_name)
                 .sort((a, b) => a.company_name.localeCompare(b.company_name))
                 .map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.company_name}
                   </option>
-              ))}
-          </select>
+                ))}
+            </select>
 
-          {formErrors.client_id && (
-            <p className="text-red-600 text-sm mt-1">{formErrors.client_id}</p>
-          )}
+            {formErrors.client_id && (
+              <p className="text-red-600 text-sm mt-1">{formErrors.client_id}</p>
+            )}
           </label>
 
-          <label className="text-neutral-800">{t('addVisitModal.setDate')} 
-          <input
-            type="date"
-            name="visit_date"
-            value={formData.visit_date}
-            onChange={handleChange}
-            className="w-full border p-2"
-          />
-          {formErrors.visit_date && (
-            <p className="text-red-600 text-sm mt-1">{formErrors.visit_date}</p>
-          )}
+          <label className="text-neutral-800">{t('addVisitModal.setDate')}
+            <input
+              type="date"
+              name="visit_date"
+              value={formData.visit_date}
+              onChange={handleChange}
+              className="w-full border p-2"
+            />
+            {formErrors.visit_date && (
+              <p className="text-red-600 text-sm mt-1">{formErrors.visit_date}</p>
+            )}
           </label>
 
           <label className="text-neutral-800">{t('addVisitModal.contactPerson')}
-          <input
-            type="text"
-            name="contact_person"
-            placeholder="Z kim odbyła się wizyta"
-            value={formData.contact_person}
-            onChange={handleChange}
-            className="w-full border p-2"
-          />
-          {formErrors.contact_person && (
-            <p className="text-red-600 text-sm mt-1">{formErrors.contact_person}</p>
-          )}
+            <input
+              type="text"
+              name="contact_person"
+              placeholder="Z kim odbyła się wizyta"
+              value={formData.contact_person}
+              onChange={handleChange}
+              className="w-full border p-2"
+            />
+            {formErrors.contact_person && (
+              <p className="text-red-600 text-sm mt-1">{formErrors.contact_person}</p>
+            )}
           </label>
 
           <label className="text-neutral-800">{t('addVisitModal.kindOfMeeting')}
-          <select
-            name="meeting_type"
-            value={formData.meeting_type}
-            onChange={handleChange}
-            className="w-full border p-2"
-          >
-            <option value="meeting">{t('addVisitModal.kindOfMeeting.meeting')}</option>
-            <option value="call">{t('addVisitModal.kindOfMeeting.call')}</option>
-            <option value="email">{t('addVisitModal.kindOfMeeting.email')}</option>
-            <option value="video">{t('addVisitModal.kindOfMeeting.video')}</option>
-          </select>
+            <select
+              name="meeting_type"
+              value={formData.meeting_type}
+              onChange={handleChange}
+              className="w-full border p-2"
+            >
+              <option value="meeting">{t('addVisitModal.kindOfMeeting.meeting')}</option>
+              <option value="call">{t('addVisitModal.kindOfMeeting.call')}</option>
+              <option value="email">{t('addVisitModal.kindOfMeeting.email')}</option>
+              <option value="video">{t('addVisitModal.kindOfMeeting.video')}</option>
+            </select>
           </label>
 
           {[
@@ -216,7 +220,7 @@ useEffect(() => {
             { name: "action_plan", label: t('addVisitModal.actionPlan') },
             { name: "competition_info", label: t('addVisitModal.competitionInfo') },
             { name: "additional_notes", label: t('addVisitModal.additionalNotes') },
-          ].map(({name, label}) => (
+          ].map(({ name, label }) => (
             <label key={name} className="text-neutral-800">{label}
               <textarea
                 name={name}
@@ -229,7 +233,7 @@ useEffect(() => {
 
           <div className="flex justify-end gap-2">
             <button type="button" onClick={onClose} className="buttonRed">
-            {t('addClientModal.cancel')}
+              {t('addClientModal.cancel')}
             </button>
             <button type="submit" className="buttonGreen">
               {t('addClientModal.save')}

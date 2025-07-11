@@ -54,6 +54,8 @@
     "country": "Country",
     "postalCode": "Postal code",
     "clientCategory": "Client category",
+    "fairs": "Fairs",
+    "competition": "Konkurencja",
     "selectCategory": "Select category",
     "categories.KLIENT_POTENCJALNY": "Potential client",
     "categories.CENTRALA_SIEĆ": "CENTRAL NETWORK",
