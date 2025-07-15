@@ -507,7 +507,7 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated, allClients 
             )
             .map((c, i) => (
               <div key={i} className='contactBlock'>
-                <select name="department" value={c.department} onChange={(e) => handleContactChange(i, e)} className="contactSelect mb-4" disabled={readOnly}>
+                <select name="department" value={c.department} onChange={(e) => handleContactChange(i, e)} className="contactSelect mb-4">
                   <option value="">{t('addClientModal.selectDepartment')}</option>
                   <option value="Zarząd">{t('addClientModal.departments.management')}</option>
                   <option value="Sprzedaż">{t('addClientModal.departments.sales')}</option>
@@ -551,14 +551,14 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated, allClients 
           <button className='buttonGreenNeg' type="button" onClick={handleAddContact}>{t('addClientModal.addContact')}</button>
 
 
-          {!isReadOnly(user) && (<div className='flex justify-end mt-5'>
+          <div className='flex justify-end mt-5'>
             <button className='buttonGreen' type="submit" disabled={isSaving || isStructureInvalid}>
               {isSaving ? t('addClientModal.saving') : t('addClientModal.save')}
             </button>
-            <button className='buttonRed' type="button" onClick={onClose} style={{ marginLeft: '10px' }}>
+            {!isReadOnly(user) && (<button className='buttonRed' type="button" onClick={onClose} style={{ marginLeft: '10px' }}>
               {t('addClientModal.cancel')}
-            </button>
-          </div>)}
+            </button>)}
+          </div>
         </form>
 
         <div className="mt-10 px-8">
