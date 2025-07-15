@@ -522,22 +522,22 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated, allClients 
 
                 <div className='flex gap-2'>
                   <label className='text-neutral-800'>{t('addClientModal.position')}
-                    <input type="text" name="position" placeholder="" value={c.position} onChange={(e) => handleContactChange(i, e)} className="contactInput" readOnly={readOnly} />
+                    <input type="text" name="position" placeholder="" value={c.position} onChange={(e) => handleContactChange(i, e)} className="contactInput"/>
                   </label>
                   <label className='text-neutral-800'> {t('addClientModal.name')}
-                    <input type="text" name="name" placeholder="" value={c.name} onChange={(e) => handleContactChange(i, e)} className="contactInput" readOnly={readOnly} />
+                    <input type="text" name="name" placeholder="" value={c.name} onChange={(e) => handleContactChange(i, e)} className="contactInput"/>
                   </label>
                   <label className='text-neutral-800'>{t('addClientModal.phone')}
-                    <input type="text" name="phone" placeholder="" value={c.phone} onChange={(e) => handleContactChange(i, e)} className="contactInput" readOnly={readOnly} />
+                    <input type="text" name="phone" placeholder="" value={c.phone} onChange={(e) => handleContactChange(i, e)} className="contactInput"/>
                   </label>
                   <label className='text-neutral-800'>{t('addClientModal.email')}Email
-                    <input type="email" name="email" placeholder="" value={c.email} onChange={(e) => handleContactChange(i, e)} className="contactInput" readOnly={readOnly} />
+                    <input type="email" name="email" placeholder="" value={c.email} onChange={(e) => handleContactChange(i, e)} className="contactInput"/>
                   </label>
                   <label className='text-neutral-800'>{t('addClientModal.functionNotes')}
-                    <input type="text" name="function_notes" placeholder="" value={c.function_notes} onChange={(e) => handleContactChange(i, e)} className="contactInput" readOnly={readOnly} />
+                    <input type="text" name="function_notes" placeholder="" value={c.function_notes} onChange={(e) => handleContactChange(i, e)} className="contactInput"/>
                   </label>
                   <label className='text-neutral-800'> {t('addClientModal.decisionLevel')}
-                    <select name="decision_level" value={c.decision_level} onChange={(e) => handleContactChange(i, e)} className="contactSelect text-neutral-800" readOnly={readOnly}>
+                    <select name="decision_level" value={c.decision_level} onChange={(e) => handleContactChange(i, e)} className="contactSelect text-neutral-800">
                       <option value="">{t('addClientModal.decisionLevel')}</option>
                       <option value="wysoka">{t('addClientModal.decision.high')}</option>
                       <option value="średnia">{t('addClientModal.decision.medium')}</option>
