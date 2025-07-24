@@ -334,6 +334,7 @@ function Customers() {
 
           <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className='pl-1 pr-1 pt-2 pb-2 rounded border'>
             <option value="">{t('addClientModal.selectCategory')}</option>
+            <option value="KLIENT_POTENCJALNY">{t('addClientModal.categories.KLIENT_POTENCJALNY')}</option>
             <option value="CENTRALA_SIEĆ">{t('addClientModal.categories.CENTRALA_SIEĆ')}</option>
             <option value="DEWELOPER">{t('addClientModal.categories.DEWELOPER')}</option>
             <option value="DYSTRYBUTOR">{t('addClientModal.categories.DYSTRYBUTOR')}</option>
