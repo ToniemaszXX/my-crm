@@ -129,7 +129,7 @@ function AddClientModal({ isOpen, onClose, onClientAdded, allClients }) {
                 <label className="text-neutral-800">{t('addClientModal.clientCategory')}<br />
                   <select name="client_category" value={formData.client_category} onChange={handleChange} className='AddSelectClient'>
                     <option value="">{t('addClientModal.selectCategory')}</option>
-                    <option value="KLIENT POTENCJALNY">{t('addClientModal.categories.KLIENT_POTENCJALNY')}</option>
+                    <option value="KLIENT_POTENCJALNY">{t('addClientModal.categories.KLIENT_POTENCJALNY')}</option>
                     <option value="CENTRALA_SIEĆ">{t('addClientModal.categories.CENTRALA_SIEĆ')}</option>
                     <option value="DEWELOPER">{t('addClientModal.categories.DEWELOPER')}</option>
                     {/* <option value="DYSTRYBUTOR">{t('addClientModal.categories.DYSTRYBUTOR')}</option> */}
