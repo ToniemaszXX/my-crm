@@ -11,7 +11,10 @@ export const AuthProvider = ({ children }) => {
 
     const checkSession = async () => {
       try {
-        const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/session_check.php`);
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/session_check.php`, {
+          credentials: 'include',
+          headers: { 'Cache-Control': 'no-store' }
+        });
         const data = await res.json();
 
         if (isMounted) {

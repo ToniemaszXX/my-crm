@@ -7,26 +7,33 @@ import Trainings from './pages/Trainings';
 import Login from './pages/Login';
 import Logout from './pages/Logout';
 import { useAuth } from './context/AuthContext';
-import { useRef, useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+
 import SessionLoginModal from './components/SessionLoginModal';
 import { wasLoggedIn } from './utils/wasLoggedIn';
 
-
+// NOWE: handler 401 -> otwiera modal
+import { setUnauthorizedHandler } from './utils/fetchWithAuth';
 
 function Layout() {
   const { user, loading } = useAuth();
   const location = useLocation();
-  const navigate = useNavigate();
 
   const [showSessionModal, setShowSessionModal] = useState(false);
 
+  // Rejestracja globalnego handlera 401:
+  // Gdy dowolny request dostanie 401, otwieramy modal (tylko raz).
+  useEffect(() => {
+    setUnauthorizedHandler(() => setShowSessionModal(true));
+  }, []);
+
+  // Zachowanie Twojej wcześniejszej logiki: jeśli byłeś zalogowany i
+  // nagle user===null (poza /login) -> pokaż modal.
   useEffect(() => {
     if (!loading) {
       if (user) {
         wasLoggedIn.current = true;
       }
-
       if (!user && wasLoggedIn.current && location.pathname !== '/login') {
         setShowSessionModal(true);
       }
@@ -35,17 +42,17 @@ function Layout() {
 
   if (loading) return <div className="text-white p-4">Checking session...</div>;
 
-  const hideSidebar = location.pathname === "/login";
+  const hideSidebar = location.pathname === '/login';
 
   return (
     <div className="relative flex bg-neutral-900">
       {!hideSidebar && <Sidebar />}
 
-      <div className={`w-full h-screen box-border ${
-        hideSidebar
-          ? ''
-          : 'p-5 overflow-y-auto text-neutral-300 portrait:ml-40 landscape:ml-56'
-      }`}>
+      <div
+        className={`w-full h-screen box-border ${
+          hideSidebar ? '' : 'p-5 overflow-y-auto text-neutral-300 portrait:ml-40 landscape:ml-56'
+        }`}
+      >
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/" element={<Dashboard />} />
@@ -56,25 +63,33 @@ function Layout() {
         </Routes>
       </div>
 
-      {showSessionModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center">
-          <SessionLoginModal onSuccess={() => setShowSessionModal(false)} />
-        </div>
-      )}
+      {/* Modal sesji: ma własny overlay, więc NIE owijamy go dodatkowym divem */}
+      <SessionLoginModal
+        open={showSessionModal}
+        onSuccess={() => {
+          // Użytkownik zalogował się w modalu:
+          // - modal się zamknie,
+          // - fetchWithAuth ponowi przerwane żądanie.
+          setShowSessionModal(false);
+        }}
+        onClose={() => {
+          // Użytkownik anulował modal:
+          // - SessionLoginModal wywoła completeReauth(false),
+          // - fetchWithAuth zrobi redirect na /login.
+          setShowSessionModal(false);
+        }}
+      />
     </div>
   );
 }
 
+export default function App() {
+  // Dobrze mieć dynamiczny basename: w DEV "/" a w PROD "/engo/CRM"
+  const basename = import.meta.env.PROD ? '/engo/CRM' : '/';
 
-
-
-function App() {
   return (
-    <Router basename="/engo/CRM">
+    <Router basename={basename}>
       <Layout />
     </Router>
   );
 }
-
-
-export default App;

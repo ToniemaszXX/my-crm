@@ -111,7 +111,7 @@ function EditVisitModal({ isOpen, onClose, onVisitUpdated, visit, clients }) {
       });
 
       const text = await response.text();
-
+      console.log("ID wysyłane do edit.php:", formData.id);
       let data;
       try {
         data = JSON.parse(text);
