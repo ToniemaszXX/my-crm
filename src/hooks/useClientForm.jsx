@@ -1,3 +1,4 @@
+// src/hooks/useClientForm.jsx
 import { useEffect, useState } from 'react';
 
 export default function useClientForm(initialData = {}) {
@@ -6,7 +7,7 @@ export default function useClientForm(initialData = {}) {
     company_name: '',
     client_code_erp: '',
     status: 1,
-    data_veryfication: '',
+    data_veryfication: 0,
     street: '',
     city: '',
     postal_code: '',
@@ -47,15 +48,14 @@ export default function useClientForm(initialData = {}) {
   const [contacts, setContacts] = useState([]);
   const [isSaving, setIsSaving] = useState(false);
 
-
   useEffect(() => {
     if (initialData && Object.keys(initialData).length > 0) {
       setFormData({
         id: initialData.id || null,
         company_name: initialData.company_name || '',
         client_code_erp: initialData.client_code_erp || '',
-        status: initialData.status || '',
-        data_veryfication: initialData.data_veryfication || '',
+        status: initialData.status ?? 1,
+        data_veryfication: initialData.data_veryfication ?? 0,
         street: initialData.street || '',
         city: initialData.city || '',
         postal_code: initialData.postal_code || '',
@@ -92,7 +92,6 @@ export default function useClientForm(initialData = {}) {
         latitude: initialData.latitude || '',
         longitude: initialData.longitude || ''
       });
-
       setContacts(initialData.contacts || []);
     }
   }, [initialData]);
@@ -101,14 +100,7 @@ export default function useClientForm(initialData = {}) {
     const { name, value, type, checked } = e.target;
     let newValue = type === 'checkbox' ? (checked ? 1 : 0) : value;
 
-    // Przytnij spacje z przodu i końca dla tekstowych pól
-    // if (typeof newValue === 'string' && ['country', 'company_name', 'city', 'street', 'nip'].includes(name)) {
-    //   newValue = newValue.trim();
-    // }
-
-    if (name === 'status' || name === 'data_veryfication') {
-      newValue = parseInt(value, 10);
-    }
+    if (name === 'status' || name === 'data_veryfication') newValue = parseInt(value, 10);
 
     if ([
       'structure_installer',
@@ -121,10 +113,7 @@ export default function useClientForm(initialData = {}) {
       newValue = isNaN(numeric) ? 0 : Math.min(Math.max(numeric, 0), 100);
     }
 
-    setFormData((prev) => ({
-      ...prev,
-      [name]: newValue,
-    }));
+    setFormData((prev) => ({ ...prev, [name]: newValue }));
   };
 
   const handleContactChange = (index, e) => {
@@ -136,7 +125,7 @@ export default function useClientForm(initialData = {}) {
 
   const handleAddContact = () => {
     setContacts([...contacts, {
-      department: '', position: '', name: '', phone: '', email: '', function_notes: '', decision_level: ''
+      department: '', position: '', name: '', phone: '', email: '', function_notes: '', decision_level: '-'
     }]);
   };
 
@@ -149,45 +138,15 @@ export default function useClientForm(initialData = {}) {
   const resetForm = () => {
     setFormData({
       id: null,
-      company_name: '',
-      client_code_erp: '',
-      status: 1,
-      data_veryfication: '',
-      street: '',
-      city: '',
-      postal_code: '',
-      voivodeship: '',
-      country: '',
-      nip: '',
-      client_category: '',
-      fairs: '',
-      competition: '',
-      index_of_parent: '',
-      engo_team_contact: '',
-      number_of_branches: '',
-      number_of_sales_reps: '',
-      www: '',
-      turnover_pln: '',
-      turnover_eur: '',
-      installation_sales_share: '',
-      automatic_sales_share: '',
-      sales_potential: '',
-      has_webstore: '',
-      has_b2b_platform: '',
-      has_b2c_platform: '',
-      facebook: '',
-      auction_service: '',
-      private_brand: 0,
-      private_brand_details: '',
-      loyalty_program: 0,
-      loyalty_program_details: '',
-      structure_installer: 0,
-      structure_wholesaler: 0,
-      structure_ecommerce: 0,
-      structure_retail: 0,
-      structure_other: 0,
-      latitude: '',
-      longitude: ''
+      company_name: '', client_code_erp: '', status: 1, data_veryfication: 0,
+      street: '', city: '', postal_code: '', voivodeship: '', country: '', nip: '',
+      client_category: '', fairs: '', competition: '', index_of_parent: '', engo_team_contact: '',
+      number_of_branches: '', number_of_sales_reps: '', www: '',
+      turnover_pln: '', turnover_eur: '', installation_sales_share: '', automatic_sales_share: '', sales_potential: '',
+      has_webstore: '', has_b2b_platform: '', has_b2c_platform: '', facebook: '', auction_service: '',
+      private_brand: 0, private_brand_details: '', loyalty_program: 0, loyalty_program_details: '',
+      structure_installer: 0, structure_wholesaler: 0, structure_ecommerce: 0, structure_retail: 0, structure_other: 0,
+      latitude: '', longitude: ''
     });
     setContacts([]);
     setIsSaving(false);
@@ -203,17 +162,11 @@ export default function useClientForm(initialData = {}) {
   const isStructureInvalid = structureSum > 100;
 
   return {
-    formData,
-    setFormData,
-    contacts,
-    setContacts,
-    isSaving,
-    setIsSaving,
+    formData, setFormData,
+    contacts, setContacts,
+    isSaving, setIsSaving,
     isStructureInvalid,
-    handleChange,
-    handleAddContact,
-    handleRemoveContact,
-    handleContactChange,
+    handleChange, handleAddContact, handleRemoveContact, handleContactChange,
     resetForm
   };
 }

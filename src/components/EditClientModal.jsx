@@ -104,7 +104,7 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated, allClients 
 
   };
 
-    const wrapSubmit = usePreventDoubleSubmit(); // <== poprawne
+  const wrapSubmit = usePreventDoubleSubmit(); // <== poprawne
   const safeSubmit = wrapSubmit(handleSubmit);
 
   function handleNumericWithDotAndSpaceOnly(e) {
@@ -154,11 +154,11 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated, allClients 
             <div className="grid2col mb-7">
               <div className="flexColumn">
                 <label className="text-neutral-800">{t('addClientModal.companyName')}
-                  <input type="text" name="company_name" value={formData.company_name} onChange={handleChange}  />
+                  <input type="text" name="company_name" value={formData.company_name} onChange={handleChange} />
                 </label>
 
                 <label className="text-neutral-800">{t('addClientModal.client_code_erp')}<br />
-                  <input type="text" name="client_code_erp" value={formData.client_code_erp} onChange={handleChange}  />
+                  <input type="text" name="client_code_erp" value={formData.client_code_erp} onChange={handleChange} />
                 </label>
                 {!isBok(user) && (<label className="text-neutral-800">{t('addClientModal.status')}<br />
                   <select name="status" className='AddSelectClient' value={formData.status} onChange={handleChange} >
@@ -175,7 +175,7 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated, allClients 
 
 
                 <label className="text-neutral-800">{t('addClientModal.nip')}
-                  <input type="text" name="nip" value={formData.nip} onChange={handleChange}  />
+                  <input type="text" name="nip" value={formData.nip} onChange={handleChange} />
                 </label>
                 <label className='text-neutral-800'>
                   {t('addClientModal.clientCategory')}
@@ -208,7 +208,7 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated, allClients 
                           }))
                         }
                         className='AddSelectClient'
-                        
+
                       >
                         <option value="">Wybierz centralę</option>
                         {allClients
@@ -232,29 +232,19 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated, allClients 
 
               <div className='flexColumn'>
                 <label className="text-neutral-800">{t('addClientModal.street')}
-                  <input type="text" name="street" value={formData.street} onChange={handleChange}  />
+                  <input type="text" name="street" value={formData.street} onChange={handleChange} />
                 </label>
                 <label className="text-neutral-800">{t('addClientModal.city')}
-                  <input type="text" name="city" value={formData.city} onChange={handleChange}  />
+                  <input type="text" name="city" value={formData.city} onChange={handleChange} />
                 </label>
                 <label className='text-neutral-800'>
                   {t('addClientModal.postalCode')}
-                  <input type="text" name="postal_code" value={formData.postal_code} onChange={handleChange}  />
-                </label>
-
-                <label className="text-neutral-800">
-                  {t('addClientModal.fairs')}<br />
-                  <input type="text" name="fairs" value={formData.fairs} onChange={handleChange} />
-                </label>
-
-                <label className="text-neutral-800">
-                  {t('addClientModal.competition')}<br />
-                  <input type="text" name="competition" value={formData.competition} onChange={handleChange} />
+                  <input type="text" name="postal_code" value={formData.postal_code} onChange={handleChange} />
                 </label>
 
                 <label className='text-neutral-800'>
                   {t('addClientModal.voivodeship')}
-                  <input type="text" name="voivodeship" placeholder="" value={formData.voivodeship} onChange={handleChange}  />
+                  <input type="text" name="voivodeship" placeholder="" value={formData.voivodeship} onChange={handleChange} />
                 </label>
                 <CountrySelect
                   label={t('addClientModal.country')}
@@ -301,7 +291,7 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated, allClients 
                     name="latitude"
                     value={formData.latitude}
                     onChange={handleChange}
-                    
+
                   />
                 </label>
                 <label className='text-neutral-800'>Długość geograficzna (lng)
@@ -310,7 +300,7 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated, allClients 
                     name="longitude"
                     value={formData.longitude}
                     onChange={handleChange}
-                    
+
                   />
                 </label>
               </div>
@@ -369,26 +359,34 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated, allClients 
                     </select>
                   </label>
                   <label className='text-neutral-800'>{t('addClientModal.branches')}
-                    <input type="text" name="number_of_branches" placeholder="" value={formData.number_of_branches} onChange={handleChange}  />
+                    <input type="text" name="number_of_branches" placeholder="" value={formData.number_of_branches} onChange={handleChange} />
                   </label>
                   <label className='text-neutral-800'>{t('addClientModal.salesReps')}
-                    <input type="text" name="number_of_sales_reps" placeholder="" value={formData.number_of_sales_reps} onChange={handleChange}  />
+                    <input type="text" name="number_of_sales_reps" placeholder="" value={formData.number_of_sales_reps} onChange={handleChange} />
                   </label>
                   <label className='text-neutral-800'>{t('addClientModal.www')}
-                    <input type="text" name="www" placeholder="" value={formData.www} onChange={handleChange}  />
+                    <input type="text" name="www" placeholder="" value={formData.www} onChange={handleChange} />
                   </label>
                   <label className='text-neutral-800'>{t('addClientModal.facebook')}
-                    <input type="text" name="facebook" placeholder="" value={formData.facebook} onChange={handleChange}  />
+                    <input type="text" name="facebook" placeholder="" value={formData.facebook} onChange={handleChange} />
                   </label>
                   <label className='text-neutral-800'>{t('addClientModal.auctionService')}
-                    <input type="text" name="auction_service" placeholder="" value={formData.auction_service} onChange={handleChange}  />
+                    <input type="text" name="auction_service" placeholder="" value={formData.auction_service} onChange={handleChange} />
+                  </label>
+                  <label className="text-neutral-800">
+                    {t('addClientModal.fairs')}<br />
+                    <input type="text" name="fairs" value={formData.fairs} onChange={handleChange} />
+                  </label>
+                  <label className="text-neutral-800">
+                    {t('addClientModal.competition')}<br />
+                    <input type="text" name="competition" value={formData.competition} onChange={handleChange} />
                   </label>
                   <label className='text-neutral-800'>
                     <input type="checkbox" name="private_brand" checked={formData.private_brand === 1} onChange={handleChange} />
                     {t('addClientModal.privateBrand')}
                   </label>
                   {formData.private_brand === 1 && (
-                    <input type="text" name="private_brand_details" placeholder="Nazwa marki własnej" value={formData.private_brand_details} onChange={handleChange}  />
+                    <input type="text" name="private_brand_details" placeholder="Nazwa marki własnej" value={formData.private_brand_details} onChange={handleChange} />
                   )}
 
                   <label className='text-neutral-800'>
@@ -396,7 +394,7 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated, allClients 
                     {t('addClientModal.loyaltyProgram')}
                   </label>
                   {formData.loyalty_program === 1 && (
-                    <input type="text" name="loyalty_program_details" placeholder="Nazwa programu lojalnościowego" value={formData.loyalty_program_details} onChange={handleChange}  />
+                    <input type="text" name="loyalty_program_details" placeholder="Nazwa programu lojalnościowego" value={formData.loyalty_program_details} onChange={handleChange} />
                   )}
                 </div>
 
@@ -417,7 +415,7 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated, allClients 
                           }
                         });
                       }}
-                      
+
                     />
                   </label>
                   <label className='text-neutral-800'>{t('addClientModal.turnoverEur')}
@@ -436,26 +434,26 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated, allClients 
                           }
                         });
                       }}
-                      
+
                     />
                   </label>
                   <label className='text-neutral-800'>{t('addClientModal.installationSales')}
-                    <input type="text" name="installation_sales_share" placeholder="" onInput={handleNumericWithDotAndSpaceOnly} value={formData.installation_sales_share} onChange={handleChange}  />
+                    <input type="text" name="installation_sales_share" placeholder="" onInput={handleNumericWithDotAndSpaceOnly} value={formData.installation_sales_share} onChange={handleChange} />
                   </label>
                   <label className='text-neutral-800'>{t('addClientModal.automationSales')}
-                    <input type="text" name="automatic_sales_share" placeholder="" onInput={handleNumericWithDotAndSpaceOnly} value={formData.automatic_sales_share} onChange={handleChange}  />
+                    <input type="text" name="automatic_sales_share" placeholder="" onInput={handleNumericWithDotAndSpaceOnly} value={formData.automatic_sales_share} onChange={handleChange} />
                   </label>
                   <label className='text-neutral-800'>{t('addClientModal.salesPotential')}
-                    <input type="text" name="sales_potential" placeholder="" onInput={handleNumericWithDotAndSpaceOnly} value={formData.sales_potential} onChange={handleChange}  />
+                    <input type="text" name="sales_potential" placeholder="" onInput={handleNumericWithDotAndSpaceOnly} value={formData.sales_potential} onChange={handleChange} />
                   </label>
                   <label className='text-neutral-800'>{t('addClientModal.webstore')}
-                    <input type="text" name="has_webstore" placeholder="" value={formData.has_webstore} onChange={handleChange}  />
+                    <input type="text" name="has_webstore" placeholder="" value={formData.has_webstore} onChange={handleChange} />
                   </label>
                   <label className='text-neutral-800'>{t('addClientModal.b2b')}
-                    <input type="text" name="has_b2b_platform" placeholder="" value={formData.has_b2b_platform} onChange={handleChange}  />
+                    <input type="text" name="has_b2b_platform" placeholder="" value={formData.has_b2b_platform} onChange={handleChange} />
                   </label>
                   <label className='text-neutral-800'>{t('addClientModal.b2c')}
-                    <input type="text" name="has_b2c_platform" placeholder="" value={formData.has_b2c_platform} onChange={handleChange}  />
+                    <input type="text" name="has_b2c_platform" placeholder="" value={formData.has_b2c_platform} onChange={handleChange} />
                   </label>
                 </div>
 
@@ -473,19 +471,19 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated, allClients 
           )}
           <div className="flexColumn mb-7">
             <label className='text-neutral-800'>{t('addClientModal.structure.installer')}<br />
-              <input type="number" name="structure_installer" value={formData.structure_installer} onChange={handleChange} onFocus={(e) => { if (e.target.value === '0') e.target.value = ''; }}  />
+              <input type="number" name="structure_installer" value={formData.structure_installer} onChange={handleChange} onFocus={(e) => { if (e.target.value === '0') e.target.value = ''; }} />
             </label>
             <label className='text-neutral-800'>{t('addClientModal.structure.wholesaler')}<br />
-              <input type="number" name="structure_wholesaler" value={formData.structure_wholesaler} onChange={handleChange} onFocus={(e) => { if (e.target.value === '0') e.target.value = ''; }}  />
+              <input type="number" name="structure_wholesaler" value={formData.structure_wholesaler} onChange={handleChange} onFocus={(e) => { if (e.target.value === '0') e.target.value = ''; }} />
             </label>
             <label className='text-neutral-800'>{t('addClientModal.structure.ecommerce')}<br />
-              <input type="number" name="structure_ecommerce" value={formData.structure_ecommerce} onChange={handleChange} onFocus={(e) => { if (e.target.value === '0') e.target.value = ''; }}  />
+              <input type="number" name="structure_ecommerce" value={formData.structure_ecommerce} onChange={handleChange} onFocus={(e) => { if (e.target.value === '0') e.target.value = ''; }} />
             </label>
             <label className='text-neutral-800'>{t('addClientModal.structure.retail')}<br />
-              <input type="number" name="structure_retail" value={formData.structure_retail} onChange={handleChange} onFocus={(e) => { if (e.target.value === '0') e.target.value = ''; }}  />
+              <input type="number" name="structure_retail" value={formData.structure_retail} onChange={handleChange} onFocus={(e) => { if (e.target.value === '0') e.target.value = ''; }} />
             </label>
             <label className='text-neutral-800'>{t('addClientModal.structure.other')}<br />
-              <input type="number" name="structure_other" value={formData.structure_other} onChange={handleChange} onFocus={(e) => { if (e.target.value === '0') e.target.value = ''; }}  />
+              <input type="number" name="structure_other" value={formData.structure_other} onChange={handleChange} onFocus={(e) => { if (e.target.value === '0') e.target.value = ''; }} />
             </label>
           </div>
 
@@ -522,19 +520,19 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated, allClients 
 
                 <div className='flex gap-2'>
                   <label className='text-neutral-800'>{t('addClientModal.position')}
-                    <input type="text" name="position" placeholder="" value={c.position} onChange={(e) => handleContactChange(i, e)} className="contactInput"/>
+                    <input type="text" name="position" placeholder="" value={c.position} onChange={(e) => handleContactChange(i, e)} className="contactInput" />
                   </label>
                   <label className='text-neutral-800'> {t('addClientModal.name')}
-                    <input type="text" name="name" placeholder="" value={c.name} onChange={(e) => handleContactChange(i, e)} className="contactInput"/>
+                    <input type="text" name="name" placeholder="" value={c.name} onChange={(e) => handleContactChange(i, e)} className="contactInput" />
                   </label>
                   <label className='text-neutral-800'>{t('addClientModal.phone')}
-                    <input type="text" name="phone" placeholder="" value={c.phone} onChange={(e) => handleContactChange(i, e)} className="contactInput"/>
+                    <input type="text" name="phone" placeholder="" value={c.phone} onChange={(e) => handleContactChange(i, e)} className="contactInput" />
                   </label>
                   <label className='text-neutral-800'>{t('addClientModal.email')}Email
-                    <input type="email" name="email" placeholder="" value={c.email} onChange={(e) => handleContactChange(i, e)} className="contactInput"/>
+                    <input type="email" name="email" placeholder="" value={c.email} onChange={(e) => handleContactChange(i, e)} className="contactInput" />
                   </label>
                   <label className='text-neutral-800'>{t('addClientModal.functionNotes')}
-                    <input type="text" name="function_notes" placeholder="" value={c.function_notes} onChange={(e) => handleContactChange(i, e)} className="contactInput"/>
+                    <input type="text" name="function_notes" placeholder="" value={c.function_notes} onChange={(e) => handleContactChange(i, e)} className="contactInput" />
                   </label>
                   <label className='text-neutral-800'> {t('addClientModal.decisionLevel')}
                     <select name="decision_level" value={c.decision_level} onChange={(e) => handleContactChange(i, e)} className="contactSelect text-neutral-800">

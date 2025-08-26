@@ -54,7 +54,7 @@
     "country": "Country",
     "postalCode": "Postal code",
     "clientCategory": "Client category",
-    "fairs": "Fairs",
+    "fairs": "Attendance at the fair has been and is planned",
     "competition": "Konkurencja",
     "selectCategory": "Select category",
     "categories.KLIENT_POTENCJALNY": "Potential client",
