@@ -10,7 +10,7 @@ const europeanCountries = [
   "Latvia", "Liechtenstein", "Lithuania", "Luxembourg", "Malta", "Moldova", "Monaco",
   "Montenegro", "Netherlands", "North Macedonia", "Norway", "Poland", "Portugal",
   "Romania", "Russia", "San Marino", "Serbia", "Slovakia", "Slovenia", "Spain",
-  "Sweden", "Switzerland", "Turkey", "Ukraine", "UK", "Vatican City", "Uzbekistan",
+  "Sweden", "Switzerland", "Turkey", "Ukraine", "United Kingdom", "Vatican City", "Uzbekistan",
   "Uruguay", "Israel", "Jordan", "Argentina", "Australia", "Azerbaijan", "Brazil",
   "China", "Georgia", "Hong Kong", "Canada", "South Korea", "India", "Iraq"
 ];

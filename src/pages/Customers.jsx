@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import AddClientModal from '../components/AddClientModal';
-import EditClientModal from '../components/EditClientModal';
+// import EditClientModal from '../components/EditClientModal';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { isAdmin, isZarzad } from '../utils/roles';
 import { europeanCountries } from '../components/CountrySelect';
@@ -14,12 +15,13 @@ import CountrySelect from '../components/CountrySelect';
 
 function Customers() {
   const { user, loading } = useAuth();
+  const navigate = useNavigate();
   const [clients, setClients] = useState([]);
   const [filteredClients, setFilteredClients] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [selectedClient, setSelectedClient] = useState(null);
+  // const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  // const [selectedClient, setSelectedClient] = useState(null);
   const { t } = useTranslation();
   const [meModeOnly, setMeModeOnly] = useState(false);
   const [filterStatus, setFilterStatus] = useState('');
@@ -224,9 +226,13 @@ function Customers() {
     setSearchQuery(query);
   };
 
+  // const handleEdit = (client) => {
+  //   setSelectedClient(client);
+  //   setIsEditModalOpen(true);
+  // };
+
   const handleEdit = (client) => {
-    setSelectedClient(client);
-    setIsEditModalOpen(true);
+    navigate(`/customers/${client.id}`);
   };
 
   if (loading) return <p>{t('loading')}</p>;
@@ -393,7 +399,7 @@ function Customers() {
         allClients={clients}
       />
 
-      {selectedClient && (
+      {/* {selectedClient && (
         <EditClientModal
           isOpen={isEditModalOpen}
           client={selectedClient}
@@ -404,15 +410,15 @@ function Customers() {
           onClientUpdated={fetchClients}
           allClients={clients}
         />
-      )}
+      )} */}
 
       <table border="1" cellPadding="10" style={{ width: '100%', borderCollapse: 'collapse' }}>
-        <thead className='bg-neutral-600'>
+        <thead className=''>
           <tr>
             <th>{t('tableHeaders.number')}</th>
             <th>{t('tableHeaders.clientCode')}</th>
             <th>{t('tableHeaders.clientStatus')}</th>
-            <th>{t('tableHeaders.company')}</th>
+            <th>{t('tableHeaders.dataStatus')}</th>
             <th>{t('tableHeaders.company')}</th>
             <th>{t('tableHeaders.country')}</th>
             <th className='portrait:hidden'>{t('tableHeaders.city')}</th>

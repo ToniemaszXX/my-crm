@@ -9,12 +9,14 @@ import { checkSessionBeforeSubmit } from '../utils/checkSessionBeforeSubmit';
 import { fetchWithAuth } from '../utils/fetchWithAuth';
 import { usePreventDoubleSubmit } from '../utils/preventDoubleSubmit';
 import { clientSchema } from '../validation/clientSchema';
+import ContactsSection from './ContactsSection';
+import { syncContacts } from '../utils/syncContacts';
 
 const normalizeCategory = cat => (cat ? cat.toString() : '').trim().replace(/\s+/g, '_');
 
 function AddClientModal({ isOpen, onClose, onClientAdded, allClients }) {
   const {
-    formData, contacts, isSaving, isStructureInvalid,
+    formData, contacts, setContacts, isSaving, isStructureInvalid,
     setIsSaving, handleChange, handleAddContact, handleRemoveContact,
     handleContactChange, resetForm, setFormData
   } = useClientForm();
@@ -29,7 +31,7 @@ function AddClientModal({ isOpen, onClose, onClientAdded, allClients }) {
     const isSessionOk = await checkSessionBeforeSubmit();
     if (!isSessionOk) { setIsSaving(false); return; }
 
-    // 1) Walidacja Zod
+    // 1) Walidacja Zod – tak jak było
     const payloadCandidate = { ...formData, contacts };
     const parsed = clientSchema.safeParse(payloadCandidate);
 
@@ -50,36 +52,71 @@ function AddClientModal({ isOpen, onClose, onClientAdded, allClients }) {
     }
 
     setErrors({});
-    const payload = parsed.data; // liczby już są liczbami, puste -> null
 
-    // 2) Wysyłka
-    const response = await fetchWithAuth(`${import.meta.env.VITE_API_URL}/customers/add.php`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
+    // ⛔️ ważne: klient idzie osobno, bez kontaktów
+    const { contacts: contactsToCreate, ...clientPayload } = parsed.data;
 
-    let data = {};
-    try { data = await response.json(); } catch (_) { }
+    try {
+      // 2) Najpierw tworzymy klienta
+      const resClient = await fetchWithAuth(`${import.meta.env.VITE_API_URL}/customers/add.php`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(clientPayload),
+      });
 
-    if (response.ok && data?.success) {
+      let dataClient = {};
+      try { dataClient = await resClient.json(); } catch (_) { }
+
+      if (!(resClient.ok && dataClient?.success)) {
+        if (dataClient?.errors && typeof dataClient.errors === 'object') {
+          setErrors(dataClient.errors);
+          const first = Object.keys(dataClient.errors)[0];
+          if (first) {
+            const el = document.querySelector(`[name="${first.split('.')[0]}"]`);
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }
+        alert(dataClient?.message || t('error'));
+        setIsSaving(false);
+        return;
+      }
+
+      // back musi zwrócić id nowego klienta
+      const newClientId = dataClient.id || dataClient.client_id || dataClient.newId;
+      if (!newClientId) {
+        alert('Brak ID nowego klienta w odpowiedzi API. Upewnij się, że customers/add.php zwraca {"success":true,"id":...}');
+        setIsSaving(false);
+        return;
+      }
+
+      // 3) Synchronizacja kontaktów jednym helperem (bez starych pętli)
+      const syncRes = await syncContacts({
+        clientId: newClientId,
+        original: [],     // nowy klient nie ma jeszcze kontaktów w bazie
+        current: contacts // to, co masz w formularzu
+      });
+
+      if (!syncRes.ok) {
+        // pokaż pierwszy błąd użytkownikowi
+        const first = syncRes.errors?.[0];
+        const msg = first
+          ? `Błąd kontaktów: ${first.status} ${first.url}\n` +
+          (first.data?.message || first.text || 'nieznany błąd')
+          : 'Niepowodzenie bez szczegółów';
+        alert(msg);
+      }
+
+
       alert(t('success'));
       resetForm();
-      onClientAdded();
+      onClientAdded?.();
       onClose();
-    } else {
-      if (data?.errors && typeof data.errors === 'object') {
-        setErrors(data.errors);
-        const first = Object.keys(data.errors)[0];
-        if (first) {
-          const el = document.querySelector(`[name="${first.split('.')[0]}"]`);
-          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }
-      alert(t('error'));
+    } catch (err) {
+      console.error(err);
+      alert(`Błąd zapisu: ${err.message}`);
+    } finally {
+      setIsSaving(false);
     }
-
-    setIsSaving(false);
   };
 
   const wrapSubmit = usePreventDoubleSubmit();
@@ -87,16 +124,19 @@ function AddClientModal({ isOpen, onClose, onClientAdded, allClients }) {
 
   // wspólne propsy dla <input type="number"> (kwoty, procenty, lat/lng)
   const numberInputGuards = {
-    inputMode: 'decimal',           // mobilna klawiatura numeryczna
-    onKeyDown: (e) => {
-      if (['e', 'E', '+', '-'].includes(e.key)) e.preventDefault();
-    },
+    inputMode: 'decimal',
+    onKeyDown: (e) => { if (['e', 'E', '+', '-'].includes(e.key)) e.preventDefault(); },
     onPaste: (e) => {
       const txt = e.clipboardData.getData('text') || '';
-      if (/[eE+\-]/.test(txt)) e.preventDefault(); // zablokuj wklejanie 1e3, +5, -2
+      if (/[eE+\-]/.test(txt)) e.preventDefault();
     },
-    onWheel: (e) => e.currentTarget.blur(), // nie zmieniaj wartości scroll'em
+    onWheel: (e) => e.currentTarget.blur(),
   };
+
+  const onContactFieldChange = (index, field, value) => {
+    handleContactChange(index, { target: { name: field, value } });
+  };
+
 
   if (!isOpen) return null;
 
@@ -209,11 +249,11 @@ function AddClientModal({ isOpen, onClose, onClientAdded, allClients }) {
             <h4 className="header2">{t('addClientModal.location')}</h4>
             <div className="grid2col mb-4">
               <label className="text-neutral-800">{t('addClientModal.latitude')}<br />
-                <input type="number" step="0.000001" name="latitude" value={formData.latitude} onChange={handleChange} {...numberInputGuards}/>
+                <input type="number" step="0.000001" name="latitude" value={formData.latitude} onChange={handleChange} {...numberInputGuards} />
                 {errors.latitude && <div className="text-red-600 text-sm">{errors.latitude}</div>}
               </label>
               <label className="text-neutral-800">{t('addClientModal.longitude')}<br />
-                <input type="number" step="0.000001" name="longitude" value={formData.longitude} onChange={handleChange} {...numberInputGuards}/>
+                <input type="number" step="0.000001" name="longitude" value={formData.longitude} onChange={handleChange} {...numberInputGuards} />
                 {errors.longitude && <div className="text-red-600 text-sm">{errors.longitude}</div>}
               </label>
             </div>
@@ -228,6 +268,19 @@ function AddClientModal({ isOpen, onClose, onClientAdded, allClients }) {
                 longitude={formData.longitude}
                 onCoordsChange={(coords) => setFormData((prev) => ({ ...prev, latitude: coords.lat, longitude: coords.lng }))}
               />
+
+              {/* <LocationPicker
+                street={formData.street}
+                city={formData.city}
+                postal_code={formData.postal_code}
+                voivodeship={formData.voivodeship}
+                country={formData.country}
+                latitude={formData.latitude}
+                longitude={formData.longitude}
+                onCoordsChange={({ latitude, longitude }) =>
+                  setFormData((p) => ({ ...p, latitude, longitude }))
+                }
+              /> */}
             </div>
           </div>
 
@@ -261,10 +314,33 @@ function AddClientModal({ isOpen, onClose, onClientAdded, allClients }) {
                   <input type="text" name="www" value={formData.www} onChange={handleChange} />
                   {errors.www && <div className="text-red-600 text-sm">{errors.www}</div>}
                 </label>
+
+                <label className="text-neutral-800">{t('addClientModal.possibility_www_baner')}<br />
+                  <select name="possibility_www_baner" className='AddSelectClient' value={formData.possibility_www_baner} onChange={handleChange}>
+                    <option value="0">{t('addClientModal.no')}</option>
+                    <option value="1">{t('addClientModal.yes')}</option>
+                  </select>
+                </label>
+
+                <label className="text-neutral-800">{t('addClientModal.possibility_add_articles')}<br />
+                  <select name="possibility_add_articles" className='AddSelectClient' value={formData.possibility_add_articles} onChange={handleChange}>
+                    <option value="0">{t('addClientModal.no')}</option>
+                    <option value="1">{t('addClientModal.yes')}</option>
+                  </select>
+                </label>
+
                 <label className="text-neutral-800">{t('addClientModal.facebook')}<br />
                   <input type="text" name="facebook" value={formData.facebook} onChange={handleChange} />
                   {errors.facebook && <div className="text-red-600 text-sm">{errors.facebook}</div>}
                 </label>
+
+                <label className="text-neutral-800">{t('addClientModal.possibility_graphic_and_posts_FB')}<br />
+                  <select name="possibility_graphic_and_posts_FB" className='AddSelectClient' value={formData.possibility_graphic_and_posts_FB} onChange={handleChange}>
+                    <option value="0">{t('addClientModal.no')}</option>
+                    <option value="1">{t('addClientModal.yes')}</option>
+                  </select>
+                </label>
+
                 <label className="text-neutral-800">{t('addClientModal.auctionService')}<br />
                   <input type="text" name="auction_service" value={formData.auction_service} onChange={handleChange} />
                   {errors.auction_service && <div className="text-red-600 text-sm">{errors.auction_service}</div>}
@@ -299,28 +375,45 @@ function AddClientModal({ isOpen, onClose, onClientAdded, allClients }) {
 
               <div className="flexColumn">
                 <label className="text-neutral-800">{t('addClientModal.turnoverPln')}<br />
-                  <input type="number" step="0.01" name="turnover_pln" value={formData.turnover_pln} onChange={handleChange} {...numberInputGuards}/>
+                  <input type="number" step="0.01" name="turnover_pln" value={formData.turnover_pln} onChange={handleChange} {...numberInputGuards} />
                   {errors.turnover_pln && <div className="text-red-600 text-sm">{errors.turnover_pln}</div>}
                 </label>
                 <label className="text-neutral-800">{t('addClientModal.turnoverEur')}<br />
-                  <input type="number" step="0.01" name="turnover_eur" value={formData.turnover_eur} onChange={handleChange} {...numberInputGuards}/>
+                  <input type="number" step="0.01" name="turnover_eur" value={formData.turnover_eur} onChange={handleChange} {...numberInputGuards} />
                   {errors.turnover_eur && <div className="text-red-600 text-sm">{errors.turnover_eur}</div>}
                 </label>
                 <label className="text-neutral-800">{t('addClientModal.installationSales')}<br />
-                  <input type="number" step="0.01" name="installation_sales_share" value={formData.installation_sales_share} onChange={handleChange} {...numberInputGuards}/>
+                  <input type="number" step="0.01" name="installation_sales_share" value={formData.installation_sales_share} onChange={handleChange} {...numberInputGuards} />
                   {errors.installation_sales_share && <div className="text-red-600 text-sm">{errors.installation_sales_share}</div>}
                 </label>
                 <label className="text-neutral-800">{t('addClientModal.automationSales')}<br />
-                  <input type="number" step="0.01" name="automatic_sales_share" value={formData.automatic_sales_share} onChange={handleChange} {...numberInputGuards}/>
+                  <input type="number" step="0.01" name="automatic_sales_share" value={formData.automatic_sales_share} onChange={handleChange} {...numberInputGuards} />
                   {errors.automatic_sales_share && <div className="text-red-600 text-sm">{errors.automatic_sales_share}</div>}
                 </label>
                 <label className="text-neutral-800">{t('addClientModal.salesPotential')}<br />
-                  <input type="number" step="0.01" name="sales_potential" value={formData.sales_potential} onChange={handleChange} {...numberInputGuards}/>
+                  <input type="number" step="0.01" name="sales_potential" value={formData.sales_potential} onChange={handleChange} {...numberInputGuards} />
                   {errors.sales_potential && <div className="text-red-600 text-sm">{errors.sales_potential}</div>}
                 </label>
                 <label className="text-neutral-800">{t('addClientModal.webstore')}<br />
                   <input type="text" name="has_webstore" value={formData.has_webstore} onChange={handleChange} />
                 </label>
+
+                <label className="text-neutral-800">{t('addClientModal.has_ENGO_products_in_webstore')}<br />
+                  <select name="has_ENGO_products_in_webstore" className='AddSelectClient' value={formData.has_ENGO_products_in_webstore}
+                    onChange={handleChange}>
+                    <option value="0">{t('addClientModal.no')}</option>
+                    <option value="1">{t('addClientModal.yes')}</option>
+                  </select>
+                </label>
+
+                <label className="text-neutral-800">{t('addClientModal.possibility_add_ENGO_products_to_webstore')}<br />
+                  <select name="possibility_add_ENGO_products_to_webstore" className='AddSelectClient' value={formData.possibility_add_ENGO_products_to_webstore}
+                    onChange={handleChange}>
+                    <option value="0">{t('addClientModal.no')}</option>
+                    <option value="1">{t('addClientModal.yes')}</option>
+                  </select>
+                </label>
+
                 <label className="text-neutral-800">{t('addClientModal.b2b')}<br />
                   <input type="text" name="has_b2b_platform" value={formData.has_b2b_platform} onChange={handleChange} />
                 </label>
@@ -356,55 +449,16 @@ function AddClientModal({ isOpen, onClose, onClientAdded, allClients }) {
             </label>
           </div>
 
-          {/* Kontakty */}
-          <h4 className='header2'>{t('addClientModal.contact')}</h4>
-          {contacts.map((contact, index) => (
-            <div key={index} className='contactBlock'>
-              <label className='text-neutral-800'>
-                <select name="department" value={contact.department} onChange={(e) => handleContactChange(index, e)} className="contactSelect mb-4">
-                  <option value="">{t('addClientModal.selectDepartment')}</option>
-                  <option value="Zarząd">{t('addClientModal.departments.management')}</option>
-                  <option value="Sprzedaż">{t('addClientModal.departments.sales')}</option>
-                  <option value="Zakupy">{t('addClientModal.departments.purchasing')}</option>
-                  <option value="Marketing">{t('addClientModal.departments.marketing')}</option>
-                  <option value="Inwestycje">{t('addClientModal.departments.investments')}</option>
-                  <option value="Finanse">{t('addClientModal.departments.finance')}</option>
-                  <option value="Logistyka">{t('addClientModal.departments.logistics')}</option>
-                  <option value="Administracja">{t('addClientModal.departments.admin')}</option>
-                  <option value="Obsługi klienta">{t('addClientModal.departments.customerService')}</option>
-                </select>
-              </label>
+          <ContactsSection
+            contacts={contacts}
+            onAdd={handleAddContact}
+            onRemove={handleRemoveContact}
+            onChange={onContactFieldChange}
+            readOnly={false}
+            enableSearch={false}
+          />
 
-              <div className='flex gap-2'>
-                <label className='text-neutral-800'>{t('addClientModal.position')}
-                  <input type="text" name="position" value={contact.position} onChange={(e) => handleContactChange(index, e)} className="contactInput" />
-                </label>
-                <label className='text-neutral-800'>{t('addClientModal.name')}
-                  <input type="text" name="name" value={contact.name} onChange={(e) => handleContactChange(index, e)} className="contactInput" />
-                </label>
-                <label className='text-neutral-800'>{t('addClientModal.phone')}
-                  <input type="text" name="phone" value={contact.phone} onChange={(e) => handleContactChange(index, e)} className="contactInput" />
-                </label>
-                <label className='text-neutral-800'>{t('addClientModal.email')}
-                  <input type="email" name="email" value={contact.email} onChange={(e) => handleContactChange(index, e)} className="contactInput" />
-                </label>
-                <label className='text-neutral-800'>{t('addClientModal.functionNotes')}
-                  <input type="text" name="function_notes" value={contact.function_notes} onChange={(e) => handleContactChange(index, e)} className="contactInput" />
-                </label>
-                <label className='text-neutral-800'>{t('addClientModal.decisionLevel')}
-                  <select name="decision_level" value={contact.decision_level} onChange={(e) => handleContactChange(index, e)} className="contactSelect text-neutral-800">
-                    <option value="-">{t('addClientModal.decisionLevel')}</option>
-                    <option value="wysoka">{t('addClientModal.decision.high')}</option>
-                    <option value="średnia">{t('addClientModal.decision.medium')}</option>
-                    <option value="brak">{t('addClientModal.decision.none')}</option>
-                  </select>
-                </label>
-                <button className='buttonRed' type="button" onClick={() => handleRemoveContact(index)}>{t('addClientModal.remove')}</button>
-              </div>
-            </div>
-          ))}
 
-          <button className='buttonGreenNeg' type="button" onClick={handleAddContact} style={{ marginTop: '10px' }}>{t('addClientModal.addContact')}</button>
 
           {/* Przyciski */}
           <div className='flex justify-end mt-5'>

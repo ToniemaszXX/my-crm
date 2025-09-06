@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-route
 import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
 import Customers from './pages/Customers';
+import CustomerDetails from './pages/CustomerDetails';
 import Visits from './pages/Visits';
 import Trainings from './pages/Trainings';
 import Login from './pages/Login';
@@ -45,18 +46,19 @@ function Layout() {
   const hideSidebar = location.pathname === '/login';
 
   return (
-    <div className="relative flex bg-neutral-900">
+    <div className="relative flex bg-slate-50">
       {!hideSidebar && <Sidebar />}
 
       <div
         className={`w-full h-screen box-border ${
-          hideSidebar ? '' : 'p-5 overflow-y-auto text-neutral-300 portrait:ml-40 landscape:ml-56'
+          hideSidebar ? '' : 'p-5 overflow-y-auto text-neutral-900 portrait:ml-40 landscape:ml-56'
         }`}
       >
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/" element={<Dashboard />} />
           <Route path="/customers" element={<Customers />} />
+          <Route path="/customers/:id" element={<CustomerDetails />} />
           <Route path="/visits" element={<Visits />} />
           <Route path="/logout" element={<Logout />} />
           <Route path="/trainings" element={<Trainings />} />

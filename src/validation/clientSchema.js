@@ -22,7 +22,69 @@ const decimal = (precision = 12, scale = 2) =>
 
 const int0_100 = z.coerce.number().int().min(0, "Min 0").max(100, "Max 100");
 
+// "" / null / undefined → null
+// "1 000" → 1000
+export const zNumberNullable = z.preprocess((v) => {
+    if (v === '' || v === null || v === undefined) return null;
+    const num = Number(String(v).replace(/\s/g, ''));
+    return Number.isFinite(num) ? num : v; // jeśli się nie da, pozwól Zod'owi rzucić błąd
+}, z.number({
+    invalid_type_error: 'Invalid input: expected number',
+    required_error: 'To pole jest wymagane',
+}).nullable());
+
+// Wersja dla liczb całkowitych ≥ 0
+export const zIntNullable = z.preprocess((v) => {
+    if (v === '' || v === null || v === undefined) return null;
+    const num = Number(String(v).replace(/\s/g, ''));
+    return Number.isFinite(num) ? num : v;
+}, z.number({
+    invalid_type_error: 'Invalid input: expected number',
+}).int().nonnegative().nullable());
+
+// RegEx dopuszcza: 123, 123.4, 123,45; minus też ok
+const decimalRegex = (scale) =>
+  new RegExp(`^-?\\d+(?:[\\.,]\\d{1,${scale}})?$`);
+
+/**
+ * zDecimalNullable(scale, { round=false, min, max })
+ * - przyjmuje string/number, zwraca number lub null
+ * - wspiera przecinek i kropkę
+ * - waliduje max. X miejsc po przecinku
+ */
+export function zDecimalNullable(scale, opts = {}) {
+  const { round = false, min, max } = opts;
+
+  // 1) preprocess → null albo znormalizowany string z kropką
+  let schema = z.preprocess((v) => {
+    if (v === '' || v == null) return null;
+    return String(v).trim().replace(/\s/g, '').replace(',', '.');
+  },
+  // 2) walidacja regex + transform na number, lub null
+  z.union([
+    z
+      .string()
+      .regex(decimalRegex(scale), { message: `Do ${scale} miejsc po przecinku` })
+      .transform((s) => {
+        const n = Number(s);
+        return round ? Number(n.toFixed(scale)) : n;
+      }),
+    z.null(),
+  ]));
+
+  // 3) dodatkowe zakresy (opcjonalnie)
+  if (min !== undefined) {
+    schema = schema.refine((v) => v === null || v >= min, { message: `Min ${min}` });
+  }
+  if (max !== undefined) {
+    schema = schema.refine((v) => v === null || v <= max, { message: `Max ${max}` });
+  }
+
+  return schema;
+}
+
 export const contactSchema = z.object({
+    id: z.coerce.number().int().optional(),
     department: z.string().optional().default(""),
     position: z.string().optional().default(""),
     name: z.string().optional().default(""),
@@ -52,11 +114,16 @@ export const clientSchema = z.object({
     competition: z.string().optional().default(""),
     engo_team_contact: z.string().optional().default(""),
 
-    number_of_branches: z.preprocess(v => (v === '' ? null : v), z.number().int().min(0).nullable().optional()),
-    number_of_sales_reps: z.preprocess(v => (v === '' ? null : v), z.number().int().min(0).nullable().optional()),
+    // number_of_branches: z.preprocess(v => (v === '' ? null : v), z.number().int().min(0).nullable().optional()),
+    // number_of_sales_reps: z.preprocess(v => (v === '' ? null : v), z.number().int().min(0).nullable().optional()),
+    number_of_branches: zIntNullable.optional(),
+    number_of_sales_reps: zIntNullable.optional(),
 
     www: z.union([z.string(), z.null()]).optional(),
+    possibility_www_baner: z.coerce.number().int().min(0).max(1).default(0),
+    possibility_add_articles: z.coerce.number().int().min(0).max(1).default(0),
     facebook: z.union([z.string(), z.null()]).optional(),
+    possibility_graphic_and_posts_FB: z.coerce.number().int().min(0).max(1).default(0),
     auction_service: z.union([z.string(), z.null()]).optional(),
 
     private_brand: z.coerce.number().int().min(0).max(1).default(0),
@@ -66,11 +133,14 @@ export const clientSchema = z.object({
 
     turnover_pln: decimal(12, 2).nullable().optional(),
     turnover_eur: decimal(12, 2).nullable().optional(),
-    installation_sales_share: decimal(5, 2).nullable().optional(),
-    automatic_sales_share: decimal(5, 2).nullable().optional(),
+    installation_sales_share: decimal(15, 2).nullable().optional(),
+    automatic_sales_share: decimal(15, 2).nullable().optional(),
     sales_potential: decimal(12, 2).nullable().optional(),
 
     has_webstore: z.union([z.string(), z.null()]).optional(),
+    has_ENGO_products_in_webstore: z.coerce.number().int().min(0).max(1).default(0),
+    possibility_add_ENGO_products_to_webstore: z.coerce.number().int().min(0).max(1).default(0),
+
     has_b2b_platform: z.union([z.string(), z.null()]).optional(),
     has_b2c_platform: z.union([z.string(), z.null()]).optional(),
 
@@ -80,8 +150,10 @@ export const clientSchema = z.object({
     structure_retail: int0_100.default(0),
     structure_other: int0_100.default(0),
 
-    latitude: z.preprocess(v => (v === '' ? null : v), z.number().min(-90).max(90).nullable().optional()),
-    longitude: z.preprocess(v => (v === '' ? null : v), z.number().min(-180).max(180).nullable().optional()),
+    // latitude: z.preprocess(v => (v === '' ? null : v), z.number().min(-90).max(90).nullable().optional()),
+    // longitude: z.preprocess(v => (v === '' ? null : v), z.number().min(-180).max(180).nullable().optional()),
+    latitude: zDecimalNullable(8).optional(),
+    longitude: zDecimalNullable(8).optional(),
 
     contacts: z.array(contactSchema).default([]),
 })
