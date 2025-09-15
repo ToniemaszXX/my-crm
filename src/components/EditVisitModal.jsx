@@ -4,11 +4,15 @@ import { checkSessionBeforeSubmit } from '../utils/checkSessionBeforeSubmit';
 import { fetchWithAuth } from '../utils/fetchWithAuth';
 import { usePreventDoubleSubmit } from '../utils/preventDoubleSubmit';
 
-
-function EditVisitModal({ isOpen, onClose, onVisitUpdated, visit, clients }) {
+function EditVisitModal({ isOpen, onClose, onVisitUpdated, visit, clients, entityType = 'client', entities, fixedEntityId }) {
   const [formData, setFormData] = useState({
     id: "",
-    client_id: "",
+  client_id: "",
+  designer_id: "",
+  installer_id: "",
+  deweloper_id: "",
+  entity_type: undefined,
+  entity_id: undefined,
     visit_date: "",
     contact_person: "",
     meeting_type: "meeting",
@@ -26,7 +30,9 @@ function EditVisitModal({ isOpen, onClose, onVisitUpdated, visit, clients }) {
 
   const validateForm = () => {
     const errors = {};
-    if (!formData.client_id) errors.client_id = t('addVisitModal.errors.requiredClient');
+    const idField = `${entityType}_id`;
+    const selectedId = formData[idField] || formData.client_id;
+    if (!selectedId) errors.target = t('addVisitModal.errors.requiredClient');
     if (!formData.visit_date) errors.visit_date = t('addVisitModal.errors.requiredDate');
     if (!formData.contact_person || formData.contact_person.length < 3)
       errors.contact_person = t('addVisitModal.errors.invalidContactPerson');
@@ -36,34 +42,42 @@ function EditVisitModal({ isOpen, onClose, onVisitUpdated, visit, clients }) {
   const [allClients, setAllClients] = useState([]);
 
   useEffect(() => {
-    fetchWithAuth(`${import.meta.env.VITE_API_URL}/customers/list.php`, {
-    })
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) {
-          setAllClients(data.clients);
-        }
-      })
-      .catch(err => {
-        console.error("Błąd pobierania klientów:", err);
-      });
-  }, []);
+    if (entities && entities.length) {
+      setAllClients(entities);
+      return;
+    }
+    // fallback for clients
+    if (entityType === 'client') {
+      fetchWithAuth(`${import.meta.env.VITE_API_URL}/customers/list.php`)
+        .then(res => res.json())
+        .then(data => { if (data.success) setAllClients(data.clients); })
+        .catch(() => {});
+    } else {
+      setAllClients([]);
+    }
+  }, [entities, entityType]);
 
 
   useEffect(() => {
     if (isOpen && visit?.visit_id) {
-      fetchWithAuth(`${import.meta.env.VITE_API_URL}/visits/get_visit_by_id.php?id=${visit.visit_id}`, {
-      })
+      fetchWithAuth(`${import.meta.env.VITE_API_URL}/visits/get_visit_by_id.php?id=${visit.visit_id}`)
         .then((res) => res.json())
         .then((data) => {
           if (data.success) {
             const v = data.data;
+            const detectedType = v.client_id ? 'client' : v.designer_id ? 'designer' : v.installer_id ? 'installer' : v.deweloper_id ? 'deweloper' : entityType;
+            const detectedId = v.client_id || v.designer_id || v.installer_id || v.deweloper_id || '';
             setFormData({
               id: v.id,
-              client_id: v.client_id,
-              visit_date: visit.visit_date?.split(' ')[0] || "",
-              contact_person: v.contact_person,
-              meeting_type: v.meeting_type,
+              client_id: v.client_id || '',
+              designer_id: v.designer_id || '',
+              installer_id: v.installer_id || '',
+              deweloper_id: v.deweloper_id || '',
+              entity_type: detectedType,
+              entity_id: detectedId ? String(detectedId) : undefined,
+              visit_date: (v.visit_date || visit.visit_date || '').toString().split(' ')[0],
+              contact_person: v.contact_person || '',
+              meeting_type: v.meeting_type || 'meeting',
               meeting_purpose: v.meeting_purpose || "",
               post_meeting_summary: v.post_meeting_summary || "",
               marketing_tasks: v.marketing_tasks || "",
@@ -79,11 +93,23 @@ function EditVisitModal({ isOpen, onClose, onVisitUpdated, visit, clients }) {
           console.error("Błąd pobierania wizyty:", err);
         });
     }
-  }, [isOpen, visit]);
+  }, [isOpen, visit, entityType]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => {
+      const next = { ...prev, [name]: value };
+      const isAnyEntityField = ['client_id','designer_id','installer_id','deweloper_id'].includes(name);
+      if (isAnyEntityField) {
+        const type = name.replace('_id','');
+        next.entity_type = type;
+        next.entity_id = value || undefined;
+        ['client','designer','installer','deweloper']
+          .filter(t => t !== type)
+          .forEach(t => { next[`${t}_id`] = ""; });
+      }
+      return next;
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -104,7 +130,7 @@ function EditVisitModal({ isOpen, onClose, onVisitUpdated, visit, clients }) {
     setServerError("");
 
     try {
-      const response = await fetchWithAuth(`${import.meta.env.VITE_API_URL}/visits/edit.php`, {
+  const response = await fetchWithAuth(`${import.meta.env.VITE_API_URL}/visits/edit.php`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
@@ -141,6 +167,11 @@ function EditVisitModal({ isOpen, onClose, onVisitUpdated, visit, clients }) {
 
   if (!isOpen || !visit) return null;
 
+  const list = entities || clients || allClients;
+  const idFieldName = `${entityType}_id`;
+  const selectValue = formData[idFieldName] || (entityType === 'client' ? formData.client_id : "");
+  const disabled = !!fixedEntityId;
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-start pt-20  z-[99]">
       <div className="bg-white text-black p-6 rounded-lg w-[600px] max-h-[90vh] overflow-y-auto">
@@ -150,14 +181,15 @@ function EditVisitModal({ isOpen, onClose, onVisitUpdated, visit, clients }) {
 
           <label className="text-neutral-800">{t('addVisitModal.chooseClient')}
             <select
-              name="client_id"
-              value={formData.client_id}
+              name={idFieldName}
+              value={selectValue}
               onChange={handleChange}
               className="w-full border p-2"
               required
+              disabled={disabled}
             >
               <option value="">{t('addVisitModal.chooseClient')}</option>
-              {allClients
+              {(list || [])
                 .filter(c => c.id && c.company_name)
                 .sort((a, b) => a.company_name.localeCompare(b.company_name))
                 .map((c) => (
@@ -167,8 +199,8 @@ function EditVisitModal({ isOpen, onClose, onVisitUpdated, visit, clients }) {
                 ))}
             </select>
 
-            {formErrors.client_id && (
-              <p className="text-red-600 text-sm mt-1">{formErrors.client_id}</p>
+            {(formErrors.target || formErrors[idFieldName] || formErrors.client_id) && (
+              <p className="text-red-600 text-sm mt-1">{formErrors.target || formErrors[idFieldName] || formErrors.client_id}</p>
             )}
           </label>
 

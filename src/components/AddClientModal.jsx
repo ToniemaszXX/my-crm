@@ -1,5 +1,5 @@
 // src/components/AddClientModal.jsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import useClientForm from '../hooks/useClientForm';
 import LocationPicker from './LocationPicker';
 import { useTranslation } from 'react-i18next';
@@ -11,6 +11,13 @@ import { usePreventDoubleSubmit } from '../utils/preventDoubleSubmit';
 import { clientSchema } from '../validation/clientSchema';
 import ContactsSection from './ContactsSection';
 import { syncContacts } from '../utils/syncContacts';
+import { useAuth } from '../context/AuthContext';
+import { getMarketLabel } from '../utils/markets';
+// Shared UI components for consistent layout
+import Section from './common/Section';
+import Grid from './common/Grid';
+import FormField from './common/FormField';
+import Mapa from './common/Mapa';
 
 const normalizeCategory = cat => (cat ? cat.toString() : '').trim().replace(/\s+/g, '_');
 
@@ -23,6 +30,14 @@ function AddClientModal({ isOpen, onClose, onClientAdded, allClients }) {
 
   const { t } = useTranslation();
   const [errors, setErrors] = useState({}); // { pole: komunikat }
+  const { user } = useAuth();
+
+  // Auto-assign market_id if user has a single market; leave empty if multiple for manual selection
+  useEffect(() => {
+    if (user?.singleMarketId) {
+      setFormData((prev) => ({ ...prev, market_id: user.singleMarketId }));
+    }
+  }, [user?.singleMarketId]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -133,6 +148,13 @@ function AddClientModal({ isOpen, onClose, onClientAdded, allClients }) {
     onWheel: (e) => e.currentTarget.blur(),
   };
 
+  // Display formatting for large numbers (match EditClientModal)
+  const formatNumberWithSpaces = (value) => {
+    if (value === null || value === undefined || value === '') return '';
+    return String(value).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  };
+  const parseNumber = (value) => String(value || '').replace(/\s/g, '');
+
   const onContactFieldChange = (index, field, value) => {
     handleContactChange(index, { target: { name: field, value } });
   };
@@ -151,113 +173,224 @@ function AddClientModal({ isOpen, onClose, onClientAdded, allClients }) {
         </div>
 
         <form onSubmit={safeSubmit} className="text-white flex flex-col gap-3 pl-8 pr-8">
-          {/* Podstawowe informacje */}
-          <div className="flex-col">
-            <h4 className='header2'>{t('addClientModal.companyData')}</h4>
-            <div className="grid2col mb-7">
-              <div className="flexColumn">
-                <label className="text-neutral-800">{t('addClientModal.companyName')}<br />
-                  <input type="text" name="company_name" value={formData.company_name} onChange={handleChange} />
-                  {errors.company_name && <div className="text-red-600 text-sm">{errors.company_name}</div>}
-                </label>
-                <label className="text-neutral-800">{t('addClientModal.client_code_erp')}<br />
-                  <input type="text" name="client_code_erp" value={formData.client_code_erp} onChange={handleChange} />
-                  {errors.client_code_erp && <div className="text-red-600 text-sm">{errors.client_code_erp}</div>}
-                </label>
-                <label className="text-neutral-800">{t('addClientModal.status')}<br />
-                  <select name="status" className='AddSelectClient' value={formData.status} onChange={handleChange}>
-                    <option value="1">Nowy</option>
-                    <option value="0">Zweryfikowany</option>
+          {/* Rynek */}
+          {Array.isArray(user?.marketIds) && user.marketIds.length > 1 ? (
+            <Section title={t('addClientModal.market') || 'Rynek'}>
+              <Grid>
+                <FormField id="market_id" label={t('addClientModal.market') || 'Rynek'} error={errors.market_id}>
+                  <select
+                    name="market_id"
+                    value={formData.market_id}
+                    onChange={handleChange}
+                    className="w-full border border-neutral-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-neutral-400"
+                  >
+                    <option value="">— wybierz rynek —</option>
+                    {user.marketIds.map((mid) => (
+                      <option key={mid} value={mid}>{getMarketLabel(mid)}</option>
+                    ))}
                   </select>
-                  {errors.status && <div className="text-red-600 text-sm">{errors.status}</div>}
-                </label>
-                <label className="text-neutral-800">{t('addClientModal.data_veryfication')}<br />
-                  <select name="data_veryfication" className='AddSelectClient' value={formData.data_veryfication} onChange={handleChange}>
-                    <option value="0">Brak danych</option>
-                    <option value="1">Gotowe</option>
-                  </select>
-                  {errors.data_veryfication && <div className="text-red-600 text-sm">{errors.data_veryfication}</div>}
-                </label>
-                <label className="text-neutral-800">{t('addClientModal.nip')}<br />
-                  <input type="text" name="nip" value={formData.nip} onChange={handleChange} />
-                  {errors.nip && <div className="text-red-600 text-sm">{errors.nip}</div>}
-                </label>
-                <label className="text-neutral-800">{t('addClientModal.clientCategory')}<br />
-                  <select name="client_category" value={formData.client_category} onChange={handleChange} className='AddSelectClient'>
-                    <option value="">{t('addClientModal.selectCategory')}</option>
-                    <option value="KLIENT_POTENCJALNY">{t('addClientModal.categories.KLIENT_POTENCJALNY')}</option>
-                    <option value="CENTRALA_SIEĆ">{t('addClientModal.categories.CENTRALA_SIEĆ')}</option>
-                    <option value="DEWELOPER">{t('addClientModal.categories.DEWELOPER')}</option>
-                    <option value="DYSTRYBUTOR_CENTRALA">{t('addClientModal.categories.DYSTRYBUTOR_CENTRALA')}</option>
-                    <option value="DYSTRYBUTOR_MAGAZYN">{t('addClientModal.categories.DYSTRYBUTOR_MAGAZYN')}</option>
-                    <option value="DYSTRYBUTOR_ODDZIAŁ">{t('addClientModal.categories.DYSTRYBUTOR_ODDZIAŁ')}</option>
-                    <option value="INSTALATOR_ENGO_PLUS">{t('addClientModal.categories.INSTALATOR_ENGO_PLUS')}</option>
-                    <option value="INSTALATOR">{t('addClientModal.categories.INSTALATOR')}</option>
-                    <option value="INSTALATOR_FIRMA">{t('addClientModal.categories.INSTALATOR')}</option>
-                    <option value="PODHURT">{t('addClientModal.categories.PODHURT')}</option>
-                    <option value="PODHURT_ELEKTRYKA">{t('addClientModal.categories.PODHURT_ELEKTRYKA')}</option>
-                    <option value="PROJEKTANT">{t('addClientModal.categories.PROJEKTANT')}</option>
-                  </select>
-
-                  {formData.client_category === 'DYSTRYBUTOR_ODDZIAŁ' && (
-                    <label className="text-neutral-800">Siedziba główna<br />
-                      <select
-                        name="index_of_parent"
-                        value={(formData.index_of_parent || '').trim()}
-                        onChange={(e) => setFormData((prev) => ({ ...prev, index_of_parent: e.target.value.trim() }))}
-                        className='AddSelectClient'
-                      >
-                        <option value="">Wybierz centralę</option>
-                        {allClients
-                          .filter((c) => normalizeCategory(c.client_category) === 'DYSTRYBUTOR_CENTRALA' && (c.client_code_erp && c.client_code_erp.trim() !== ''))
-                          .map((parent) => (
-                            <option key={parent.id} value={(parent.client_code_erp || '').trim()}>
-                              {parent.company_name} ({(parent.client_code_erp || '').trim()})
-                            </option>
-                          ))}
-                      </select>
-                      {errors.index_of_parent && <div className="text-red-600 text-sm">{errors.index_of_parent}</div>}
-                    </label>
-                  )}
-                </label>
+                </FormField>
+              </Grid>
+            </Section>
+          ) : (
+            <Section title={t('addClientModal.market') || 'Rynek'}>
+              <div className="text-neutral-800">
+                Rynek: <span className="font-semibold">{getMarketLabel(formData.market_id || user?.singleMarketId)}</span>
               </div>
+            </Section>
+          )}
 
-              <div className="flexColumn">
-                <label className="text-neutral-800">{t('addClientModal.street')}<br />
-                  <input type="text" name="street" value={formData.street} onChange={handleChange} />
-                  {errors.street && <div className="text-red-600 text-sm">{errors.street}</div>}
-                </label>
-                <label className="text-neutral-800">{t('addClientModal.city')}<br />
-                  <input type="text" name="city" value={formData.city} onChange={handleChange} />
-                  {errors.city && <div className="text-red-600 text-sm">{errors.city}</div>}
-                </label>
-                <label className="text-neutral-800">{t('addClientModal.voivodeship')}<br />
-                  <input type="text" name="voivodeship" value={formData.voivodeship} onChange={handleChange} />
-                  {errors.voivodeship && <div className="text-red-600 text-sm">{errors.voivodeship}</div>}
-                </label>
-                <CountrySelect label={t('addClientModal.country')} value={formData.country} onChange={handleChange} className='AddSelectClient' />
-                {errors.country && <div className="text-red-600 text-sm">{errors.country}</div>}
-                <label className="text-neutral-800">{t('addClientModal.postalCode')}<br />
-                  <input type="text" name="postal_code" value={formData.postal_code} onChange={handleChange} />
-                  {errors.postal_code && <div className="text-red-600 text-sm">{errors.postal_code}</div>}
-                </label>
-              </div>
-            </div>
-          </div>
+          {/* Dane firmy */}
+          <Section title={t('addClientModal.companyData')}>
+            <Grid className="mb-4">
+              <FormField id="company_name" label={t('addClientModal.companyName')} required error={errors.company_name}>
+                <input
+                  type="text"
+                  name="company_name"
+                  value={formData.company_name}
+                  onChange={handleChange}
+                  className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neutral-400"
+                />
+              </FormField>
 
-          <div className="flex-col mb-7">
-            <h4 className="header2">{t('addClientModal.location')}</h4>
-            <div className="grid2col mb-4">
-              <label className="text-neutral-800">{t('addClientModal.latitude')}<br />
-                <input type="number" step="0.000001" name="latitude" value={formData.latitude} onChange={handleChange} {...numberInputGuards} />
-                {errors.latitude && <div className="text-red-600 text-sm">{errors.latitude}</div>}
-              </label>
-              <label className="text-neutral-800">{t('addClientModal.longitude')}<br />
-                <input type="number" step="0.000001" name="longitude" value={formData.longitude} onChange={handleChange} {...numberInputGuards} />
-                {errors.longitude && <div className="text-red-600 text-sm">{errors.longitude}</div>}
-              </label>
-            </div>
-            <div className='bg-neutral-100 p-8 rounded-lg w-full max-w-[90%] max-h-[90vh] overflow-y-auto'>
+              <FormField id="client_code_erp" label={t('addClientModal.client_code_erp')} error={errors.client_code_erp}>
+                <input
+                  type="text"
+                  name="client_code_erp"
+                  value={formData.client_code_erp}
+                  onChange={handleChange}
+                  className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neutral-400"
+                />
+              </FormField>
+
+              <FormField id="status" label={t('addClientModal.status')} error={errors.status}>
+                <select
+                  name="status"
+                  value={formData.status}
+                  onChange={handleChange}
+                  className="w-full border border-neutral-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-neutral-400"
+                >
+                  <option value="1">Nowy</option>
+                  <option value="0">Zweryfikowany</option>
+                </select>
+              </FormField>
+
+              <FormField id="data_veryfication" label={t('addClientModal.data_veryfication')} error={errors.data_veryfication}>
+                <select
+                  name="data_veryfication"
+                  value={formData.data_veryfication}
+                  onChange={handleChange}
+                  className="w-full border border-neutral-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-neutral-400"
+                >
+                  <option value="0">Brak danych</option>
+                  <option value="1">Gotowe</option>
+                </select>
+              </FormField>
+
+              <FormField id="nip" label={t('addClientModal.nip')} error={errors.nip}>
+                <input
+                  type="text"
+                  name="nip"
+                  value={formData.nip}
+                  onChange={handleChange}
+                  className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neutral-400"
+                />
+              </FormField>
+
+              <FormField id="client_category" label={t('addClientModal.clientCategory')} error={errors.client_category}>
+                <select
+                  name="client_category"
+                  value={formData.client_category}
+                  onChange={handleChange}
+                  className="w-full border border-neutral-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-neutral-400"
+                >
+                  <option value="">{t('addClientModal.selectCategory')}</option>
+                  <option value="KLIENT_POTENCJALNY">{t('addClientModal.categories.KLIENT_POTENCJALNY')}</option>
+                  <option value="CENTRALA_SIEĆ">{t('addClientModal.categories.CENTRALA_SIEĆ')}</option>
+                  <option value="DEWELOPER">{t('addClientModal.categories.DEWELOPER')}</option>
+                  <option value="DYSTRYBUTOR_CENTRALA">{t('addClientModal.categories.DYSTRYBUTOR_CENTRALA')}</option>
+                  <option value="DYSTRYBUTOR_MAGAZYN">{t('addClientModal.categories.DYSTRYBUTOR_MAGAZYN')}</option>
+                  <option value="DYSTRYBUTOR_ODDZIAŁ">{t('addClientModal.categories.DYSTRYBUTOR_ODDZIAŁ')}</option>
+                  <option value="INSTALATOR_ENGO_PLUS">{t('addClientModal.categories.INSTALATOR_ENGO_PLUS')}</option>
+                  <option value="INSTALATOR">{t('addClientModal.categories.INSTALATOR')}</option>
+                  <option value="INSTALATOR_FIRMA">{t('addClientModal.categories.INSTALATOR_FIRMA')}</option>
+                  <option value="PODHURT">{t('addClientModal.categories.PODHURT')}</option>
+                  <option value="PODHURT_ELEKTRYKA">{t('addClientModal.categories.PODHURT_ELEKTRYKA')}</option>
+                  <option value="PROJEKTANT">{t('addClientModal.categories.PROJEKTANT')}</option>
+                </select>
+
+                {formData.client_category === 'DYSTRYBUTOR_ODDZIAŁ' && (
+                  <div className="mt-2">
+                    <div className="text-neutral-800 mb-1">Siedziba główna</div>
+                    <select
+                      name="index_of_parent"
+                      value={(formData.index_of_parent || '').trim()}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, index_of_parent: e.target.value.trim() }))}
+                      className="w-full border border-neutral-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-neutral-400"
+                    >
+                      <option value="">Wybierz centralę</option>
+                      {allClients
+                        .filter((c) => normalizeCategory(c.client_category) === 'DYSTRYBUTOR_CENTRALA' && (c.client_code_erp && c.client_code_erp.trim() !== ''))
+                        .map((parent) => (
+                          <option key={parent.id} value={(parent.client_code_erp || '').trim()}>
+                            {parent.company_name} ({(parent.client_code_erp || '').trim()})
+                          </option>
+                        ))}
+                    </select>
+                    {errors.index_of_parent && <div className="text-red-600 text-sm">{errors.index_of_parent}</div>}
+                  </div>
+                )}
+              </FormField>
+
+              <FormField id="client_subcategory" label="Podkategoria klienta" error={errors.client_subcategory}>
+                <input
+                  type="text"
+                  name="client_subcategory"
+                  value={formData.client_subcategory}
+                  onChange={handleChange}
+                  className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neutral-400"
+                />
+              </FormField>
+
+              <FormField id="street" label={t('addClientModal.street')} error={errors.street}>
+                <input
+                  type="text"
+                  name="street"
+                  value={formData.street}
+                  onChange={handleChange}
+                  className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neutral-400"
+                />
+              </FormField>
+
+              <FormField id="city" label={t('addClientModal.city')} error={errors.city}>
+                <input
+                  type="text"
+                  name="city"
+                  value={formData.city}
+                  onChange={handleChange}
+                  className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neutral-400"
+                />
+              </FormField>
+
+              <FormField id="voivodeship" label={t('addClientModal.voivodeship')} error={errors.voivodeship}>
+                <input
+                  type="text"
+                  name="voivodeship"
+                  value={formData.voivodeship}
+                  onChange={handleChange}
+                  className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neutral-400"
+                />
+              </FormField>
+
+              <FormField id="country" label={t('addClientModal.country')} error={errors.country}>
+                <CountrySelect
+                  value={formData.country}
+                  onChange={handleChange}
+                  name="country"
+                  hideLabel={true}
+                  className="w-full border border-neutral-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-neutral-400"
+                />
+              </FormField>
+
+              <FormField id="postal_code" label={t('addClientModal.postalCode')} error={errors.postal_code}>
+                <input
+                  type="text"
+                  name="postal_code"
+                  value={formData.postal_code}
+                  onChange={handleChange}
+                  className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neutral-400"
+                />
+              </FormField>
+            </Grid>
+          </Section>
+
+          {/* Lokalizacja */}
+          <Section title={t('addClientModal.location')}>
+            <Grid className="mb-2">
+              <FormField id="latitude" label={t('addClientModal.latitude')} error={errors.latitude}>
+                <input
+                  type="number"
+                  step="0.000001"
+                  name="latitude"
+                  value={formData.latitude}
+                  onChange={handleChange}
+                  {...numberInputGuards}
+                  className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neutral-400"
+                />
+              </FormField>
+              <FormField id="longitude" label={t('addClientModal.longitude')} error={errors.longitude}>
+                <input
+                  type="number"
+                  step="0.000001"
+                  name="longitude"
+                  value={formData.longitude}
+                  onChange={handleChange}
+                  {...numberInputGuards}
+                  className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neutral-400"
+                />
+              </FormField>
+            </Grid>
+            <Mapa>
               <LocationPicker
                 street={formData.street}
                 city={formData.city}
@@ -268,195 +401,330 @@ function AddClientModal({ isOpen, onClose, onClientAdded, allClients }) {
                 longitude={formData.longitude}
                 onCoordsChange={(coords) => setFormData((prev) => ({ ...prev, latitude: coords.lat, longitude: coords.lng }))}
               />
+            </Mapa>
+          </Section>
 
-              {/* <LocationPicker
-                street={formData.street}
-                city={formData.city}
-                postal_code={formData.postal_code}
-                voivodeship={formData.voivodeship}
-                country={formData.country}
-                latitude={formData.latitude}
-                longitude={formData.longitude}
-                onCoordsChange={({ latitude, longitude }) =>
-                  setFormData((p) => ({ ...p, latitude, longitude }))
-                }
-              /> */}
-            </div>
-          </div>
+          {/* Konta / Social / Finanse */}
+          <Section title={t('addClientModal.accounts')}>
+            <Grid>
+              <FormField id="engo_team_director" label={t('addClientModal.engoTeamDirector') || 'Dyrektor w zespole ENGO'} error={errors.engo_team_director}>
+                <input
+                  type="text"
+                  name="engo_team_director"
+                  value={formData.engo_team_director || ''}
+                  onChange={handleChange}
+                  className='w-full border border-neutral-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-neutral-400'
+                />
+              </FormField>
+              <FormField id="engo_team_contact" label={t('addClientModal.engoTeamContact')} error={errors.engo_team_contact}>
+                <select
+                  name="engo_team_contact"
+                  value={formData.engo_team_contact}
+                  onChange={handleChange}
+                  className='w-full border border-neutral-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-neutral-400'
+                >
+                  <option value="">{t('addClientModal.chooseMember')}</option>
+                  <option value="Paweł Kulpa; DOK">Paweł Kulpa, DOK</option>
+                  <option value="Bartosz Jamruszkiewicz;">Bartosz Jamruszkiewicz</option>
+                  <option value="Arna Cizmovic; Bartosz Jamruszkiewicz">Arna Cizmovic, Bartosz Jamruszkiewicz</option>
+                  <option value="Bogdan Iacob; Bartosz Jamruszkiewicz">Bogdan Iacob, Bartosz Jamruszkiewicz</option>
+                  <option value="Lukasz Apanel;">Łukasz Apanel</option>
+                  <option value="Lukasz Apanel; Damian Krzyżanowski">Damian Krzyżanowski, Łukasz Apanel</option>
+                  <option value="Lukasz Apanel; Egidijus Karitonis">Egidijus Karitonis, Łukasz Apanel</option>
+                </select>
+              </FormField>
 
-          <div className="flex-col mb-7">
-            <h4 className='header2'>{t('addClientModal.accounts')}</h4>
-            <div className='grid2col'>
-              <div className="flexColumn">
-                <label className="text-neutral-800">{t('addClientModal.engoTeamContact')}<br />
-                  <select name="engo_team_contact" value={formData.engo_team_contact} onChange={handleChange} className='AddSelectClient'>
-                    <option value="">{t('addClientModal.chooseMember')}</option>
-                    <option value="Pawel Kulpa; DOK">Pawel Kulpa, DOK</option>
-                    <option value="Bartosz Jamruszkiewicz">Bartosz Jamruszkiewicz</option>
-                    <option value="Arna Cizmovic; Bartosz Jamruszkiewicz">Arna Cizmovic, Bartosz Jamruszkiewicz</option>
-                    <option value="Bogdan Iacob; Bartosz Jamruszkiewicz">Bogdan Iacob, Bartosz Jamruszkiewicz</option>
-                    <option value="Lukasz Apanel">Lukasz Apanel</option>
-                    <option value="Damian Krzyzanowski; Lukasz Apanel">Damian Krzyzanowski, Lukasz Apanel</option>
-                    <option value="Egidijus Karitonis; Lukasz Apane">Egidijus Karitonis, Lukasz Apanel</option>
-                  </select>
-                  {errors.engo_team_contact && <div className="text-red-600 text-sm">{errors.engo_team_contact}</div>}
-                </label>
+              <FormField id="number_of_branches" label={t('addClientModal.branches')} error={errors.number_of_branches}>
+                <input
+                  type="text"
+                  name="number_of_branches"
+                  value={formData.number_of_branches}
+                  onChange={handleChange}
+                  className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neutral-400"
+                />
+              </FormField>
+              <FormField id="number_of_sales_reps" label={t('addClientModal.salesReps')} error={errors.number_of_sales_reps}>
+                <input
+                  type="text"
+                  name="number_of_sales_reps"
+                  value={formData.number_of_sales_reps}
+                  onChange={handleChange}
+                  className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neutral-400"
+                />
+              </FormField>
+              <FormField id="www" label={t('addClientModal.www')} error={errors.www}>
+                <input
+                  type="text"
+                  name="www"
+                  value={formData.www}
+                  onChange={handleChange}
+                  className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neutral-400"
+                />
+              </FormField>
 
-                <label className="text-neutral-800">{t('addClientModal.branches')}<br />
-                  <input type="number" name="number_of_branches" value={formData.number_of_branches} onChange={handleChange} />
-                  {errors.number_of_branches && <div className="text-red-600 text-sm">{errors.number_of_branches}</div>}
-                </label>
-                <label className="text-neutral-800">{t('addClientModal.salesReps')}<br />
-                  <input type="number" name="number_of_sales_reps" value={formData.number_of_sales_reps} onChange={handleChange} />
-                  {errors.number_of_sales_reps && <div className="text-red-600 text-sm">{errors.number_of_sales_reps}</div>}
-                </label>
-                <label className="text-neutral-800">{t('addClientModal.www')}<br />
-                  <input type="text" name="www" value={formData.www} onChange={handleChange} />
-                  {errors.www && <div className="text-red-600 text-sm">{errors.www}</div>}
-                </label>
+              <FormField id="possibility_www_baner" label={t('addClientModal.possibility_www_baner')} error={errors.possibility_www_baner}>
+                <select
+                  name="possibility_www_baner"
+                  value={formData.possibility_www_baner}
+                  onChange={handleChange}
+                  className='w-full border border-neutral-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-neutral-400'
+                >
+                  <option value="0">{t('addClientModal.no')}</option>
+                  <option value="1">{t('addClientModal.yes')}</option>
+                </select>
+              </FormField>
 
-                <label className="text-neutral-800">{t('addClientModal.possibility_www_baner')}<br />
-                  <select name="possibility_www_baner" className='AddSelectClient' value={formData.possibility_www_baner} onChange={handleChange}>
-                    <option value="0">{t('addClientModal.no')}</option>
-                    <option value="1">{t('addClientModal.yes')}</option>
-                  </select>
-                </label>
+              <FormField id="possibility_add_articles" label={t('addClientModal.possibility_add_articles')} error={errors.possibility_add_articles}>
+                <select
+                  name="possibility_add_articles"
+                  value={formData.possibility_add_articles}
+                  onChange={handleChange}
+                  className='w-full border border-neutral-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-neutral-400'
+                >
+                  <option value="0">{t('addClientModal.no')}</option>
+                  <option value="1">{t('addClientModal.yes')}</option>
+                </select>
+              </FormField>
 
-                <label className="text-neutral-800">{t('addClientModal.possibility_add_articles')}<br />
-                  <select name="possibility_add_articles" className='AddSelectClient' value={formData.possibility_add_articles} onChange={handleChange}>
-                    <option value="0">{t('addClientModal.no')}</option>
-                    <option value="1">{t('addClientModal.yes')}</option>
-                  </select>
-                </label>
+              <FormField id="facebook" label={t('addClientModal.facebook')} error={errors.facebook}>
+                <input
+                  type="text"
+                  name="facebook"
+                  value={formData.facebook}
+                  onChange={handleChange}
+                  className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neutral-400"
+                />
+              </FormField>
 
-                <label className="text-neutral-800">{t('addClientModal.facebook')}<br />
-                  <input type="text" name="facebook" value={formData.facebook} onChange={handleChange} />
-                  {errors.facebook && <div className="text-red-600 text-sm">{errors.facebook}</div>}
-                </label>
+              <FormField id="possibility_graphic_and_posts_FB" label={t('addClientModal.possibility_graphic_and_posts_FB')} error={errors.possibility_graphic_and_posts_FB}>
+                <select
+                  name="possibility_graphic_and_posts_FB"
+                  value={formData.possibility_graphic_and_posts_FB}
+                  onChange={handleChange}
+                  className='w-full border border-neutral-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-neutral-400'
+                >
+                  <option value="0">{t('addClientModal.no')}</option>
+                  <option value="1">{t('addClientModal.yes')}</option>
+                </select>
+              </FormField>
 
-                <label className="text-neutral-800">{t('addClientModal.possibility_graphic_and_posts_FB')}<br />
-                  <select name="possibility_graphic_and_posts_FB" className='AddSelectClient' value={formData.possibility_graphic_and_posts_FB} onChange={handleChange}>
-                    <option value="0">{t('addClientModal.no')}</option>
-                    <option value="1">{t('addClientModal.yes')}</option>
-                  </select>
-                </label>
+              <FormField id="auction_service" label={t('addClientModal.auctionService')} error={errors.auction_service}>
+                <input
+                  type="text"
+                  name="auction_service"
+                  value={formData.auction_service}
+                  onChange={handleChange}
+                  className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neutral-400"
+                />
+              </FormField>
 
-                <label className="text-neutral-800">{t('addClientModal.auctionService')}<br />
-                  <input type="text" name="auction_service" value={formData.auction_service} onChange={handleChange} />
-                  {errors.auction_service && <div className="text-red-600 text-sm">{errors.auction_service}</div>}
-                </label>
-                <label className="text-neutral-800">{t('addClientModal.fairs')}<br />
-                  <input type="text" name="fairs" value={formData.fairs} onChange={handleChange} />
-                  {errors.fairs && <div className="text-red-600 text-sm">{errors.fairs}</div>}
-                </label>
-                <label className="text-neutral-800">{t('addClientModal.competition')}<br />
-                  <input type="text" name="competition" value={formData.competition} onChange={handleChange} />
-                  {errors.competition && <div className="text-red-600 text-sm">{errors.competition}</div>}
-                </label>
-                <label className="text-neutral-800">
-                  <input type="checkbox" name="private_brand" checked={!!formData.private_brand} onChange={handleChange} />{t('addClientModal.privateBrand')}
-                </label>
+              <FormField id="fairs" label={t('addClientModal.fairs')} error={errors.fairs}>
+                <input
+                  type="text"
+                  name="fairs"
+                  value={formData.fairs}
+                  onChange={handleChange}
+                  className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neutral-400"
+                />
+              </FormField>
+              <FormField id="competition" label={t('addClientModal.competition')} error={errors.competition}>
+                <input
+                  type="text"
+                  name="competition"
+                  value={formData.competition}
+                  onChange={handleChange}
+                  className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neutral-400"
+                />
+              </FormField>
+
+              <FormField id="private_brand" label={t('addClientModal.privateBrand')}>
+                <div className="flex items-center gap-2">
+                  <input type="checkbox" name="private_brand" checked={!!formData.private_brand} onChange={handleChange} />
+                  <span className="text-neutral-800">{t('addClientModal.privateBrand')}</span>
+                </div>
                 {formData.private_brand === 1 && (
-                  <label className="text-neutral-800">{t('addClientModal.privateBrandDetails')}
-                    <input type="text" name="private_brand_details" value={formData.private_brand_details} onChange={handleChange} />
+                  <div className="mt-2">
+                    <input
+                      type="text"
+                      name="private_brand_details"
+                      value={formData.private_brand_details}
+                      onChange={handleChange}
+                      className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neutral-400"
+                    />
                     {errors.private_brand_details && <div className="text-red-600 text-sm">{errors.private_brand_details}</div>}
-                  </label>
+                  </div>
                 )}
-                <label className="text-neutral-800">
-                  <input type="checkbox" name="loyalty_program" checked={!!formData.loyalty_program} onChange={handleChange} />{t('addClientModal.loyaltyProgram')}<br />
-                </label>
+              </FormField>
+
+              <FormField id="loyalty_program" label={t('addClientModal.loyaltyProgram')}>
+                <div className="flex items-center gap-2">
+                  <input type="checkbox" name="loyalty_program" checked={!!formData.loyalty_program} onChange={handleChange} />
+                  <span className="text-neutral-800">{t('addClientModal.loyaltyProgram')}</span>
+                </div>
                 {formData.loyalty_program === 1 && (
-                  <label className="text-neutral-800">{t('addClientModal.loyaltyProgramDetails')}<br />
-                    <input type="text" name="loyalty_program_details" value={formData.loyalty_program_details} onChange={handleChange} />
+                  <div className="mt-2">
+                    <input
+                      type="text"
+                      name="loyalty_program_details"
+                      value={formData.loyalty_program_details}
+                      onChange={handleChange}
+                      className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neutral-400"
+                    />
                     {errors.loyalty_program_details && <div className="text-red-600 text-sm">{errors.loyalty_program_details}</div>}
-                  </label>
+                  </div>
                 )}
+              </FormField>
+
+              <FormField id="turnover_pln" label={t('addClientModal.turnoverPln')} error={errors.turnover_pln}>
+                <input
+                  type="text"
+                  name="turnover_pln"
+                  placeholder=""
+                  value={formatNumberWithSpaces(formData.turnover_pln)}
+                  onChange={(e) => {
+                    const numeric = parseNumber(e.target.value);
+                    handleChange({ target: { name: 'turnover_pln', value: numeric } });
+                  }}
+                  className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neutral-400"
+                />
+              </FormField>
+
+              <FormField id="turnover_eur" label={t('addClientModal.turnoverEur')} error={errors.turnover_eur}>
+                <input
+                  type="text"
+                  name="turnover_eur"
+                  placeholder=""
+                  value={formatNumberWithSpaces(formData.turnover_eur)}
+                  onChange={(e) => {
+                    const numeric = parseNumber(e.target.value);
+                    handleChange({ target: { name: 'turnover_eur', value: numeric } });
+                  }}
+                  className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neutral-400"
+                />
+              </FormField>
+
+              <FormField id="installation_sales_share" label={t('addClientModal.installationSales')} error={errors.installation_sales_share}>
+                <input
+                  type="text"
+                  name="installation_sales_share"
+                  value={formData.installation_sales_share}
+                  onChange={handleChange}
+                  className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neutral-400"
+                />
+              </FormField>
+
+              <FormField id="automatic_sales_share" label={t('addClientModal.automationSales')} error={errors.automatic_sales_share}>
+                <input
+                  type="text"
+                  name="automatic_sales_share"
+                  value={formData.automatic_sales_share}
+                  onChange={handleChange}
+                  className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neutral-400"
+                />
+              </FormField>
+
+              <FormField id="sales_potential" label={t('addClientModal.salesPotential')} error={errors.sales_potential}>
+                <input
+                  type="text"
+                  name="sales_potential"
+                  value={formData.sales_potential}
+                  onChange={handleChange}
+                  className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neutral-400"
+                />
+              </FormField>
+
+              <FormField id="has_webstore" label={t('addClientModal.webstore')} error={errors.has_webstore}>
+                <input
+                  type="text"
+                  name="has_webstore"
+                  value={formData.has_webstore}
+                  onChange={handleChange}
+                  className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neutral-400"
+                />
+              </FormField>
+
+              <FormField id="has_ENGO_products_in_webstore" label={t('addClientModal.has_ENGO_products_in_webstore')} error={errors.has_ENGO_products_in_webstore}>
+                <select
+                  name="has_ENGO_products_in_webstore"
+                  value={formData.has_ENGO_products_in_webstore}
+                  onChange={handleChange}
+                  className='w-full border border-neutral-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-neutral-400'
+                >
+                  <option value="0">{t('addClientModal.no')}</option>
+                  <option value="1">{t('addClientModal.yes')}</option>
+                </select>
+              </FormField>
+
+              <FormField id="possibility_add_ENGO_products_to_webstore" label={t('addClientModal.possibility_add_ENGO_products_to_webstore')} error={errors.possibility_add_ENGO_products_to_webstore}>
+                <select
+                  name="possibility_add_ENGO_products_to_webstore"
+                  value={formData.possibility_add_ENGO_products_to_webstore}
+                  onChange={handleChange}
+                  className='w-full border border-neutral-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-neutral-400'
+                >
+                  <option value="0">{t('addClientModal.no')}</option>
+                  <option value="1">{t('addClientModal.yes')}</option>
+                </select>
+              </FormField>
+
+              <FormField id="has_b2b_platform" label={t('addClientModal.b2b')} error={errors.has_b2b_platform}>
+                <input
+                  type="text"
+                  name="has_b2b_platform"
+                  value={formData.has_b2b_platform}
+                  onChange={handleChange}
+                  className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neutral-400"
+                />
+              </FormField>
+              <FormField id="has_b2c_platform" label={t('addClientModal.b2c')} error={errors.has_b2c_platform}>
+                <input
+                  type="text"
+                  name="has_b2c_platform"
+                  value={formData.has_b2c_platform}
+                  onChange={handleChange}
+                  className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neutral-400"
+                />
+              </FormField>
+            </Grid>
+          </Section>
+
+          {/* Struktura sprzedaży */}
+          <Section title={t('addClientModal.salesStructure')}>
+            {(isStructureInvalid || errors['structure_other']) && (
+              <div className="text-red-600 font-semibold mb-2">
+                {errors['structure_other'] || t('addClientModal.structureSumError')}
               </div>
+            )}
+            <Grid>
+              <FormField id="structure_installer" label={t('addClientModal.structure.installer')}>
+                <input type="number" name="structure_installer" value={formData.structure_installer} onChange={handleChange} className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none" />
+              </FormField>
+              <FormField id="structure_wholesaler" label={t('addClientModal.structure.wholesaler')}>
+                <input type="number" name="structure_wholesaler" value={formData.structure_wholesaler} onChange={handleChange} className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none" />
+              </FormField>
+              <FormField id="structure_ecommerce" label={t('addClientModal.structure.ecommerce')}>
+                <input type="number" name="structure_ecommerce" value={formData.structure_ecommerce} onChange={handleChange} className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none" />
+              </FormField>
+              <FormField id="structure_retail" label={t('addClientModal.structure.retail')}>
+                <input type="number" name="structure_retail" value={formData.structure_retail} onChange={handleChange} className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none" />
+              </FormField>
+              <FormField id="structure_other" label={t('addClientModal.structure.other')} error={errors.structure_other}>
+                <input type="number" name="structure_other" value={formData.structure_other} onChange={handleChange} className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none" />
+              </FormField>
+            </Grid>
+          </Section>
 
-              <div className="flexColumn">
-                <label className="text-neutral-800">{t('addClientModal.turnoverPln')}<br />
-                  <input type="number" step="0.01" name="turnover_pln" value={formData.turnover_pln} onChange={handleChange} {...numberInputGuards} />
-                  {errors.turnover_pln && <div className="text-red-600 text-sm">{errors.turnover_pln}</div>}
-                </label>
-                <label className="text-neutral-800">{t('addClientModal.turnoverEur')}<br />
-                  <input type="number" step="0.01" name="turnover_eur" value={formData.turnover_eur} onChange={handleChange} {...numberInputGuards} />
-                  {errors.turnover_eur && <div className="text-red-600 text-sm">{errors.turnover_eur}</div>}
-                </label>
-                <label className="text-neutral-800">{t('addClientModal.installationSales')}<br />
-                  <input type="number" step="0.01" name="installation_sales_share" value={formData.installation_sales_share} onChange={handleChange} {...numberInputGuards} />
-                  {errors.installation_sales_share && <div className="text-red-600 text-sm">{errors.installation_sales_share}</div>}
-                </label>
-                <label className="text-neutral-800">{t('addClientModal.automationSales')}<br />
-                  <input type="number" step="0.01" name="automatic_sales_share" value={formData.automatic_sales_share} onChange={handleChange} {...numberInputGuards} />
-                  {errors.automatic_sales_share && <div className="text-red-600 text-sm">{errors.automatic_sales_share}</div>}
-                </label>
-                <label className="text-neutral-800">{t('addClientModal.salesPotential')}<br />
-                  <input type="number" step="0.01" name="sales_potential" value={formData.sales_potential} onChange={handleChange} {...numberInputGuards} />
-                  {errors.sales_potential && <div className="text-red-600 text-sm">{errors.sales_potential}</div>}
-                </label>
-                <label className="text-neutral-800">{t('addClientModal.webstore')}<br />
-                  <input type="text" name="has_webstore" value={formData.has_webstore} onChange={handleChange} />
-                </label>
-
-                <label className="text-neutral-800">{t('addClientModal.has_ENGO_products_in_webstore')}<br />
-                  <select name="has_ENGO_products_in_webstore" className='AddSelectClient' value={formData.has_ENGO_products_in_webstore}
-                    onChange={handleChange}>
-                    <option value="0">{t('addClientModal.no')}</option>
-                    <option value="1">{t('addClientModal.yes')}</option>
-                  </select>
-                </label>
-
-                <label className="text-neutral-800">{t('addClientModal.possibility_add_ENGO_products_to_webstore')}<br />
-                  <select name="possibility_add_ENGO_products_to_webstore" className='AddSelectClient' value={formData.possibility_add_ENGO_products_to_webstore}
-                    onChange={handleChange}>
-                    <option value="0">{t('addClientModal.no')}</option>
-                    <option value="1">{t('addClientModal.yes')}</option>
-                  </select>
-                </label>
-
-                <label className="text-neutral-800">{t('addClientModal.b2b')}<br />
-                  <input type="text" name="has_b2b_platform" value={formData.has_b2b_platform} onChange={handleChange} />
-                </label>
-                <label className="text-neutral-800">{t('addClientModal.b2c')}<br />
-                  <input type="text" name="has_b2c_platform" value={formData.has_b2c_platform} onChange={handleChange} />
-                </label>
-              </div>
-            </div>
-          </div>
-
-          {/* Sales Structure */}
-          <h4 className='header2'>{t('addClientModal.salesStructure')}</h4>
-          {(isStructureInvalid || errors['structure_other']) && (
-            <div style={{ color: 'red', fontWeight: 'bold', marginBottom: '10px' }}>
-              {errors['structure_other'] || t('addClientModal.structureSumError')}
-            </div>
-          )}
-          <div className="flexColumn mb-7">
-            <label className='text-neutral-800'>{t('addClientModal.structure.installer')}<br />
-              <input type="number" name="structure_installer" value={formData.structure_installer} onChange={handleChange} />
-            </label>
-            <label className='text-neutral-800'>{t('addClientModal.structure.wholesaler')}<br />
-              <input type="number" name="structure_wholesaler" value={formData.structure_wholesaler} onChange={handleChange} />
-            </label>
-            <label className='text-neutral-800'>{t('addClientModal.structure.ecommerce')}<br />
-              <input type="number" name="structure_ecommerce" value={formData.structure_ecommerce} onChange={handleChange} />
-            </label>
-            <label className='text-neutral-800'>{t('addClientModal.structure.retail')}<br />
-              <input type="number" name="structure_retail" value={formData.structure_retail} onChange={handleChange} />
-            </label>
-            <label className='text-neutral-800'>{t('addClientModal.structure.other')}<br />
-              <input type="number" name="structure_other" value={formData.structure_other} onChange={handleChange} />
-            </label>
-          </div>
-
-          <ContactsSection
-            contacts={contacts}
-            onAdd={handleAddContact}
-            onRemove={handleRemoveContact}
-            onChange={onContactFieldChange}
-            readOnly={false}
-            enableSearch={false}
-          />
+          {/* Kontakty */}
+          <Section title={t('addClientModal.contacts') || 'Kontakty'}>
+            <ContactsSection
+              contacts={contacts}
+              onAdd={handleAddContact}
+              onRemove={handleRemoveContact}
+              onChange={onContactFieldChange}
+              readOnly={false}
+              enableSearch={false}
+            />
+          </Section>
 
 
 

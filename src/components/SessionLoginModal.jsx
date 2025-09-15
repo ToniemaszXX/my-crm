@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { completeReauth } from '../utils/reauthGate';
+import { useAuth } from '../context/AuthContext';
 
 export default function SessionLoginModal({
   open,
   onSuccess,
   onClose,
 }) {
+  const { setUser } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -96,10 +98,14 @@ export default function SessionLoginModal({
 
       // 2) Opcjonalny check sesji (odświeżenie stanu FE/kontekstu)
       try {
-        await fetch(mePath, {
+        const meResp = await fetch(mePath, {
           credentials: 'include',
           headers: { 'Cache-Control': 'no-store' },
         });
+        const meData = await meResp.json().catch(() => ({}));
+        if (meData?.success && meData?.user) {
+          setUser(meData.user); // aktualizacja kontekstu – przywraca dane w Sidebar
+        }
       } catch {}
 
       // 3) Powiadom „bramkę” o sukcesie — retry ruszy

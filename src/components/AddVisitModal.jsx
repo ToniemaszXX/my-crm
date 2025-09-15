@@ -7,9 +7,14 @@ import { fetchWithAuth } from '../utils/fetchWithAuth';
 import { usePreventDoubleSubmit } from '../utils/preventDoubleSubmit';
 
 
-function AddVisitModal({ isOpen, onClose, onVisitAdded, clients, fixedClientId }) {
+function AddVisitModal({ isOpen, onClose, onVisitAdded, clients, fixedClientId, entityType = 'client', entities, fixedEntityId }) {
   const [formData, setFormData] = useState({
-    client_id: "",
+  client_id: "", // backward compat for clients
+  designer_id: "",
+  installer_id: "",
+  deweloper_id: "",
+  entity_type: undefined,
+  entity_id: undefined,
     visit_date: "",
     contact_person: "",
     meeting_type: "meeting",
@@ -29,8 +34,13 @@ function AddVisitModal({ isOpen, onClose, onVisitAdded, clients, fixedClientId }
 
   const validateForm = () => {
     const errors = {};
-
-    if (!formData.client_id) errors.client_id = t('addVisitModal.errors.requiredClient');
+    // Determine selected id based on entityType
+    const idField = `${entityType}_id`;
+    const selectedId = formData[idField] || formData.client_id; // compat
+    if (!selectedId) {
+      // show generic error key to display under select
+      errors.target = t('addVisitModal.errors.requiredClient');
+    }
     if (!formData.visit_date) errors.visit_date = t('addVisitModal.errors.requiredDate');
     if (!formData.contact_person || formData.contact_person.length < 3)
       errors.contact_person = t('addVisitModal.errors.invalidContactPerson');
@@ -41,10 +51,21 @@ function AddVisitModal({ isOpen, onClose, onVisitAdded, clients, fixedClientId }
 
   useEffect(() => {
     if (isOpen) {
-      setFormData((prev) => ({
-        ...prev,
-        client_id: fixedClientId || prev.client_id || "",
-      }));
+      setFormData((prev) => {
+        const next = { ...prev };
+        // prefer new generic props
+        const idField = `${entityType}_id`;
+        if (fixedEntityId) {
+          next[idField] = String(fixedEntityId);
+          next.entity_type = entityType;
+          next.entity_id = String(fixedEntityId);
+        } else if (fixedClientId) {
+          next.client_id = String(fixedClientId);
+          next.entity_type = 'client';
+          next.entity_id = String(fixedClientId);
+        }
+        return next;
+      });
     }
 
     if (!isOpen) {
@@ -52,13 +73,28 @@ function AddVisitModal({ isOpen, onClose, onVisitAdded, clients, fixedClientId }
       setFormErrors({});
     }
 
-  }, [isOpen, fixedClientId]);
+  }, [isOpen, fixedClientId, fixedEntityId, entityType]);
 
 
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => {
+      const next = { ...prev, [name]: value };
+      // keep derived entity_type/entity_id in sync when changing the select
+      const isAnyEntityField = ['client_id','designer_id','installer_id','deweloper_id'].includes(name);
+      if (isAnyEntityField) {
+        // figure out which type changed
+        const type = name.replace('_id','');
+        next.entity_type = type;
+        next.entity_id = value || undefined;
+        // clear other *_id to satisfy exactly-one constraint
+        ['client','designer','installer','deweloper']
+          .filter(t => t !== type)
+          .forEach(t => { next[`${t}_id`] = ""; });
+      }
+      return next;
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -78,11 +114,11 @@ function AddVisitModal({ isOpen, onClose, onVisitAdded, clients, fixedClientId }
     const isSessionValid = await checkSessionBeforeSubmit();
     if (!isSessionValid) return;
 
-    try {
+  try {
       const response = await fetchWithAuth(`${import.meta.env.VITE_API_URL}/visits/add.php`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+    body: JSON.stringify(formData),
       });
 
       const text = await response.text();
@@ -96,11 +132,16 @@ function AddVisitModal({ isOpen, onClose, onVisitAdded, clients, fixedClientId }
         return;
       }
 
-      if (data.success) {
+    if (data.success) {
         onVisitAdded();
         onClose();
         setFormData({
-          client_id: "",
+      client_id: "",
+      designer_id: "",
+      installer_id: "",
+      deweloper_id: "",
+      entity_type: undefined,
+      entity_id: undefined,
           visit_date: "",
           contact_person: "",
           meeting_type: "meeting",
@@ -114,7 +155,7 @@ function AddVisitModal({ isOpen, onClose, onVisitAdded, clients, fixedClientId }
         setFormErrors({});
         setServerError("");
       } else {
-        if (data.errors) {
+  if (data.errors) {
           setFormErrors(data.errors);
         } else {
           setServerError(data.message || "Wystąpił błąd serwera.");
@@ -144,22 +185,29 @@ function AddVisitModal({ isOpen, onClose, onVisitAdded, clients, fixedClientId }
 
   if (!isOpen) return null;
 
+  // Build options according to entityType; fallback to clients prop for backward compat
+  const list = entities || clients || [];
+  const idFieldName = `${entityType}_id`;
+  const selectValue = formData[idFieldName] || (entityType === 'client' ? formData.client_id : "");
+  const disabled = !!fixedEntityId || (!!fixedClientId && entityType === 'client');
+  const chooseLabel = t('addVisitModal.chooseClient');
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-start pt-20  z-[99]">
       <div className="bg-white text-black p-6 rounded-lg w-[600px] max-h-[90vh] overflow-y-auto">
         <h2 className="text-xl font-bold mb-4">{t('addVisitModal.addVisit')}</h2>
         <form onSubmit={safeSubmit} className="space-y-3">
 
-          <label className="text-neutral-800">{t('addVisitModal.chooseClient')}
+          <label className="text-neutral-800">{chooseLabel}
             <select
-              name="client_id"
-              value={formData.client_id}
+              name={idFieldName}
+              value={selectValue}
               onChange={handleChange}
               className="w-full border p-2"
-              disabled={!!fixedClientId}
+              disabled={disabled}
             >
-              <option value="">{t('addVisitModal.chooseClient')}</option>
-              {[...clients]
+              <option value="">{chooseLabel}</option>
+              {[...list]
                 .sort((a, b) => a.company_name.localeCompare(b.company_name))
                 .map((c) => (
                   <option key={c.id || c.client_id} value={c.id || c.client_id}>
@@ -167,8 +215,8 @@ function AddVisitModal({ isOpen, onClose, onVisitAdded, clients, fixedClientId }
                   </option>
                 ))}
             </select>
-            {formErrors.client_id && (
-              <p className="text-red-600 text-sm mt-1">{formErrors.client_id}</p>
+            {(formErrors.target || formErrors[idFieldName] || formErrors.client_id) && (
+              <p className="text-red-600 text-sm mt-1">{formErrors.target || formErrors[idFieldName] || formErrors.client_id}</p>
             )}
           </label>
 

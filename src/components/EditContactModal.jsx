@@ -8,6 +8,9 @@ import { usePreventDoubleSubmit } from "../utils/preventDoubleSubmit";
 const emptyContact = {
   id: null,          // wymagane do update
   client_id: null,   // wymagane do update
+  designer_id: null,
+  installer_id: null,
+  deweloper_id: null,
   department: "",
   position: "",
   name: "",
@@ -33,6 +36,9 @@ export default function EditContactModal({
     setForm({
       id: src.id ?? null,
       client_id: src.client_id ?? src.clientId ?? null,
+  designer_id: src.designer_id ?? null,
+  installer_id: src.installer_id ?? null,
+  deweloper_id: src.deweloper_id ?? null,
       department: src.department ?? "",
       position: src.position ?? "",
       name: src.name ?? "",
@@ -52,8 +58,21 @@ export default function EditContactModal({
   const handleSubmit = wrapSubmit(async (e) => {
     e.preventDefault();
 
-    if (!form?.id || !form?.client_id) {
-      alert("Brak id lub client_id — nie mogę zapisać zmian kontaktu.");
+    if (!form?.id) {
+      alert("Brak id — nie mogę zapisać zmian kontaktu.");
+      return;
+    }
+
+    // detect owner
+    const owner = {
+      client_id: form.client_id,
+      designer_id: form.designer_id,
+      installer_id: form.installer_id,
+      deweloper_id: form.deweloper_id,
+    };
+    const ownerEntries = Object.entries(owner).filter(([,v]) => !!v);
+    if (ownerEntries.length !== 1) {
+      alert("Brak jednoznacznego właściciela kontaktu.");
       return;
     }
 
@@ -63,24 +82,24 @@ export default function EditContactModal({
     if (!okSession) { setIsSaving(false); return; }
 
     try {
-      const res = await fetchWithAuth(
-        `${import.meta.env.VITE_API_URL}/contacts/update.php`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            id: form.id,
-            client_id: form.client_id,
-            department: form.department || "",
-            position: form.position || "",
-            name: form.name || "",
-            phone: form.phone || "",
-            email: form.email || "",
-            function_notes: form.function_notes || "",
-            decision_level: form.decision_level ?? "-",
-          }),
-        }
-      );
+      const payload = {
+        id: form.id,
+        department: form.department || "",
+        position: form.position || "",
+        name: form.name || "",
+        phone: form.phone || "",
+        email: form.email || "",
+        function_notes: form.function_notes || "",
+        decision_level: form.decision_level ?? "-",
+      };
+      const [ownerKey, ownerVal] = ownerEntries[0];
+      payload[ownerKey] = ownerVal;
+
+      const res = await fetchWithAuth(`${import.meta.env.VITE_API_URL}/contacts/update.php`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
 
       const text = await res.text();
       let data = null;

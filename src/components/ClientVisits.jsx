@@ -10,19 +10,21 @@ function ClientVisits({ client, clientId: propClientId, onEdit }) {
   const [visits, setVisits] = useState(client?.visits || null);
   const [loading, setLoading] = useState(false);
 
-  const clientId = client?.client_id || client?.id || propClientId;
+  // Ensure numeric clientId to match backend (which returns integers)
+  const clientIdRaw = client?.client_id ?? client?.id ?? propClientId;
+  const clientId = clientIdRaw != null ? Number(clientIdRaw) : null;
 
   useEffect(() => {
     if (visits !== null || !clientId) return;
 
     setLoading(true);
-    fetch(`${import.meta.env.VITE_API_URL}/visits/get_visits_by_clients.php`, {
+  fetch(`${import.meta.env.VITE_API_URL}/visits/get_visits_by_clients.php`, {
       credentials: "include",
     })
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {
-          const matched = data.data.find((c) => c.client_id === clientId);
+      const matched = data.data.find((c) => Number(c.client_id) === clientId);
           setVisits(matched?.visits || []);
         } else {
           console.error("Błąd pobierania wizyt:", data.message);

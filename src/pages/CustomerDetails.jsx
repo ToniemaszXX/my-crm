@@ -65,6 +65,7 @@ export default function CustomerDetails() {
 
         const detRes = await fetchWithAuth(`${import.meta.env.VITE_API_URL}/customers/get.php?id=${id}`);
         if (!detRes) return; // 401 obsłuży się globalnie
+        
         if (detRes.status === 404) {
           if (!ignore) { setNotFound(true); setClient(null); }
         } else {
@@ -135,6 +136,8 @@ export default function CustomerDetails() {
       <div className="flex items-start justify-between gap-4 mb-6">
         <h1 className="text-2xl font-bold">{title}</h1>
         <div className="flex gap-2">
+          <button className="buttonGreen" onClick={() => setIsAddVisitOpen(true)}>{t('visit.addVisit')}</button>
+          <button className="buttonGreen" onClick={() => setIsAddContactOpen(true)}>Dodaj kontakt</button>
           <button className="buttonGreen" onClick={() => setIsEditOpen(true)}>Edytuj</button>
           <button className="buttonRed" onClick={() => navigate(-1)}>Wróć</button>
         </div>
@@ -149,6 +152,8 @@ export default function CustomerDetails() {
           <Field label={t('addClientModal.client_code_erp')} value={client.client_code_erp} />
           <Field label={t('addClientModal.nip')} value={client.nip} />
           <Field label={t('addClientModal.clientCategory')} value={client.client_category} />
+          <Field label="Podkategoria klienta" value={client.client_subcategory} />
+          <Field label={t('addClientModal.engoTeamDirector')} value={client.engo_team_director} />
           <Field label={t('addClientModal.engoTeamContact')} value={client.engo_team_contact} />
         </Grid>
       </Section>
@@ -290,7 +295,7 @@ export default function CustomerDetails() {
                 className="buttonGreenNeg"
                 onClick={() => {
                   // dodajemy client_id, bo update.php go wymaga
-                  setSelectedContact({ ...c, client_id: client.id });
+                  setSelectedContact({ ...c, client_id: client.id, designer_id: null, installer_id: null, deweloper_id: null });
                   setIsEditContactOpen(true);
                 }}
               >
@@ -304,13 +309,7 @@ export default function CustomerDetails() {
           )
         }
 
-        <button
-          type="button"
-          className="buttonGreen"
-          onClick={() => setIsAddContactOpen(true)}
-        >
-          Dodaj kontakt
-        </button>
+        
       </Section>
 
       {/* Modal edycji – Twój komponent */}
@@ -333,16 +332,7 @@ export default function CustomerDetails() {
         />
       )}
 
-      <Section title={t('visitsPage.allVisits')}>
-        <div className="mb-3">
-          <button
-            className="buttonGreen"
-            onClick={() => setIsAddVisitOpen(true)}
-          >
-            {t('visit.addVisit')}
-          </button>
-        </div>
-
+  <Section title={t('visitsPage.allVisits')}>
         <ClientVisits
           client={client}
           clientId={client?.id}

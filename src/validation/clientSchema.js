@@ -95,6 +95,12 @@ export const contactSchema = z.object({
 });
 
 export const clientSchema = z.object({
+  // market assignment: optional on FE (BE enforces rules). When provided, must be an int > 0
+  market_id: z.preprocess((v) => {
+    if (v === '' || v === null || v === undefined) return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : v;
+  }, z.number().int().positive().nullable().optional()),
     company_name: z.string().min(1, "Nazwa jest wymagana").max(120),
     client_code_erp: z.string().optional().default(""),
     status: z.coerce.number().int().min(0).max(1).default(1),
@@ -108,10 +114,12 @@ export const clientSchema = z.object({
     nip: z.string().optional().default(""),
 
     client_category: z.string().optional().default(""),
+  client_subcategory: z.string().max(255).optional().default(""),
     index_of_parent: z.string().optional().default(""),
 
     fairs: z.string().optional().default(""),
     competition: z.string().optional().default(""),
+  engo_team_director: z.string().optional().default(""),
     engo_team_contact: z.string().optional().default(""),
 
     // number_of_branches: z.preprocess(v => (v === '' ? null : v), z.number().int().min(0).nullable().optional()),

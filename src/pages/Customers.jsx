@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import AddClientModal from '../components/AddClientModal';
+import AddInstallerModal from '../components/AddInstallerModal';
+import EditInstallerModal from '../components/EditInstallerModal';
+import AddDesignerModal from '../components/AddDesignerModal';
+import AddDeweloperModal from '../components/AddDeweloperModal';
 // import EditClientModal from '../components/EditClientModal';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -20,6 +24,12 @@ function Customers() {
   const [filteredClients, setFilteredClients] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isAddInstallerOpen, setIsAddInstallerOpen] = useState(false);
+  const [isEditInstallerOpen, setIsEditInstallerOpen] = useState(false);
+  const [selectedInstaller, setSelectedInstaller] = useState(null);
+  const [isAddDesignerOpen, setIsAddDesignerOpen] = useState(false);
+  const [isAddDeveloperOpen, setIsAddDeveloperOpen] = useState(false);
+  // Designer details are now a page route
   // const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   // const [selectedClient, setSelectedClient] = useState(null);
   const { t } = useTranslation();
@@ -130,7 +140,7 @@ function Customers() {
       });
     }
 
-
+    const safe = (v) => String(v ?? '').toLowerCase();
 
     // Then apply search query on top of that
     if (searchQuery.trim() === '') {
@@ -141,42 +151,43 @@ function Customers() {
         const query = lowerQuery;
 
         const baseMatch =
-          (client.company_name || '').toLowerCase().includes(query) ||
-          (client.client_code_erp || '').toLowerCase().includes(query) ||
-          (client.status || '').includes(query) ||
-          (client.data_veryfication || '').includes(query) ||
-          (client.city || '').toLowerCase().includes(query) ||
-          (client.engo_team_contact || '').toLowerCase().includes(query) ||
-          (client.country || '').toLowerCase().includes(query) ||
-          (client.nip || '').toLowerCase().includes(query) ||
-          (client.street || '').toLowerCase().includes(query) ||
-          (client.postal_code || '').toLowerCase().includes(query) ||
-          (client.voivodeship || '').toLowerCase().includes(query) ||
-          (client.client_category || '').toLowerCase().includes(query) ||
-          (client.fairs || '').toLowerCase().includes(query) ||
-          (client.competition || '').toLowerCase().includes(query) ||
-          (client.number_of_branches || '').toLowerCase().includes(query) ||
-          (client.number_of_sales_reps || '').toLowerCase().includes(query) ||
-          (client.www || '').toLowerCase().includes(query) ||
-          (client.turnover_pln || '').toLowerCase().includes(query) ||
-          (client.turnover_eur || '').toLowerCase().includes(query) ||
-          (client.installation_sales_share || '').toLowerCase().includes(query) ||
-          (client.automatic_sales_share || '').toLowerCase().includes(query) ||
-          (client.sales_potential || '').toLowerCase().includes(query) ||
-          (client.has_webstore || '').toLowerCase().includes(query) ||
-          (client.has_b2b_platform || '').toLowerCase().includes(query) ||
-          (client.has_b2c_platform || '').toLowerCase().includes(query) ||
-          (client.facebook || '').toLowerCase().includes(query) ||
-          (client.auction_service || '').toLowerCase().includes(query) ||
-          (client.private_bran || '').toLowerCase().includes(query) ||
-          (client.private_brand_details || '').toLowerCase().includes(query) ||
-          (client.loyalty_progra || '').toLowerCase().includes(query) ||
-          (client.loyalty_program_details || '').toLowerCase().includes(query) ||
-          (client.structure_installe || '').toLowerCase().includes(query) ||
-          (client.structure_wholesale || '').toLowerCase().includes(query) ||
-          (client.structure_ecommerc || '').toLowerCase().includes(query) ||
-          (client.structure_retai || '').toLowerCase().includes(query) ||
-          (client.structure_oth || '').toLowerCase().includes(query);
+          safe(client.company_name).includes(query) ||
+          safe(client.client_code_erp).includes(query) ||
+          safe(client.status).includes(query) ||                // <-- już bezpieczne
+          safe(client.data_veryfication).includes(query) ||
+          safe(client.city).includes(query) ||
+          safe(client.engo_team_contact).includes(query) ||
+          safe(client.country).includes(query) ||
+          safe(client.nip).includes(query) ||
+          safe(client.street).includes(query) ||
+          safe(client.postal_code).includes(query) ||
+          safe(client.voivodeship).includes(query) ||
+          safe(client.client_category).includes(query) ||
+          safe(client.fairs).includes(query) ||
+          safe(client.competition).includes(query) ||
+          safe(client.number_of_branches).includes(query) ||
+          safe(client.number_of_sales_reps).includes(query) ||
+          safe(client.www).includes(query) ||
+          safe(client.turnover_pln).includes(query) ||
+          safe(client.turnover_eur).includes(query) ||
+          safe(client.installation_sales_share).includes(query) ||
+          safe(client.automatic_sales_share).includes(query) ||
+          safe(client.sales_potential).includes(query) ||
+          safe(client.has_webstore).includes(query) ||
+          safe(client.has_b2b_platform).includes(query) ||
+          safe(client.has_b2c_platform).includes(query) ||
+          safe(client.facebook).includes(query) ||
+          safe(client.auction_service).includes(query) ||
+          safe(client.private_bran).includes(query) ||
+          safe(client.private_brand_details).includes(query) ||
+          safe(client.loyalty_progra).includes(query) ||
+          safe(client.loyalty_program_details).includes(query) ||
+          safe(client.structure_installe).includes(query) ||
+          safe(client.structure_wholesale).includes(query) ||
+          safe(client.structure_ecommerc).includes(query) ||
+          safe(client.structure_retai).includes(query) ||
+          safe(client.structure_oth).includes(query);
+
 
         const contactsMatch = Array.isArray(client.contacts)
           ? client.contacts.some(contact =>
@@ -203,22 +214,41 @@ function Customers() {
   };
 
   const fetchClients = async () => {
-    const response = await fetchWithAuth(`${import.meta.env.VITE_API_URL}/customers/list.php`);
-    const data = await response.json();
-    if (data.success) {
-      const sortedClients = [...data.clients].sort((a, b) => {
-        // Najpierw według statusu (Nowy na górze)
-        if (a.status === "1" && b.status !== "1") return -1;
-        if (a.status !== "1" && b.status === "1") return 1;
+    // Pobierz klientów, instalatorów, projektantów i deweloperów, scalamy do jednej listy
+    const [respClients, respInstallers, respDesigners, respDevelopers] = await Promise.all([
+      fetchWithAuth(`${import.meta.env.VITE_API_URL}/customers/list.php`),
+      fetchWithAuth(`${import.meta.env.VITE_API_URL}/Installers/list.php`),
+      fetchWithAuth(`${import.meta.env.VITE_API_URL}/Designers/list.php`),
+      fetchWithAuth(`${import.meta.env.VITE_API_URL}/Developers/list.php`),
+    ]);
 
-        // Potem alfabetycznie po nazwie firmy (case-insensitive)
-        const nameA = (a.company_name || '').toLowerCase();
-        const nameB = (b.company_name || '').toLowerCase();
-        return nameA.localeCompare(nameB);
-      });
+    let clientsData = { success: false, clients: [] };
+    let installersData = { success: false, installers: [] };
+    let designersData = { success: false, designers: [] };
+    let developersData = { success: false, developers: [] };
+    try { clientsData = await respClients.json(); } catch {}
+    try { installersData = await respInstallers.json(); } catch {}
+    try { designersData = await respDesigners.json(); } catch {}
+    try { developersData = await respDevelopers.json(); } catch {}
 
-      setClients(sortedClients);
-    }
+    const clientsArr = (clientsData.clients || []).map(c => ({ ...c, type: 'client' }));
+    const installersArr = (installersData.installers || []).map(i => ({ ...i, type: 'installer' }));
+    const designersArr = (designersData.designers || []).map(d => ({ ...d, type: 'designer' }));
+    const developersArr = (developersData.developers || []).map(d => ({ ...d, type: 'developer' }));
+
+    const combined = [...clientsArr, ...installersArr, ...designersArr, ...developersArr];
+
+    const sorted = combined.sort((a, b) => {
+      // Nowy na górze (status === "1")
+      if (String(a.status) === '1' && String(b.status) !== '1') return -1;
+      if (String(a.status) !== '1' && String(b.status) === '1') return 1;
+      // Alfabetycznie po nazwie
+      const nameA = (a.company_name || '').toLowerCase();
+      const nameB = (b.company_name || '').toLowerCase();
+      return nameA.localeCompare(nameB);
+    });
+
+    setClients(sorted);
   };
 
 
@@ -235,6 +265,46 @@ function Customers() {
     navigate(`/customers/${client.id}`);
   };
 
+  const handleEditInstaller = (installer) => {
+    navigate(`/installers/${installer.id}`);
+  };
+
+  const handleDeleteDeveloper = async (id) => {
+    const confirm = window.confirm(t('alertClientRemove'));
+    if (!confirm) return;
+
+    const canProceed = await checkSessionBeforeSubmit();
+    if (!canProceed) return;
+
+    try {
+      const response = await fetchWithAuth(`${import.meta.env.VITE_API_URL}/Developers/delete.php`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      });
+
+      if (!response) return;
+      const data = await response.json();
+      if (data.success) {
+        alert(t('clientDeleted'));
+        fetchClients();
+      } else {
+        alert(t('clientDeleteError'));
+      }
+    } catch (error) {
+      console.error('Delete developer error:', error);
+      alert(t('clientDeleteClientError'));
+    }
+  };
+
+  const handleEditDesigner = (designer) => {
+    navigate(`/designers/${designer.id}`);
+  };
+
+  const handleEditDeveloper = (developer) => {
+    navigate(`/developers/${developer.id}`);
+  };
+
   if (loading) return <p>{t('loading')}</p>;
 
   const handleDelete = async (id) => {
@@ -245,7 +315,7 @@ function Customers() {
     if (!canProceed) return;
 
     try {
-      const response = await fetchWithAuth(`${import.meta.env.VITE_API_URL}/customers/delete.php`, {
+  const response = await fetchWithAuth(`${import.meta.env.VITE_API_URL}/customers/delete.php`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id })
@@ -263,6 +333,62 @@ function Customers() {
       }
     } catch (error) {
       console.error('Delete error:', error);
+      alert(t('clientDeleteClientError'));
+    }
+  };
+
+  const handleDeleteInstaller = async (id) => {
+    const confirm = window.confirm(t('alertClientRemove'));
+    if (!confirm) return;
+
+    const canProceed = await checkSessionBeforeSubmit();
+    if (!canProceed) return;
+
+    try {
+      const response = await fetchWithAuth(`${import.meta.env.VITE_API_URL}/Installers/delete.php`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      });
+
+      if (!response) return;
+      const data = await response.json();
+      if (data.success) {
+        alert(t('clientDeleted'));
+        fetchClients();
+      } else {
+        alert(t('clientDeleteError'));
+      }
+    } catch (error) {
+      console.error('Delete installer error:', error);
+      alert(t('clientDeleteClientError'));
+    }
+  };
+
+  const handleDeleteDesigner = async (id) => {
+    const confirm = window.confirm(t('alertClientRemove'));
+    if (!confirm) return;
+
+    const canProceed = await checkSessionBeforeSubmit();
+    if (!canProceed) return;
+
+    try {
+      const response = await fetchWithAuth(`${import.meta.env.VITE_API_URL}/Designers/delete.php`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      });
+
+      if (!response) return;
+      const data = await response.json();
+      if (data.success) {
+        alert(t('clientDeleted'));
+        fetchClients();
+      } else {
+        alert(t('clientDeleteError'));
+      }
+    } catch (error) {
+      console.error('Delete designer error:', error);
       alert(t('clientDeleteClientError'));
     }
   };
@@ -292,10 +418,26 @@ function Customers() {
       <div className="mb-6 space-y-4">
         <div className="flex flex-wrap gap-4 items-center justify-between">
           <div className="flex gap-3 items-center flex-wrap">
+            {/* Dodaj klienta: dostępne dla użytkowników niebędących zarządem */}
             {!isZarzad(user) && (
               <button onClick={() => setIsAddModalOpen(true)} className="buttonGreen">
                 {t('addClient')}
               </button>
+            )}
+
+            {/* Dodaj instalatora/dewelopera/projektanta: tylko dla admina */}
+            {isAdmin(user) && (
+              <>
+                <button onClick={() => setIsAddInstallerOpen(true)} className="buttonGreen">
+                  {t('addInstaler')}
+                </button>
+                <button onClick={() => setIsAddDeveloperOpen(true)} className="buttonGreen">
+                  {t('addDeweloper')}
+                </button>
+                <button onClick={() => setIsAddDesignerOpen(true)} className="buttonGreen">
+                  {t('addDesigner')}
+                </button>
+              </>
             )}
 
             <label className="flex items-center gap-2">
@@ -399,6 +541,33 @@ function Customers() {
         allClients={clients}
       />
 
+      <AddInstallerModal
+        isOpen={isAddInstallerOpen}
+        onClose={() => setIsAddInstallerOpen(false)}
+        onInstallerAdded={fetchClients}
+      />
+
+      <AddDesignerModal
+        isOpen={isAddDesignerOpen}
+        onClose={() => setIsAddDesignerOpen(false)}
+        onDesignerAdded={fetchClients}
+      />
+
+      <AddDeweloperModal
+        isOpen={isAddDeveloperOpen}
+        onClose={() => setIsAddDeveloperOpen(false)}
+        onDeveloperAdded={fetchClients}
+      />
+
+      {false && selectedInstaller && (
+        <EditInstallerModal
+          isOpen={isEditInstallerOpen}
+          installer={selectedInstaller}
+          onClose={() => { setIsEditInstallerOpen(false); setSelectedInstaller(null); }}
+          onInstallerUpdated={() => { setIsEditInstallerOpen(false); setSelectedInstaller(null); fetchClients(); }}
+        />
+      )}
+
       {/* {selectedClient && (
         <EditClientModal
           isOpen={isEditModalOpen}
@@ -429,7 +598,7 @@ function Customers() {
         <tbody>
           {filteredClients.length > 0 ? (
             filteredClients.map((client, index) => (
-              <tr key={client.id} className='border-b border-b-neutral-300 text-center'>
+              <tr key={`${client.type || 'client'}-${client.id}`} className='border-b border-b-neutral-300 text-center'>
                 <td>{index + 1}</td>
                 <td>{client.client_code_erp || '-'}</td>
                 <td className={client.status === "1" ? "text-green-600 font-semibold" : "text-neutral-300 font-semibold"}>{client.status === "1" ? "Nowy" : "Zweryfikowany"}</td>
@@ -440,9 +609,34 @@ function Customers() {
                 <td className='portrait:hidden'>{client.engo_team_contact || '-'}</td>
 
                 <td style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
-                  <button onClick={() => handleEdit(client)} className='buttonGreen2'>{t('details')}</button>
-                  {isAdmin(user) && (
-                    <button onClick={() => handleDelete(client.id)} className="buttonRed2">{t('delete')}</button>
+                  {(!client.type || client.type === 'client') ? (
+                    <>
+                      <button onClick={() => handleEdit(client)} className='buttonGreen2'>{t('details')}</button>
+                      {isAdmin(user) && (
+                        <button onClick={() => handleDelete(client.id)} className="buttonRed2">{t('delete')}</button>
+                      )}
+                    </>
+                  ) : client.type === 'installer' ? (
+                    <>
+                      <button onClick={() => handleEditInstaller(client)} className='buttonGreen2'>{t('details')}</button>
+                      {isAdmin(user) && (
+                        <button onClick={() => handleDeleteInstaller(client.id)} className="buttonRed2">{t('delete')}</button>
+                      )}
+                    </>
+                  ) : client.type === 'developer' ? (
+                    <>
+                      <button onClick={() => handleEditDeveloper(client)} className='buttonGreen2'>{t('details')}</button>
+                      {isAdmin(user) && (
+                        <button onClick={() => handleDeleteDeveloper(client.id)} className="buttonRed2">{t('delete')}</button>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <button onClick={() => handleEditDesigner(client)} className='buttonGreen2'>{t('details')}</button>
+                      {isAdmin(user) && (
+                        <button onClick={() => handleDeleteDesigner(client.id)} className="buttonRed2">{t('delete')}</button>
+                      )}
+                    </>
                   )}
                 </td>
 
@@ -456,6 +650,8 @@ function Customers() {
           )}
         </tbody>
       </table>
+
+
     </div>
   );
 }

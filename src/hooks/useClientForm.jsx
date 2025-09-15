@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 export default function useClientForm(initialData = {}) {
   const [formData, setFormData] = useState({
     id: null,
+  market_id: '',
     company_name: '',
     client_code_erp: '',
     status: 1,
@@ -15,9 +16,11 @@ export default function useClientForm(initialData = {}) {
     country: '',
     nip: '',
     client_category: '',
+  client_subcategory: '',
     fairs: '',
     competition: '',
     index_of_parent: '',
+  engo_team_director: '',
     engo_team_contact: '',
     number_of_branches: '',
     number_of_sales_reps: '',
@@ -55,8 +58,22 @@ export default function useClientForm(initialData = {}) {
 
   useEffect(() => {
     if (initialData && Object.keys(initialData).length > 0) {
+      // Sanityzacja kontaktów: backend potrafi zwrócić null w polach stringowych,
+      // a schema Zod oczekuje stringów (opcjonalnych) lub pustych stringów.
+      const sanitizeContact = (c = {}) => ({
+        id: c.id ?? undefined,
+        department: c.department ?? '',
+        position: c.position ?? '',
+        name: c.name ?? '',
+        phone: c.phone ?? '',
+        email: c.email ?? '',
+        function_notes: c.function_notes ?? '',
+        decision_level: c.decision_level ?? '-',
+      });
+
       setFormData({
         id: initialData.id || null,
+  market_id: initialData.market_id ?? '',
         company_name: initialData.company_name || '',
         client_code_erp: initialData.client_code_erp || '',
         status: initialData.status ?? 1,
@@ -68,9 +85,11 @@ export default function useClientForm(initialData = {}) {
         country: initialData.country || '',
         nip: initialData.nip || '',
         client_category: (initialData.client_category || '').trim().replace(/\s+/g, '_'),
+  client_subcategory: initialData.client_subcategory || '',
         fairs: initialData.fairs || '',
         competition: initialData.competition || '',
         index_of_parent: initialData.index_of_parent || '',
+  engo_team_director: (initialData.engo_team_director || '').trim() || '',
         engo_team_contact: (initialData.engo_team_contact || '').trim() || '',
         number_of_branches: initialData.number_of_branches || '',
         number_of_sales_reps: initialData.number_of_sales_reps || '',
@@ -102,7 +121,7 @@ export default function useClientForm(initialData = {}) {
         latitude: initialData.latitude || '',
         longitude: initialData.longitude || ''
       });
-      setContacts(initialData.contacts || []);
+  setContacts((initialData.contacts || []).map(sanitizeContact));
     }
   }, [initialData]);
 
@@ -134,9 +153,10 @@ export default function useClientForm(initialData = {}) {
   };
 
   const handleAddContact = () => {
-    setContacts([...contacts, {
-      department: '', position: '', name: '', phone: '', email: '', function_notes: '', decision_level: '-'
-    }]);
+    setContacts([
+      ...contacts,
+      { department: '', position: '', name: '', phone: '', email: '', function_notes: '', decision_level: '-' }
+    ]);
   };
 
   const handleRemoveContact = (index) => {
@@ -148,9 +168,11 @@ export default function useClientForm(initialData = {}) {
   const resetForm = () => {
     setFormData({
       id: null,
+  market_id: '',
       company_name: '', client_code_erp: '', status: 1, data_veryfication: 0,
       street: '', city: '', postal_code: '', voivodeship: '', country: '', nip: '',
-      client_category: '', fairs: '', competition: '', index_of_parent: '', engo_team_contact: '',
+  client_category: '', fairs: '', competition: '', index_of_parent: '', engo_team_director: '', engo_team_contact: '',
+  client_subcategory: '',
       number_of_branches: '', number_of_sales_reps: '', www: '',
       turnover_pln: '', turnover_eur: '', installation_sales_share: '', automatic_sales_share: '', sales_potential: '',
       has_webstore: '', has_b2b_platform: '', has_b2c_platform: '', facebook: '', auction_service: '',

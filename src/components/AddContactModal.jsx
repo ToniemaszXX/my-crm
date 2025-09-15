@@ -32,8 +32,10 @@ const isEmptyContact = (c) => {
 export default function AddContactModal({
   isOpen,
   onClose,
-  clientId,          // ID klienta, do którego dodajemy kontakt (wymagane)
+  clientId,          // backward compat for client
   onAdded,           // (optional) callback(newContact) po sukcesie
+  entityType = 'client',
+  fixedEntityId,     // if provided, lock select and send this id
 }) {
   const [form, setForm] = useState({ ...emptyContact });
   const [isSaving, setIsSaving] = useState(false);
@@ -48,10 +50,8 @@ export default function AddContactModal({
 
   const handleSubmit = wrapSubmit(async (e) => {
     e.preventDefault();
-    if (!clientId) {
-      alert("Brak clientId – nie mogę dodać kontaktu.");
-      return;
-    }
+  const ownerId = fixedEntityId || (entityType === 'client' ? clientId : null);
+  if (!ownerId) { alert("Brak kontekstu encji – nie mogę dodać kontaktu."); return; }
     if (isEmptyContact(form)) {
       alert("Uzupełnij przynajmniej jedno pole kontaktu.");
       return;
@@ -66,23 +66,26 @@ export default function AddContactModal({
     }
 
     try {
-      const res = await fetchWithAuth(
-        `${import.meta.env.VITE_API_URL}/contacts/create.php`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            client_id: clientId,
-            department: form.department || "",
-            position: form.position || "",
-            name: form.name || "",
-            phone: form.phone || "",
-            email: form.email || "",
-            function_notes: form.function_notes || "",
-            decision_level: form.decision_level ?? "-",
-          }),
-        }
-      );
+      const payload = {
+        department: form.department || "",
+        position: form.position || "",
+        name: form.name || "",
+        phone: form.phone || "",
+        email: form.email || "",
+        function_notes: form.function_notes || "",
+        decision_level: form.decision_level ?? "-",
+      };
+      // set correct owner id
+      if (entityType === 'client') payload.client_id = ownerId;
+      if (entityType === 'designer') payload.designer_id = ownerId;
+      if (entityType === 'installer') payload.installer_id = ownerId;
+      if (entityType === 'deweloper') payload.deweloper_id = ownerId;
+
+      const res = await fetchWithAuth(`${import.meta.env.VITE_API_URL}/contacts/create.php`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
 
       const text = await res.text();
       let data = null;
@@ -101,11 +104,11 @@ export default function AddContactModal({
       }
 
       // sukces — dołóż nowy kontakt do listy w detalu klienta
-      const newContact = {
-        id: data.id, // backend zwraca id nowego kontaktu
-        client_id: clientId,
-        ...form,
-      };
+  const newContact = { id: data.id, ...form };
+  if (entityType === 'client') newContact.client_id = ownerId;
+  if (entityType === 'designer') newContact.designer_id = ownerId;
+  if (entityType === 'installer') newContact.installer_id = ownerId;
+  if (entityType === 'deweloper') newContact.deweloper_id = ownerId;
       onAdded?.(newContact);
       reset();
       onClose();

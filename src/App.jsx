@@ -3,6 +3,9 @@ import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
 import Customers from './pages/Customers';
 import CustomerDetails from './pages/CustomerDetails';
+import InstallerDetails from './pages/InstallerDetails';
+import DesignerDetails from './pages/DesignerDetails';
+import DeweloperDetails from './pages/DeweloperDetails';
 import Visits from './pages/Visits';
 import Trainings from './pages/Trainings';
 import Login from './pages/Login';
@@ -17,7 +20,7 @@ import { wasLoggedIn } from './utils/wasLoggedIn';
 import { setUnauthorizedHandler } from './utils/fetchWithAuth';
 
 function Layout() {
-  const { user, loading } = useAuth();
+  const { user, loading, refreshSession } = useAuth();
   const location = useLocation();
 
   const [showSessionModal, setShowSessionModal] = useState(false);
@@ -59,6 +62,9 @@ function Layout() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/customers" element={<Customers />} />
           <Route path="/customers/:id" element={<CustomerDetails />} />
+          <Route path="/installers/:id" element={<InstallerDetails />} />
+    <Route path="/designers/:id" element={<DesignerDetails />} />
+    <Route path="/developers/:id" element={<DeweloperDetails />} />
           <Route path="/visits" element={<Visits />} />
           <Route path="/logout" element={<Logout />} />
           <Route path="/trainings" element={<Trainings />} />
@@ -72,6 +78,7 @@ function Layout() {
           // Użytkownik zalogował się w modalu:
           // - modal się zamknie,
           // - fetchWithAuth ponowi przerwane żądanie.
+          refreshSession();
           setShowSessionModal(false);
         }}
         onClose={() => {
