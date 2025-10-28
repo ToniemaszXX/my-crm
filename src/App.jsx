@@ -10,7 +10,9 @@ import Visits from './pages/Visits';
 import Trainings from './pages/Trainings';
 import Login from './pages/Login';
 import Logout from './pages/Logout';
+import Settings from './pages/Settings';
 import { useAuth } from './context/AuthContext';
+import { NotificationsProvider } from './context/NotificationsContext';
 import { useEffect, useState } from 'react';
 
 import SessionLoginModal from './components/SessionLoginModal';
@@ -57,6 +59,7 @@ function Layout() {
           hideSidebar ? '' : 'p-5 overflow-y-auto text-neutral-900 portrait:ml-40 landscape:ml-56'
         }`}
       >
+  {/* Bell moved into Sidebar */}
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/" element={<Dashboard />} />
@@ -68,6 +71,7 @@ function Layout() {
           <Route path="/visits" element={<Visits />} />
           <Route path="/logout" element={<Logout />} />
           <Route path="/trainings" element={<Trainings />} />
+          <Route path="/settings" element={<Settings />} />
         </Routes>
       </div>
 
@@ -98,7 +102,9 @@ export default function App() {
 
   return (
     <Router basename={basename}>
-      <Layout />
+      <NotificationsProvider>
+        <Layout />
+      </NotificationsProvider>
     </Router>
   );
 }

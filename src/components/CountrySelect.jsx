@@ -15,7 +15,7 @@ const europeanCountries = [
   "China", "Georgia", "Hong Kong", "Canada", "South Korea", "India", "Iraq"
 ];
 
-function CountrySelect({ value, onChange, name = 'country', label = 'Country', className = '', hideLabel = false}) {
+function CountrySelect({ value, onChange, name = 'country', label = 'Country', className = '', hideLabel = false, disabled = false}) {
 
   const { t } = useTranslation();
 
@@ -31,11 +31,12 @@ function CountrySelect({ value, onChange, name = 'country', label = 'Country', c
   return (
     <div className="text-neutral-800">
     {!hideLabel && <label htmlFor={name}>{label}</label>}
-      <select
+    <select
         name={name}
         value={value}
         onChange={onChange}
-        className={`${className}`}
+  className={`${className} ${disabled ? 'bg-neutral-100 text-neutral-500 cursor-not-allowed' : ''}`}
+  disabled={disabled}
       >
         <option value="">-- Select a country --</option>
         {sortedCountries.map((country) => (

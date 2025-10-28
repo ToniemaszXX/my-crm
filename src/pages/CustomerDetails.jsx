@@ -1,8 +1,9 @@
 // src/pages/CustomerDetails.jsx
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import EditClientModal from '../components/EditClientModal';
+import { resolveUserLabelById } from '@/utils/usersCache';
 import { fetchWithAuth } from '../utils/fetchWithAuth';
 import { useTranslation } from 'react-i18next';
 import { yesNo, fmtMoney } from '../utils/conversionForData';
@@ -15,14 +16,38 @@ import EditVisitModal from '../components/EditVisitModal';
 import { canEditVisit } from '../utils/visitUtils';
 import AddContactModal from '../components/AddContactModal';
 import EditContactModal from '../components/EditContactModal';
+import { isViewer } from '../utils/roles';
+import VisitSummaries from '@/components/VisitSummaries';
+import VisitMarketingTasks from '@/components/VisitMarketingTasks';
 
 
 
-
-const normalizeCategory = (cat) => (cat ? String(cat).trim().replace(/\s+/g, '_') : '');
+// Normalize subcategory for stable comparisons: trim, strip diacritics, uppercase, collapse multiple spaces to a single space
+const normalizeCategory = (cat) => (
+  cat
+    ? String(cat)
+        .normalize('NFD')
+        .replace(/\p{Diacritic}/gu, '')
+        .trim()
+        .replace(/\s+/g, ' ')
+        .toUpperCase()
+    : ''
+);
 const numOrUndef = (v) => {
   const n = Number(v);
   return Number.isFinite(n) ? n : undefined;
+};
+
+// Compare ERP parent/index codes robustly: trim, allow numeric or string, ignore leading zeros
+const eqParentCode = (parent, code) => {
+  const a = parent == null ? '' : String(parent).trim();
+  const b = code == null ? '' : String(code).trim();
+  if (!a || !b) return false;
+  const an = Number(a);
+  const bn = Number(b);
+  if (Number.isFinite(an) && Number.isFinite(bn)) return an === bn;
+  const strip0 = (x) => x.replace(/^0+/, '');
+  return strip0(a) === strip0(b);
 };
 
 export default function CustomerDetails() {
@@ -44,6 +69,24 @@ export default function CustomerDetails() {
 
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [toast, setToast] = useState(null);
+  const location = useLocation();
+  // Resolve ENGO team names by *_user_id (must be declared before any early returns)
+  const [engoNames, setEngoNames] = useState({ dir: '', man: '', cnt: '' });
+  const [authorName, setAuthorName] = useState('');
+  // Scroll to visits section when ?section=visits-section (or legacy 'visits') is present, after data is loaded
+  useEffect(() => {
+    if (loading || !client) return;
+    const params = new URLSearchParams(location.search);
+    const section = params.get('section');
+    if (section === 'visits-section' || section === 'visits') {
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          const el = document.getElementById('visits-section');
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 0);
+      });
+    }
+  }, [location.search, id, loading, client]);
   const [contactQuery, setContactQuery] = useState('');
   const [isAddContactOpen, setIsAddContactOpen] = useState(false);
   const [isEditContactOpen, setIsEditContactOpen] = useState(false);
@@ -86,21 +129,48 @@ export default function CustomerDetails() {
     return () => { ignore = true; };
   }, [id]);
 
-  const title = useMemo(() => client?.company_name || 'Klient', [client]);
+  const title = useMemo(() => client?.company_name || t('customer.titleFallback'), [client, t]);
 
-  if (loading) return <p>Ładowanie…</p>;
+  // Resolve ENGO names by *_user_id (place before any early returns to keep hooks order stable)
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!client) return;
+      const marketId = client.market_id;
+      const [dir, man, cnt] = await Promise.all([
+        resolveUserLabelById({ id: client.engo_team_director_user_id, marketId, role: 'director' }).catch(() => undefined),
+        resolveUserLabelById({ id: client.engo_team_manager_user_id, marketId, role: 'manager' }).catch(() => undefined),
+        resolveUserLabelById({ id: client.engo_team_user_id, marketId }).catch(() => undefined),
+      ]);
+      if (!cancelled) setEngoNames({ dir: dir || '', man: man || '', cnt: cnt || '' });
+    })();
+    return () => { cancelled = true; };
+  }, [client?.id, client?.market_id, client?.engo_team_director_user_id, client?.engo_team_manager_user_id, client?.engo_team_user_id]);
+
+  // Resolve author name (created_by)
+  useEffect(() => {
+    let cancel = false;
+    (async () => {
+      if (!client?.created_by) { if (!cancel) setAuthorName(''); return; }
+      const label = await resolveUserLabelById({ id: client.created_by, marketId: client.market_id }).catch(() => undefined);
+      if (!cancel) setAuthorName(label || '');
+    })();
+    return () => { cancel = true; };
+  }, [client?.created_by, client?.market_id]);
+
+  if (loading) return <p>{t('loading')}</p>;
 
   if (notFound) {
     return (
       <div>
         <nav className="mb-4 text-sm">
-          <Link to="/customers" className="hover:underline">Klienci</Link>
+          <Link to="/customers" className="hover:underline">{t('customersTitle')}</Link>
           <span className="mx-2">/</span>
-          <span>Nie znaleziono</span>
+          <span>{t('common.notFound')}</span>
         </nav>
-        <h1 className="text-2xl font-bold mb-2">Klient nie został znaleziony (404)</h1>
-        <p className="mb-4">Sprawdź adres URL lub wróć do listy klientów.</p>
-        <Link to="/customers" className="buttonGreen">← Wróć do listy</Link>
+        <h1 className="text-2xl font-bold mb-2">{t('customer.notFound')}</h1>
+        <p className="mb-4">{t('common.checkUrlOrBack')}</p>
+        <Link to="/customers" className="buttonGreen">← {t('common.backToList')}</Link>
       </div>
     );
   }
@@ -108,13 +178,12 @@ export default function CustomerDetails() {
   if (!client) return null;
 
   // Oddziały przypisane do centrali (jak w modalu)
-  const isHeadOffice = normalizeCategory(client.client_category) === 'DYSTRYBUTOR_CENTRALA';
+  const isHeadOffice = normalizeCategory(client.client_subcategory) === 'DYSTRYBUTOR CENTRALA';
   const branches = isHeadOffice
     ? allClients.filter((c) =>
-      normalizeCategory(c.client_category) === 'DYSTRYBUTOR_ODDZIAŁ' &&
-      (client.client_code_erp && c.index_of_parent) &&
-      String(c.index_of_parent).trim() === String(client.client_code_erp).trim()
-    )
+        normalizeCategory(c.client_subcategory) === 'DYSTRYBUTOR ODDZIAŁ' &&
+        eqParentCode(c.index_of_parent, client.client_code_erp)
+      )
     : [];
 
   // Link „Prowadź do klienta”
@@ -124,42 +193,60 @@ export default function CustomerDetails() {
       [client.street, client.postal_code, client.city, client.voivodeship, client.country].filter(Boolean).join(', ')
     )}`;
 
+  // Linked distributors for this client (buyers only)
+  const linkedDistributors = Array.isArray(client.distributor_ids) && allClients?.length
+    ? allClients.filter(c => client.distributor_ids.map(Number).includes(Number(c.id)))
+    : [];
+
+  
+
   return (
     <div>
       {/* Breadcrumbs */}
       <nav className="mb-4 text-sm">
-        <Link to="/customers" className="hover:underline">Klienci</Link>
+  <Link to="/customers" className="hover:underline">{t('customersTitle')}</Link>
         <span className="mx-2">/</span>
         <span className="text-neutral-400">{title}</span>
       </nav>
 
-      <div className="flex items-start justify-between gap-4 mb-6">
-        <h1 className="text-2xl font-bold">{title}</h1>
+      <div className="flex items-start justify-between gap-4 mb-2">
+        <div>
+          <h1 className="text-2xl font-bold">{title}</h1>
+          {authorName && (
+            <div className="text-sm text-neutral-400 mt-1">Dodany przez: {authorName}</div>
+          )}
+        </div>
         <div className="flex gap-2">
           <button className="buttonGreen" onClick={() => setIsAddVisitOpen(true)}>{t('visit.addVisit')}</button>
-          <button className="buttonGreen" onClick={() => setIsAddContactOpen(true)}>Dodaj kontakt</button>
-          <button className="buttonGreen" onClick={() => setIsEditOpen(true)}>Edytuj</button>
-          <button className="buttonRed" onClick={() => navigate(-1)}>Wróć</button>
+          <button className="buttonGreen" onClick={() => setIsAddContactOpen(true)}>{t('addClientModal.addContact')}</button>
+          {!isViewer(user) && ( <button className="buttonGreen" onClick={() => setIsEditOpen(true)}>{t('edit')}</button>)}
+          <button className="buttonRed" onClick={() => navigate(-1)}>{t('common.back')}</button>
         </div>
-      </div>
+  </div>
+
+  {/* ...existing sections... */}
 
       {/* SEKCJA 1: dane główne */}
-      <Section title="Dane główne">
+    <Section title={t('common.mainData')}>
         <Grid >
           <Field label={t('addClientModal.companyName')} value={client.company_name} />
-          <Field label={t('addClientModal.status')} value={client.status === '1' ? 'Nowy' : 'Zweryfikowany'} />
-          <Field label={t('addClientModal.data_veryfication')} value={client.data_veryfication === '1' ? 'Gotowe' : 'Brak danych'} />
+      <Field label={t('addClientModal.status')} value={client.status === '1' ? t('filter.new') : t('filter.verified')} />
+      <Field label={t('addClientModal.data_veryfication')} value={client.data_veryfication === '1' ? t('dataStatus.ready') : t('dataStatus.missing')} />
           <Field label={t('addClientModal.client_code_erp')} value={client.client_code_erp} />
           <Field label={t('addClientModal.nip')} value={client.nip} />
+          <Field label={t('common.class')} value={(client.class_category && client.class_category !== '-') ? client.class_category : t('common.noClass')} />
           <Field label={t('addClientModal.clientCategory')} value={client.client_category} />
-          <Field label="Podkategoria klienta" value={client.client_subcategory} />
-          <Field label={t('addClientModal.engoTeamDirector')} value={client.engo_team_director} />
-          <Field label={t('addClientModal.engoTeamContact')} value={client.engo_team_contact} />
+      <Field label={t('fields.clientSubcategory')} value={client.client_subcategory} />
+          <Field label={t('addClientModal.engoTeamDirector')} value={engoNames.dir || '—'} />
+          <Field label={t('addClientModal.engoTeamManager') || 'Manager ENGO'} value={engoNames.man || '—'} />
+          <Field label={t('addClientModal.engoTeamContact')} value={engoNames.cnt || '—'} />
         </Grid>
       </Section>
 
-      {/* SEKCJA 2: oddziały przypisane do centrali */}
-      <Section title="Oddziały przypisane do centrali">
+      
+
+      {/* SEKCJA 2b: oddziały przypisane do centrali */}
+  <Section title={t('customer.sections.hqBranches')}>
         {isHeadOffice ? (
           branches.length > 0 ? (
             <ul className="list-disc pl-6">
@@ -170,10 +257,10 @@ export default function CustomerDetails() {
               ))}
             </ul>
           ) : (
-            <p>Brak oddziałów przypisanych do tej centrali.</p>
+    <p>{t('customer.noBranchesForHQ')}</p>
           )
         ) : (
-          <p>Dotyczy tylko klientów kategorii „DYSTRYBUTOR_CENTRALA”.</p>
+      <p>{t('customer.onlyForHQ')}</p>
         )}
       </Section>
 
@@ -209,8 +296,23 @@ export default function CustomerDetails() {
         </Grid>
       </Section>
 
+      {/* SEKCJA 2a: Firmy powiązane */}
+      <Section title={t('relatedCompanies.title') || 'Firmy powiązane'}>
+        {linkedDistributors.length > 0 ? (
+          <ul className="list-disc pl-6">
+            {linkedDistributors.map(d => (
+              <li key={d.id}>
+                <Link to={`/customers/${d.id}`} className="hover:text-lime-500">{d.company_name}</Link>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p>{t('relatedCompanies.empty') || 'Brak powiązanych firm.'}</p>
+        )}
+      </Section>
+
       {/* SEKCJA 4: dodatkowe informacje */}
-      <Section title="Dodatkowe informacje">
+    <Section title={t('common.additionalInfo')}>
         <Grid>
           <Field label={t('addClientModal.branches')} value={client.number_of_branches} />
           <Field label={t('addClientModal.salesReps')} value={client.number_of_sales_reps} />
@@ -218,13 +320,13 @@ export default function CustomerDetails() {
           <Field label={t('addClientModal.fairs')} value={client.fairs} />
           <Field label={t('addClientModal.b2b')} value={client.has_b2b_platform} />
           <Field label={t('addClientModal.b2c')} value={client.has_b2c_platform} />
-          <Field label={t('addClientModal.privateBrand')} value={client.private_brand === 1 ? (client.private_brand_details || 'Tak') : 'Nie'} />
-          <Field label={t('addClientModal.loyaltyProgram')} value={client.loyalty_program === 1 ? (client.loyalty_program_details || 'Tak') : 'Nie'} />
+      <Field label={t('addClientModal.privateBrand')} value={client.private_brand === 1 ? (client.private_brand_details || t('addClientModal.yes')) : t('addClientModal.no')} />
+      <Field label={t('addClientModal.loyaltyProgram')} value={client.loyalty_program === 1 ? (client.loyalty_program_details || t('addClientModal.yes')) : t('addClientModal.no')} />
         </Grid>
       </Section>
 
       {/* SEKCJA 5: dane finansowe */}
-      <Section title="Dane finansowe">
+  <Section title={t('customer.sections.financialData')}>
         <Grid>
           <Field label={t('addClientModal.turnoverPln')} value={fmtMoney(client.turnover_pln)} />
           <Field label={t('addClientModal.turnoverEur')} value={fmtMoney(client.turnover_eur)} />
@@ -235,7 +337,7 @@ export default function CustomerDetails() {
       </Section>
 
       {/* SEKCJA 6: serwisy */}
-      <Section title="Serwisy">
+  <Section title={t('customer.sections.services')}>
         <Grid>
           <Field label={t('addClientModal.facebook')} value={autoHttp(client.facebook)} />
           <Field label={t('addClientModal.webstore')} value={autoHttp(client.has_webstore)} />
@@ -250,66 +352,84 @@ export default function CustomerDetails() {
       </Section>
 
       {/* SEKCJA 7: % Struktura sprzedaży */}
-      <Section title="% Struktura sprzedaży">
+    <Section title={t('customer.sections.salesStructure')}>
         <Grid>
-          <Field label="Instalator" value={client.structure_installer} />
-          <Field label="E-commerce" value={client.structure_ecommerce} />
-          <Field label="Kowalski (retail)" value={client.structure_retail} />
-          <Field label="Podhurt (wholesale)" value={client.structure_wholesaler} />
-          <Field label="Inne" value={client.structure_other} />
+      <Field label={t('addClientModal.structure.installer')} value={client.structure_installer} />
+      <Field label={t('addClientModal.structure.ecommerce')} value={client.structure_ecommerce} />
+      <Field label={t('addClientModal.structure.retail')} value={client.structure_retail} />
+      <Field label={t('addClientModal.structure.wholesaler')} value={client.structure_wholesaler} />
+      <Field label={t('addClientModal.structure.other')} value={client.structure_other} />
         </Grid>
       </Section>
 
       {/* SEKCJA 8: Kontakt (wyszukiwarka jak w modalu) */}
-      <Section title="Kontakt">
+    <Section title={t('addClientModal.contact')}>
         <input
           type="text"
-          placeholder="Szukaj w kontaktach…"
+          placeholder={t('editClientModal.searchContact')}
           value={contactQuery}
           onChange={(e) => setContactQuery(e.target.value)}
           className="mb-4 p-2 border rounded w-full text-white bg-neutral-900 border-neutral-700"
         />
 
-        {(Array.isArray(client.contacts) ? client.contacts : [])
-          .filter((c) =>
-            Object.values(c || {}).some((val) =>
-              String(val ?? '').toLowerCase().includes(contactQuery.toLowerCase())
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {(Array.isArray(client.contacts) ? client.contacts : [])
+            .filter((c) =>
+              Object.values(c || {}).some((val) =>
+                String(val ?? '').toLowerCase().includes(contactQuery.toLowerCase())
+              )
             )
-          )
-          .map((c) => (
-            <div key={c.id} className="rounded border border-neutral-700 p-3 mb-2">
-              <div className="font-medium">{c.name || '—'}</div>
-              <div className="text-sm text-neutral-400">
-                {c.department || '—'} {c.position ? `• ${c.position}` : ''}
+            .map((c) => {
+              const splitList = (val) => String(val || '')
+                .split(';')
+                .map(s => s.trim())
+                .filter(Boolean);
+              const emails = splitList(c.email);
+              const phones = splitList(c.phone);
+              return (
+              <div key={c.id} className="rounded border border-neutral-700 p-3">
+                <div className="font-medium">{`${c.first_name || ''} ${c.last_name || ''}`.trim() || c.name || '—'}</div>
+                <div className="text-sm text-neutral-400">
+                  {c.department || '—'} {c.position ? `• ${c.position}` : ''}
+                </div>
+                <div className="text-sm mt-1 space-y-0.5">
+                  <div>
+                    📧 {emails.length > 0 ? (
+                      <div className="inline-flex flex-col gap-0.5 align-top">
+                        {emails.map((e, i) => (
+                          <a key={i} className="underline" href={`mailto:${e}`}>{e}</a>
+                        ))}
+                      </div>
+                    ) : '—'}
+                  </div>
+                  <div>
+                    ☎️ {phones.length > 0 ? (
+                      <div className="inline-flex flex-col gap-0.5 align-top">
+                        {phones.map((p, i) => (
+                          <a key={i} className="underline" href={`tel:${p}`}>{p}</a>
+                        ))}
+                      </div>
+                    ) : '—'}
+                  </div>
+                </div>
+                <div className="text-sm text-neutral-400 mt-1">{c.function_notes || '—'}</div>
+                <div className="text-sm mt-1">{t('addClientModal.decisionLevel')}: {c.decision_level || '—'}</div>
+                {!isViewer(user) && (
+                  <button
+                    type="button"
+                    className="buttonGreenNeg mt-2"
+                    onClick={() => {
+                      // dodajemy client_id, bo update.php go wymaga
+                      setSelectedContact({ ...c, client_id: client.id, designer_id: null, installer_id: null, deweloper_id: null });
+                      setIsEditContactOpen(true);
+                    }}
+                  >
+                    {t('edit')}
+                  </button>
+                )}
               </div>
-              <div className="text-sm mt-1">
-                📧 {c.email ? <a className="underline" href={`mailto:${c.email}`}>{c.email}</a> : '—'}
-                {' '}|☎️{' '}
-                {c.phone ? <a className="underline" href={`tel:${c.phone}`}>{c.phone}</a> : '—'}
-              </div>
-              <div className="text-sm text-neutral-400 mt-1">{c.function_notes || '—'}</div>
-              <div className="text-sm mt-1">Decyzyjność: {c.decision_level || '—'}</div>
-
-              <button
-                type="button"
-                className="buttonGreenNeg"
-                onClick={() => {
-                  // dodajemy client_id, bo update.php go wymaga
-                  setSelectedContact({ ...c, client_id: client.id, designer_id: null, installer_id: null, deweloper_id: null });
-                  setIsEditContactOpen(true);
-                }}
-              >
-                Edytuj
-              </button>
-
-            </div>
-
-
-          )
-          )
-        }
-
-        
+            )})}
+        </div>
       </Section>
 
       {/* Modal edycji – Twój komponent */}
@@ -326,13 +446,33 @@ export default function CustomerDetails() {
               const detJson = await detRes.json();
               if (detJson?.success) setClient(detJson.client);
             }
-            setToast('Zapisano zmiany klienta');
+            setToast(t('toast.clientSaved'));
             setTimeout(() => setToast(null), 2200);
           }}
         />
       )}
 
-  <Section title={t('visitsPage.allVisits')}>
+      {/* Grid directly above visits: left column = post-meeting summaries (half width) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Section title={t('visit.postMeetingSummaries') || 'Podsumowania po spotkaniu'}>
+          <VisitSummaries
+            entityType="client"
+            entityId={client.id}
+            marketId={client.market_id}
+            reloadTrigger={refreshFlag}
+          />
+        </Section>
+        <Section title={t('addVisitModal.marketingTasks') || 'Zadania marketingowe'}>
+          <VisitMarketingTasks
+            entityType="client"
+            entityId={client.id}
+            marketId={client.market_id}
+            reloadTrigger={refreshFlag}
+          />
+        </Section>
+      </div>
+
+  <Section id="visits-section" title={t('visitsPage.allVisits')}>
         <ClientVisits
           client={client}
           clientId={client?.id}

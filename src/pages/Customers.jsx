@@ -8,12 +8,13 @@ import AddDeweloperModal from '../components/AddDeweloperModal';
 // import EditClientModal from '../components/EditClientModal';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { isAdmin, isZarzad } from '../utils/roles';
+import { isAdmin, isZarzad, isAdminManager, isAdminZarzad } from '../utils/roles';
 import { europeanCountries } from '../components/CountrySelect';
 import useSessionChecker from '../hooks/useSessionChecker';
 import { fetchWithAuth } from '../utils/fetchWithAuth';
 import { checkSessionBeforeSubmit } from '../utils/checkSessionBeforeSubmit';
 import CountrySelect from '../components/CountrySelect';
+import { resolveUserLabelById } from '@/utils/usersCache';
 
 
 
@@ -37,16 +38,34 @@ function Customers() {
   const [filterStatus, setFilterStatus] = useState('');
   const [filterCountry, setFilterCountry] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
+  const [filterClassCategory, setFilterClassCategory] = useState('');
   const [filterEngoTeamContact, setfilterEngoTeamContact] = useState('');
   const [filterDateFrom, setFilterDateFrom] = useState('');
   const [filterDateTo, setFilterDateTo] = useState('');
-
-
+  // Pagination state
+  const [pageSize, setPageSize] = useState(() => {
+    const saved = localStorage.getItem('customers.pageSize');
+    return saved ? Number(saved) : 50; // default 50
+  });
+  const [page, setPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [engoContactsOptions, setEngoContactsOptions] = useState([]);
+  const [listLoading, setListLoading] = useState(false);
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const [pageInput, setPageInput] = useState('1');
+  const [engoNameMap, setEngoNameMap] = useState({}); // id -> label resolved
 
 
   useEffect(() => {
-    fetchClients();
+    // Początkowe pobranie opcji Engo contacts (raz) do selecta
+    fetchEngoContactsOptions();
   }, []);
+
+  // Debounce search input to limit server calls
+  useEffect(() => {
+    const id = setTimeout(() => setDebouncedQuery(searchQuery), 300);
+    return () => clearTimeout(id);
+  }, [searchQuery]);
 
 
   //filtracja me mode
@@ -84,171 +103,151 @@ function Customers() {
   };
 
 
-
-
-
-  // Odśwież listę po zmianie klientów lub zapytania
+  // Reset strony przy zmianie filtrów/szukania, by nie wypaść poza zakres
   useEffect(() => {
-    let baseClients = [...clients];
+    setPage(1);
+  }, [searchQuery, meModeOnly, filterStatus, filterCountry, filterCategory, filterClassCategory, filterEngoTeamContact, filterDateFrom, filterDateTo]);
 
-    const currentUserName = user?.username || '';
-
-    // Me mode filtering first
-    if (meModeOnly && currentUserName) {
-      baseClients = baseClients.filter(client => {
-        const result = isAssignedToUser(client.engo_team_contact, currentUserName);
-        return result;
-      });
-    }
-
-    // Filter by status
-    if (filterStatus !== '') {
-      baseClients = baseClients.filter(client => client.status === filterStatus);
-    }
-
-    // Filter by country
-    if (filterCountry !== '') {
-      baseClients = baseClients.filter(client => client.country === filterCountry);
-    }
-
-    // Filter by client category
-    if (filterCategory !== '') {
-      const normalizedCategory = filterCategory.trim().replace(/\s+/g, '_');
-      baseClients = baseClients.filter(client =>
-        (client.client_category || '').trim().replace(/\s+/g, '_') === normalizedCategory
-      );
-    }
-
-
-    // Filter by Engo team contact
-    if (filterEngoTeamContact !== '') {
-      baseClients = baseClients.filter(client =>
-        isAssignedToUser(client.engo_team_contact, filterEngoTeamContact));
-    }
-
-    // Filter by date range (created_at format: "YYYY-MM-DD HH:MM:SS")
-    if (filterDateFrom !== '' || filterDateTo !== '') {
-      baseClients = baseClients.filter(client => {
-        if (!client.created_at) return false;
-
-        const dateOnly = client.created_at.split(' ')[0]; // "2025-06-01"
-
-        if (filterDateFrom && dateOnly < filterDateFrom) return false;
-        if (filterDateTo && dateOnly > filterDateTo) return false;
-
-        return true;
-      });
-    }
-
-    const safe = (v) => String(v ?? '').toLowerCase();
-
-    // Then apply search query on top of that
-    if (searchQuery.trim() === '') {
-      setFilteredClients(baseClients);
-    } else {
-      const lowerQuery = searchQuery.toLowerCase();
-      const filtered = baseClients.filter((client) => {
-        const query = lowerQuery;
-
-        const baseMatch =
-          safe(client.company_name).includes(query) ||
-          safe(client.client_code_erp).includes(query) ||
-          safe(client.status).includes(query) ||                // <-- już bezpieczne
-          safe(client.data_veryfication).includes(query) ||
-          safe(client.city).includes(query) ||
-          safe(client.engo_team_contact).includes(query) ||
-          safe(client.country).includes(query) ||
-          safe(client.nip).includes(query) ||
-          safe(client.street).includes(query) ||
-          safe(client.postal_code).includes(query) ||
-          safe(client.voivodeship).includes(query) ||
-          safe(client.client_category).includes(query) ||
-          safe(client.fairs).includes(query) ||
-          safe(client.competition).includes(query) ||
-          safe(client.number_of_branches).includes(query) ||
-          safe(client.number_of_sales_reps).includes(query) ||
-          safe(client.www).includes(query) ||
-          safe(client.turnover_pln).includes(query) ||
-          safe(client.turnover_eur).includes(query) ||
-          safe(client.installation_sales_share).includes(query) ||
-          safe(client.automatic_sales_share).includes(query) ||
-          safe(client.sales_potential).includes(query) ||
-          safe(client.has_webstore).includes(query) ||
-          safe(client.has_b2b_platform).includes(query) ||
-          safe(client.has_b2c_platform).includes(query) ||
-          safe(client.facebook).includes(query) ||
-          safe(client.auction_service).includes(query) ||
-          safe(client.private_bran).includes(query) ||
-          safe(client.private_brand_details).includes(query) ||
-          safe(client.loyalty_progra).includes(query) ||
-          safe(client.loyalty_program_details).includes(query) ||
-          safe(client.structure_installe).includes(query) ||
-          safe(client.structure_wholesale).includes(query) ||
-          safe(client.structure_ecommerc).includes(query) ||
-          safe(client.structure_retai).includes(query) ||
-          safe(client.structure_oth).includes(query);
-
-
-        const contactsMatch = Array.isArray(client.contacts)
-          ? client.contacts.some(contact =>
-            Object.values(contact).some(
-              (val) => val && String(val).toLowerCase().includes(query)
-            )
-          )
-          : false;
-
-        return baseMatch || contactsMatch;
-      });
-      setFilteredClients(filtered);
-    }
-  }, [clients, searchQuery, meModeOnly, user, filterStatus, filterCountry, filterCategory, filterEngoTeamContact, filterDateFrom, filterDateTo]);
+  // Pobranie danych z BE przy zmianach paginacji/filtrów/szukania
+  useEffect(() => {
+    if (loading) return;
+    fetchClients();
+  }, [page, pageSize, debouncedQuery, meModeOnly, filterStatus, filterCountry, filterCategory, filterClassCategory, filterEngoTeamContact, filterDateFrom, filterDateTo, loading]);
 
   const resetFilters = () => {
     setFilterStatus('');
     setFilterCountry('');
     setFilterCategory('');
+  setFilterClassCategory('');
     setfilterEngoTeamContact('');
     setSearchQuery('');
     setFilterDateFrom('');
     setFilterDateTo('');
+    setPage(1);
   };
 
+  // Persist pageSize choice
+  useEffect(() => {
+    localStorage.setItem('customers.pageSize', String(pageSize));
+  }, [pageSize]);
+
+  // Derived pagination values
+  const total = totalCount || filteredClients.length;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = Math.min(total, startIndex + pageSize);
+  // BE zwraca już odpowiednią stronę, więc renderujemy bez local slice
+  const pagedClients = filteredClients;
+
+  // Sync input with derived currentPage
+  useEffect(() => {
+    setPageInput(String(currentPage));
+  }, [currentPage]);
+
+  // Clamp page state when totalPages shrinks
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [totalPages]);
+
+  const commitPageInput = () => {
+    const n = parseInt(pageInput, 10);
+    if (Number.isNaN(n)) {
+      setPageInput(String(currentPage));
+      return;
+    }
+    const clamped = Math.max(1, Math.min(totalPages, n));
+    setPage(clamped);
+    setPageInput(String(clamped));
+  };
+
+  // Resolve ENGO names by *_user_id for rows being rendered (robust to missing server-provided names)
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const rows = Array.isArray(pagedClients) ? pagedClients : [];
+      // collect unique (id, market) for contact role; include manager/director optionally
+      const tuples = [];
+      const seen = new Set();
+      for (const r of rows) {
+        const marketId = r?.market_id;
+        const ids = [r?.engo_team_user_id, r?.engo_team_manager_user_id, r?.engo_team_director_user_id].filter((x) => x != null && x !== '');
+        for (const id of ids) {
+          const key = `${id}|${marketId||''}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          tuples.push({ id, marketId });
+        }
+      }
+      if (tuples.length === 0) { if (!cancelled) setEngoNameMap({}); return; }
+      const results = await Promise.all(
+        tuples.map(({ id, marketId }) => resolveUserLabelById({ id, marketId }).then((label) => ({ id: Number(id), label: label || '' })).catch(() => ({ id: Number(id), label: '' })))
+      );
+      if (cancelled) return;
+      const map = {};
+      for (const r of results) { if (r.label) map[Number(r.id)] = r.label; }
+      setEngoNameMap(map);
+    })();
+    return () => { cancelled = true; };
+  }, [pagedClients]);
+
   const fetchClients = async () => {
-    // Pobierz klientów, instalatorów, projektantów i deweloperów, scalamy do jednej listy
-    const [respClients, respInstallers, respDesigners, respDevelopers] = await Promise.all([
-      fetchWithAuth(`${import.meta.env.VITE_API_URL}/customers/list.php`),
-      fetchWithAuth(`${import.meta.env.VITE_API_URL}/Installers/list.php`),
-      fetchWithAuth(`${import.meta.env.VITE_API_URL}/Designers/list.php`),
-      fetchWithAuth(`${import.meta.env.VITE_API_URL}/Developers/list.php`),
-    ]);
+    try {
+      setListLoading(true);
+      const payload = {
+        page,
+        per_page: pageSize,
+        search: debouncedQuery || '',
+        status: filterStatus || '',
+        country: filterCountry || '',
+        subcategory: filterCategory || '',
+        classCategory: filterClassCategory || '',
+        // Switch to filtering by user ID
+        engoTeamUserId: (meModeOnly && user?.id)
+          ? Number(user.id)
+          : (filterEngoTeamContact ? Number(filterEngoTeamContact) : 0),
+  dateFrom: filterDateFrom || '',
+  dateTo: filterDateTo || '',
+      };
+      const resp = await fetchWithAuth(`${import.meta.env.VITE_API_URL}/entities/list_combined.php`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!resp) return;
+      const data = await resp.json();
+      if (data?.success) {
+        setClients(data.data || []);
+        setFilteredClients(data.data || []);
+        setTotalCount(Number(data.total || 0));
+      } else {
+        setClients([]);
+        setFilteredClients([]);
+        setTotalCount(0);
+      }
+    } catch (err) {
+      console.error('fetchClients error', err);
+      setClients([]);
+      setFilteredClients([]);
+      setTotalCount(0);
+    } finally {
+      setListLoading(false);
+    }
+  };
 
-    let clientsData = { success: false, clients: [] };
-    let installersData = { success: false, installers: [] };
-    let designersData = { success: false, designers: [] };
-    let developersData = { success: false, developers: [] };
-    try { clientsData = await respClients.json(); } catch {}
-    try { installersData = await respInstallers.json(); } catch {}
-    try { designersData = await respDesigners.json(); } catch {}
-    try { developersData = await respDevelopers.json(); } catch {}
-
-    const clientsArr = (clientsData.clients || []).map(c => ({ ...c, type: 'client' }));
-    const installersArr = (installersData.installers || []).map(i => ({ ...i, type: 'installer' }));
-    const designersArr = (designersData.designers || []).map(d => ({ ...d, type: 'designer' }));
-    const developersArr = (developersData.developers || []).map(d => ({ ...d, type: 'developer' }));
-
-    const combined = [...clientsArr, ...installersArr, ...designersArr, ...developersArr];
-
-    const sorted = combined.sort((a, b) => {
-      // Nowy na górze (status === "1")
-      if (String(a.status) === '1' && String(b.status) !== '1') return -1;
-      if (String(a.status) !== '1' && String(b.status) === '1') return 1;
-      // Alfabetycznie po nazwie
-      const nameA = (a.company_name || '').toLowerCase();
-      const nameB = (b.company_name || '').toLowerCase();
-      return nameA.localeCompare(nameB);
-    });
-
-    setClients(sorted);
+  const fetchEngoContactsOptions = async () => {
+    try {
+  const resp = await fetchWithAuth(`${import.meta.env.VITE_API_URL}/entities/list_engo_contacts.php`);
+      if (!resp) return;
+      const data = await resp.json();
+      // Expecting [{id, label}]
+      const options = Array.isArray(data?.contacts) ? data.contacts : [];
+      setEngoContactsOptions(options);
+    } catch (e) {
+      console.warn('fetchEngoContactsOptions error', e);
+    }
   };
 
 
@@ -394,43 +393,35 @@ function Customers() {
   };
 
 
-  const uniqueEngoContacts = [
-    ...new Set(
-      clients
-        .flatMap(c =>
-          (c.engo_team_contact || '')
-            .split(';')
-            .map(name => name.trim())
-            .filter(Boolean)
-        )
-    )
-  ];
+  const uniqueEngoContacts = engoContactsOptions;
 
 
 
   return (
 
-
-
-    <div className="w-full">
+  <div className="w-full">
       <h1 className="text-2xl font-bold mb-4">{t('customersTitle')}</h1>
 
       <div className="mb-6 space-y-4">
         <div className="flex flex-wrap gap-4 items-center justify-between">
           <div className="flex gap-3 items-center flex-wrap">
             {/* Dodaj klienta: dostępne dla użytkowników niebędących zarządem */}
-            {!isZarzad(user) && (
+            {/* {isAdminManager(user) && ( */}
               <button onClick={() => setIsAddModalOpen(true)} className="buttonGreen">
                 {t('addClient')}
               </button>
-            )}
+            {/* )} */}
 
             {/* Dodaj instalatora/dewelopera/projektanta: tylko dla admina */}
-            {isAdmin(user) && (
+            {isAdminManager(user) && (
               <>
                 <button onClick={() => setIsAddInstallerOpen(true)} className="buttonGreen">
                   {t('addInstaler')}
                 </button>
+                  </>
+            )}
+            {isAdminZarzad(user) && (
+              <>
                 <button onClick={() => setIsAddDeveloperOpen(true)} className="buttonGreen">
                   {t('addDeweloper')}
                 </button>
@@ -453,7 +444,7 @@ function Customers() {
 
           </div>
 
-          <div className="w-full sm:w-auto">
+          <div className="w-full sm:w-auto flex items-center gap-3">
             <input
               type="text"
               placeholder={t('searchPlaceholder')}
@@ -471,36 +462,45 @@ function Customers() {
             <option value="0">{t('filter.verified')}</option>
           </select>
 
-          <CountrySelect
-            value={filterCountry}
-            onChange={(e) => setFilterCountry(e.target.value)}
-            hideLabel={true}
-            // label={t('filter.chooseContry')}
-            className="pl-1 pr-1 pt-2 pb-2 rounded border"
-          />
+          {!(user?.singleMarketId === 1) && (
+            <CountrySelect
+              value={filterCountry}
+              onChange={(e) => setFilterCountry(e.target.value)}
+              hideLabel={true}
+              // label={t('filter.chooseContry')}
+              className="pl-1 pr-1 pt-2 pb-2 rounded border"
+            />
+          )}
 
 
           <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className='pl-1 pr-1 pt-2 pb-2 rounded border'>
             <option value="">{t('addClientModal.selectCategory')}</option>
-            <option value="KLIENT_POTENCJALNY">{t('addClientModal.categories.KLIENT_POTENCJALNY')}</option>
-            <option value="CENTRALA_SIEĆ">{t('addClientModal.categories.CENTRALA_SIEĆ')}</option>
+            <option value="GRUPA ZAKUPOWA">{t('addClientModal.categories.GRUPA_ZAKUPOWA')}</option>
             <option value="DEWELOPER">{t('addClientModal.categories.DEWELOPER')}</option>
-            <option value="DYSTRYBUTOR">{t('addClientModal.categories.DYSTRYBUTOR')}</option>
-            <option value="DYSTRYBUTOR_CENTRALA">{t('addClientModal.categories.DYSTRYBUTOR_CENTRALA')}</option>
-            <option value="DYSTRYBUTOR_MAGAZYN">{t('addClientModal.categories.DYSTRYBUTOR_MAGAZYN')}</option>
-            <option value="DYSTRYBUTOR_ODDZIAŁ">{t('addClientModal.categories.DYSTRYBUTOR_ODDZIAŁ')}</option>
-            <option value="ENGO_PLUS">{t('addClientModal.categories.ENGO_PLUS')}</option>
-            <option value="INSTALATOR">{t('addClientModal.categories.INSTALATOR')}</option>
+            <option value="DYSTRYBUTOR CENTRALA">{t('addClientModal.categories.DYSTRYBUTOR_CENTRALA')}</option>
+            <option value="DYSTRYBUTOR MAGAZYN">{t('addClientModal.categories.DYSTRYBUTOR_MAGAZYN')}</option>
+            <option value="DYSTRYBUTOR ODDZIAŁ">{t('addClientModal.categories.DYSTRYBUTOR_ODDZIAŁ')}</option>
             <option value="PODHURT">{t('addClientModal.categories.PODHURT')}</option>
-            <option value="PODHURT_ELEKTRYKA">{t('addClientModal.categories.PODHURT_ELEKTRYKA')}</option>
+            <option value="INSTALATOR FIRMA">{t('addClientModal.categories.INSTALATOR_FIRMA')}</option>
+            <option value="INSTALATOR ENGO PLUS">{t('addClientModal.categories.ENGO_PLUS')}</option>
             <option value="PROJEKTANT">{t('addClientModal.categories.PROJEKTANT')}</option>
+            <option value="KLIENT POTENCJALNY">{t('addClientModal.categories.KLIENT_POTENCJALNY')}</option>
+          </select>
+
+          <select value={filterClassCategory} onChange={(e) => setFilterClassCategory(e.target.value)} className='pl-1 pr-1 pt-2 pb-2 rounded border'>
+            <option value="">{t('filter.class')}</option>
+            <option value="A">A</option>
+            <option value="B">B</option>
+            <option value="C">C</option>
+            <option value="D">D</option>
+            <option value="-">{t('common.noClass')}</option>
           </select>
 
           <select value={filterEngoTeamContact} onChange={(e) => setfilterEngoTeamContact(e.target.value)} className='pl-1 pr-1 pt-2 pb-2 rounded border'>
             <option value="">{t('addClientModal.chooseMember')}</option>
-            {uniqueEngoContacts.map((contact) => (
-              <option key={contact} value={contact}>
-                {contact}
+            {uniqueEngoContacts.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.label}
               </option>
             ))}
           </select>
@@ -581,32 +581,66 @@ function Customers() {
         />
       )} */}
 
-      <table border="1" cellPadding="10" style={{ width: '100%', borderCollapse: 'collapse' }}>
+  {/* Scroll container for the table with sticky header */}
+  <div className="w-full" style={{ height: 'calc(100vh - 320px)', overflowY: 'auto', boxSizing: 'border-box' }}>
+  <table border="1" cellPadding="10" style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead className=''>
           <tr>
-            <th>{t('tableHeaders.number')}</th>
-            <th>{t('tableHeaders.clientCode')}</th>
-            <th>{t('tableHeaders.clientStatus')}</th>
-            <th>{t('tableHeaders.dataStatus')}</th>
-            <th>{t('tableHeaders.company')}</th>
-            <th>{t('tableHeaders.country')}</th>
-            <th className='portrait:hidden'>{t('tableHeaders.city')}</th>
-            <th className='portrait:hidden'>{t('tableHeaders.salesperson')}</th>
-            <th>{t('tableHeaders.actions')}</th>
+            <th className="sticky top-0 bg-white z-10">{t('tableHeaders.number')}</th>
+            <th className="sticky top-0 bg-white z-10">{t('tableHeaders.clientCode')}</th>
+            <th className="sticky top-0 bg-white z-10">{t('tableHeaders.clientStatus')}</th>
+            <th className="sticky top-0 bg-white z-10">{t('tableHeaders.dataStatus')}</th>
+            <th className="sticky top-0 bg-white z-10">{t('tableHeaders.company')}</th>
+            <th className="sticky top-0 bg-white z-10">{t('tableHeaders.category')}</th>
+            <th className="sticky top-0 bg-white z-10">{t('common.class')}</th>
+            <th className="sticky top-0 bg-white z-10">{t('tableHeaders.country')}</th>
+            <th className='portrait:hidden sticky top-0 bg-white z-10'>{t('tableHeaders.city')}</th>
+            <th className='portrait:hidden sticky top-0 bg-white z-10'>{t('tableHeaders.salesperson')}</th>
+            <th className="sticky top-0 bg-white z-10">{t('tableHeaders.actions')}</th>
           </tr>
         </thead>
         <tbody>
-          {filteredClients.length > 0 ? (
-            filteredClients.map((client, index) => (
+          {listLoading ? (
+            Array.from({ length: Math.min(pageSize, 12) }).map((_, i) => (
+              <tr key={`skel-${i}`} className="border-b border-b-neutral-200">
+                <td><div className="h-4 w-8 bg-neutral-200 rounded animate-pulse" /></td>
+                <td><div className="h-4 w-20 bg-neutral-200 rounded animate-pulse" /></td>
+                <td><div className="h-4 w-16 bg-neutral-200 rounded animate-pulse" /></td>
+                <td><div className="h-4 w-20 bg-neutral-200 rounded animate-pulse" /></td>
+                <td><div className="h-4 w-48 bg-neutral-200 rounded animate-pulse" /></td>
+                <td><div className="h-4 w-40 bg-neutral-200 rounded animate-pulse" /></td>
+                <td><div className="h-4 w-10 bg-neutral-200 rounded animate-pulse" /></td>
+                <td><div className="h-4 w-16 bg-neutral-200 rounded animate-pulse" /></td>
+                <td className='portrait:hidden'><div className="h-4 w-24 bg-neutral-200 rounded animate-pulse" /></td>
+                <td className='portrait:hidden'><div className="h-4 w-36 bg-neutral-200 rounded animate-pulse" /></td>
+                <td>
+                  <div className="flex justify-center gap-2">
+                    <div className="h-8 w-20 bg-neutral-200 rounded animate-pulse" />
+                    <div className="h-8 w-20 bg-neutral-200 rounded animate-pulse" />
+                  </div>
+                </td>
+              </tr>
+            ))
+          ) : pagedClients.length > 0 ? (
+            pagedClients.map((client, index) => (
               <tr key={`${client.type || 'client'}-${client.id}`} className='border-b border-b-neutral-300 text-center'>
-                <td>{index + 1}</td>
+                <td>{startIndex + index + 1}</td>
                 <td>{client.client_code_erp || '-'}</td>
                 <td className={client.status === "1" ? "text-green-600 font-semibold" : "text-neutral-300 font-semibold"}>{client.status === "1" ? "Nowy" : "Zweryfikowany"}</td>
                 <td className={client.data_veryfication === "1" ? "text-neutral-300 font-semibold" : "text-red-600 font-semibold"}>{client.data_veryfication === "1" ? "Gotowe" : "Brak danych"}</td>
                 <td>{client.company_name || '-'}</td>
+                <td>{client.client_subcategory || '-'}</td>
+                <td>{(client.class_category && client.class_category !== '-') ? client.class_category : t('common.noClass')}</td>
                 <td>{client.country || '-'}</td>
                 <td className='portrait:hidden'>{client.city || '-'}</td>
-                <td className='portrait:hidden'>{client.engo_team_contact || '-'}</td>
+                <td className='portrait:hidden'>
+                  {
+                    (client.engo_team_user_id && engoNameMap[Number(client.engo_team_user_id)])
+                    || client.engo_team_user_name
+                    || client.engo_team_contact
+                    || '-'
+                  }
+                </td>
 
                 <td style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
                   {(!client.type || client.type === 'client') ? (
@@ -645,11 +679,69 @@ function Customers() {
             ))
           ) : (
             <tr>
-              <td colSpan="5" style={{ textAlign: 'center' }}>{t('noClientsFound')}</td>
+        <td colSpan="11" style={{ textAlign: 'center' }}>{t('noClientsFound')}</td>
             </tr>
           )}
         </tbody>
       </table>
+  </div>
+
+      {/* Pagination controls and range info */}
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+        <div className="text-sm text-neutral-500">
+          {total > 0
+            ? `${t('common.showing') || 'Pokazano'} ${startIndex + 1}–${endIndex} ${t('common.of') || 'z'} ${total}`
+            : `${t('noClientsFound')}`}
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="text-sm text-neutral-500 mr-2">
+            {t('common.perPage') || 'Na stronę'}
+          </label>
+          <select
+            value={pageSize}
+            onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
+            className="p-2 border rounded"
+          >
+            <option value={25}>25</option>
+            <option value={50}>50</option>
+            <option value={100}>100</option>
+            <option value={500}>500</option>
+          </select>
+          <button
+            className="buttonGreen2 disabled:opacity-50"
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={currentPage <= 1 || listLoading}
+          >
+            {t('common.prev') || 'Prev'}
+          </button>
+          <div className="flex items-center gap-2 text-sm">
+            <span>{t('common.page') || 'Strona'}</span>
+            <input
+              type="text"
+              inputMode="numeric"
+              pattern="\\d*"
+              value={pageInput}
+              onChange={(e) => setPageInput(e.target.value.replace(/[^0-9]/g, ''))}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') commitPageInput();
+                if (e.key === 'ArrowUp' || e.key === 'ArrowDown') e.preventDefault();
+              }}
+              onWheel={(e) => e.preventDefault()}
+              onBlur={commitPageInput}
+              disabled={listLoading}
+              className="w-16 px-2 py-1 border rounded text-center"
+            />
+            <span>/ {totalPages}</span>
+          </div>
+          <button
+            className="buttonGreen2 disabled:opacity-50"
+            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+            disabled={currentPage >= totalPages || listLoading}
+          >
+            {t('common.next') || 'Next'}
+          </button>
+        </div>
+      </div>
 
 
     </div>

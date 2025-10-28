@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAuth } from '../context/AuthContext';
 import AddVisitModal from "../components/AddVisitModal";
 import EditVisitModal from "../components/EditVisitModal";
@@ -48,6 +48,8 @@ function Visits() {
 
   const [users, setUsers] = useState([]);
 
+  
+
   useEffect(() => {
     fetchWithAuth(`${import.meta.env.VITE_API_URL}/users/list.php`, {
     })
@@ -69,6 +71,32 @@ function Visits() {
       .join(' '); // połącz spacją
   };
 
+  // Preferuj imię i nazwisko z tablicy users, fallback do sformatowanej nazwy użytkownika
+  const getDisplayName = (u) => {
+    if (!u) return '';
+    const fn = u.first_name || u.firstName || '';
+    const ln = u.last_name || u.lastName || '';
+    const full = `${fn} ${ln}`.trim();
+    if (full) return full;
+    if (u.username) return formatUsername(u.username);
+    return `ID ${u.id}`;
+  };
+
+  // Lista handlowców dostępnych w wizytach (wg user_id z wizyt)
+  const availableUsers = useMemo(() => {
+    const ids = new Set();
+    for (const c of clients) {
+      for (const v of (c.visits || [])) {
+        if (v && v.user_id != null) ids.add(String(v.user_id));
+      }
+    }
+    const list = Array.from(ids)
+      .map(id => users.find(u => String(u.id) === id))
+      .filter(Boolean)
+      .sort((a, b) => getDisplayName(a).localeCompare(getDisplayName(b)));
+    return list;
+  }, [clients, users]);
+
 
   const fetchAllClients = async () => {
     try {
@@ -85,7 +113,7 @@ function Visits() {
 
   const fetchClients = async () => {
     try {
-      const res = await fetchWithAuth(`${import.meta.env.VITE_API_URL}/visits/get_visits_by_clients.php`, {
+      const res = await fetchWithAuth(`${import.meta.env.VITE_API_URL}/visits/get_visits_by_entities.php`, {
       });
       const data = await res.json();
       if (data.success) {
@@ -105,14 +133,14 @@ function Visits() {
     setIsEditModalOpen(false);
     setSelectedVisit(null);
 
-    const res = await fetchWithAuth(`${import.meta.env.VITE_API_URL}/visits/get_visits_by_clients.php`);
+  const res = await fetchWithAuth(`${import.meta.env.VITE_API_URL}/visits/get_visits_by_entities.php`);
     const data = await res.json();
 
     if (data.success) {
       setClients(data.data);
 
       if (modalClient) {
-        const updatedClient = data.data.find(c => c.client_id === modalClient.client_id);
+  const updatedClient = data.data.find(c => c.client_id === modalClient.client_id);
         if (updatedClient) setModalClient(updatedClient);
       }
     }
@@ -196,54 +224,37 @@ function Visits() {
     );
   };
 
-  const getSortedFilteredClients = () => {
+  const sortedFilteredClients = useMemo(() => {
     const filtered = clients
-      .filter(client =>
-        client.company_name.toLowerCase().includes(search.toLowerCase())
-      )
+      .filter(client => client.company_name.toLowerCase().includes(search.toLowerCase()))
       .map(client => {
         const allVisits = client.visits || [];
-
         const filteredVisits = allVisits.filter(v => {
           const visitDate = v.visit_date?.slice(0, 10);
-          const matchesSearch = client.company_name.toLowerCase().includes(search.toLowerCase());
           const matchesUser = !userFilter || String(v.user_id) === String(userFilter);
           const matchesMine = !onlyMine || v.user_id === user.id;
           const dateFromOK = !dateFromFilter || visitDate >= dateFromFilter;
           const dateToOK = !dateToFilter || visitDate <= dateToFilter;
-
-          return (
-            matchesSearch &&
-            matchesUser &&
-            matchesMine &&
-            dateFromOK &&
-            dateToOK
-          );
+          return matchesUser && matchesMine && dateFromOK && dateToOK;
         });
-
-        // Użyj TYLKO ostatniej wizyty do belki, ale przekaż wszystkie do szczegółów
-        const latestVisit = filteredVisits.sort((a, b) =>
-          new Date(b.visit_date) - new Date(a.visit_date)
-        )[0];
-
-        return latestVisit
-          ? { ...client, visits: allVisits, latestVisit }
-          : null;
+        const latestVisit = filteredVisits.sort((a, b) => new Date(b.visit_date) - new Date(a.visit_date))[0];
+        return latestVisit ? { ...client, visits: allVisits, latestVisit } : null;
       })
       .filter(Boolean)
-
       .filter(client => client.visits.length > 0);
 
-    if (sortMode === "alphabetical") {
-      return filtered.sort((a, b) => a.company_name.localeCompare(b.company_name));
-    } else {
-      return filtered.sort((a, b) => {
-        const dateA = new Date(a.visits[0]?.visit_date || 0);
-        const dateB = new Date(b.visits[0]?.visit_date || 0);
-        return dateB - dateA;
-      });
+    // Dedup po client_id (na wszelki wypadek, gdyby backend/stan zwrócił dublety)
+    const byId = new Map();
+    for (const c of filtered) {
+      if (!byId.has(c.client_id)) byId.set(c.client_id, c);
     }
-  };
+    const unique = Array.from(byId.values());
+
+    if (sortMode === "alphabetical") {
+      return unique.sort((a, b) => a.company_name.localeCompare(b.company_name));
+    }
+    return unique.sort((a, b) => new Date(b.latestVisit?.visit_date || 0) - new Date(a.latestVisit?.visit_date || 0));
+  }, [clients, search, userFilter, onlyMine, dateFromFilter, dateToFilter, sortMode, user.id]);
 
   if (loading) return <p>{t('loading')}</p>;
 
@@ -252,6 +263,7 @@ function Visits() {
       <div className="flex flex-wrap justify-between items-center mb-4">
         <h1 className="text-2xl font-bold text-white">{t("visitsTitle")}</h1>
       </div>
+      
       <div className="flex flex-wrap justify-between items-center mb-6 gap-2">
         <button onClick={() => setIsAddModalOpen(true)} className="buttonGreen">
           {t("addVisit")}
@@ -349,11 +361,9 @@ function Visits() {
 
             <select value={userFilter} onChange={e => setUserFilter(e.target.value)} className="border p-2 rounded mb-3">
               <option value="">{t("visitsPage.selectUser")}</option>
-              {users
-                .filter(u => u.role === 'tsr' || u.role === 'manager')
-                .map(u => (
-                  <option key={u.id} value={u.id}>{formatUsername(u.username)}</option>
-                ))}
+              {availableUsers.map(u => (
+                <option key={u.id} value={u.id}>{getDisplayName(u)}</option>
+              ))}
             </select>
 
             <input type="date" value={dateFromFilter} onChange={e => setDateFromFilter(e.target.value)} className="border p-2 rounded" />
@@ -375,7 +385,7 @@ function Visits() {
 
         {/* Lista klientów */}
         <div className="p-4 pt-2">
-          {getSortedFilteredClients().map(client => (
+          {sortedFilteredClients.map(client => (
             <ClientVisitCard
               key={client.client_id}
               client={client}
@@ -405,7 +415,7 @@ function Visits() {
           onClose={() => setIsEditModalOpen(false)}
           onVisitUpdated={handleVisitEdited}
           visit={selectedVisit}
-          clients={clients}
+          entities={allClients}
         />
       )}
 

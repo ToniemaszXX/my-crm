@@ -1,10 +1,10 @@
 // src/components/EditClientModal.jsx
 import useClientForm from '../hooks/useClientForm';
 import { useAuth } from '../context/AuthContext';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import LocationPicker from './LocationPicker';
 import { useTranslation } from 'react-i18next';
-import { isReadOnly, isBok } from '../utils/roles';
+import { isReadOnly, isBok, isAdminManager } from '../utils/roles';
 import CountrySelect from './CountrySelect';
 import { X } from 'lucide-react';
 import ClientVisits from "./ClientVisits";
@@ -18,6 +18,7 @@ import { clientSchema } from '../validation/clientSchema';
 import ContactsSection from './ContactsSection';
 import { syncContacts } from '../utils/syncContacts';
 import { getMarketLabel } from '../utils/markets';
+import UserSelect from './UserSelect';
 // Shared UI components for consistent layout
 import Section from './common/Section';
 import Grid from './common/Grid';
@@ -45,6 +46,7 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated, allClients 
   const { t } = useTranslation();
   const { user } = useAuth();
   const readOnly = isReadOnly(user);
+  const [selectedDistributors, setSelectedDistributors] = useState([]);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddVisitOpen, setIsAddVisitOpen] = useState(false);
@@ -53,10 +55,13 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated, allClients 
   const [isBranchModalOpen, setIsBranchModalOpen] = useState(false);
   const [selectedVisit, setSelectedVisit] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [distOpen, setDistOpen] = useState(false);
+  const distRef = useRef(null);
 
   useEffect(() => {
     // gdy otwierasz modal dla innego klienta, zrób świeżą kopię
     originalContactsRef.current = deepClone(client?.contacts);
+  setSelectedDistributors(Array.isArray(client?.distributor_ids) ? client.distributor_ids.map(Number).slice(0,3) : []);
   }, [client?.id, isOpen]); // jeśli masz isOpen w propsach, dodaj; inaczej zostaw samo client?.id
 
 
@@ -65,6 +70,20 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated, allClients 
 
   const deepClone = (v) => JSON.parse(JSON.stringify(v ?? []));
   const originalContactsRef = useRef(deepClone(client?.contacts));
+
+  // Kandydaci dystrybutorów (A–Z, rynek, podkategorie, bez już wybranych, filtr po nazwie)
+  const distributorCandidates = useMemo(() => {
+    if (!Array.isArray(allClients)) return [];
+    const marketId = Number(formData?.market_id || user?.singleMarketId);
+    return allClients
+      .filter((c) => (
+        (c.client_subcategory === 'DYSTRYBUTOR CENTRALA' || c.client_subcategory === 'DYSTRYBUTOR ODDZIAŁ') &&
+        (Number(c.market_id) === marketId)
+      ))
+      .filter((d) => !selectedDistributors.includes(Number(d.id)))
+      .filter((d) => !searchTerm || (d.company_name || '').toLowerCase().includes(searchTerm.toLowerCase()))
+      .sort((a, b) => (a.company_name || '').localeCompare(b.company_name || ''));
+  }, [allClients, formData?.market_id, user?.singleMarketId, selectedDistributors, searchTerm]);
 
   // Number input UX guards
   const numberInputGuards = {
@@ -116,7 +135,16 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated, allClients 
     // console.log('[EditClientModal] Validation OK');
 
     // 3) Zapis klienta (bez kontaktów)
-    const { contacts: _ignoreContacts, ...clientPayload } = parsed.data;
+  const { contacts: _ignoreContacts, ...clientPayload } = parsed.data;
+  clientPayload.distributor_ids = selectedDistributors;
+  // Nadpisz tylko ID; usuń stringowe pola z payloadu
+  delete clientPayload.engo_team_director;
+  delete clientPayload.engo_team_manager;
+  delete clientPayload.engo_team_contact;
+  // include *_user_id if captured from selects (zero/undefined oznacza null)
+  clientPayload.engo_team_manager_user_id = formData.engo_team_manager_id ? Number(formData.engo_team_manager_id) : null;
+  clientPayload.engo_team_user_id = formData.engo_team_contact_id ? Number(formData.engo_team_contact_id) : null;
+  clientPayload.engo_team_director_user_id = formData.engo_team_director_id ? Number(formData.engo_team_director_id) : null;
 
     try {
       // console.log('[EditClientModal] Sending customer update', clientPayload);
@@ -203,6 +231,62 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated, allClients 
     handleContactChange(index, { target: { name: field, value } });
   };
 
+  // Mapowanie subkategorii na kategorię główną (ukryte pole)
+  const mapSubToCat = (sub) => {
+    if (!sub) return '';
+    const distributors = ['DYSTRYBUTOR CENTRALA', 'DYSTRYBUTOR MAGAZYN', 'DYSTRYBUTOR ODDZIAŁ', 'PODHURT'];
+    const installers = ['INSTALATOR FIRMA', 'INSTALATOR ENGO PLUS'];
+    if (distributors.includes(sub)) return 'DYSTRYBUTOR';
+    if (installers.includes(sub)) return 'INSTALATOR';
+    return sub; // pozostałe 1:1
+  };
+
+  // Synchronizuj client_category przy zmianie client_subcategory
+  useEffect(() => {
+    if (!formData) return;
+    setFormData(prev => ({ ...prev, client_category: mapSubToCat(prev.client_subcategory) }));
+  }, [formData?.client_subcategory]);
+
+  // UX: structure_* inputs — clear 0 on focus, restore 0 if empty on blur, clamp 0-100
+  const handleStructureFocus = (name) => {
+    setFormData((prev) => {
+      const v = prev?.[name];
+      if (v === 0 || v === '0') return { ...prev, [name]: '' };
+      return prev;
+    });
+  };
+  const handleStructureBlur = (name) => {
+    setFormData((prev) => {
+      const raw = prev?.[name];
+      if (raw === '' || raw === null || raw === undefined) return { ...prev, [name]: 0 };
+      const n = parseInt(raw, 10);
+      const clamped = isNaN(n) ? 0 : Math.min(Math.max(n, 0), 100);
+      return { ...prev, [name]: clamped };
+    });
+  };
+
+  // If user is only market 1, ensure country defaults to Poland if empty
+  useEffect(() => {
+    if (user?.singleMarketId === 1 && formData) {
+      setFormData((prev) => {
+        if (!prev) return prev;
+        const current = prev.country;
+        if (current && String(current).trim() !== '') return prev;
+        return { ...prev, country: 'Poland' };
+      });
+    }
+  }, [user?.singleMarketId, formData]);
+
+  // Zamknij listę po kliknięciu poza polem
+  useEffect(() => {
+    const onDocClick = (e) => {
+      if (!distRef.current) return;
+      if (!distRef.current.contains(e.target)) setDistOpen(false);
+    };
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, []);
+
 
   if (!isOpen || !formData) return null;
 
@@ -220,7 +304,11 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated, allClients 
           </button>
         </div>
 
-        <form onSubmit={safeSubmit} className="text-white flex flex-col gap-3 mt-2 pl-8 pr-8">
+        <form
+          onSubmit={safeSubmit}
+          onKeyDown={(e) => { if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') e.preventDefault(); }}
+          className="text-white flex flex-col gap-3 mt-2 pl-8 pr-8"
+        >
           {/* Rynek */}
           {Array.isArray(user?.marketIds) && user.marketIds.length > 1 ? (
             <Section title={t('addClientModal.market') || 'Rynek'}>
@@ -232,7 +320,7 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated, allClients 
                     onChange={handleChange}
                     className="w-full border border-neutral-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-neutral-400"
                   >
-                    <option value="">— wybierz rynek —</option>
+                    <option value="">{t('addClientModal.chooseMarket') || '— wybierz rynek —'}</option>
                     {user.marketIds.map((mid) => (
                       <option key={mid} value={mid}>{getMarketLabel(mid)}</option>
                     ))}
@@ -243,10 +331,40 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated, allClients 
           ) : (
             <Section title={t('addClientModal.market') || 'Rynek'}>
               <div className="text-neutral-800">
-                Rynek: <span className="font-semibold">{getMarketLabel(formData.market_id || user?.singleMarketId)}</span>
+                {(t('addClientModal.market') || 'Rynek') + ': '}<span className="font-semibold">{getMarketLabel(formData.market_id || user?.singleMarketId)}</span>
               </div>
             </Section>
           )}
+
+          {isAdminManager(user) && ( <Section title={t('common.BOK')}>
+                <Grid className="mb-4">
+                
+                <FormField id="status" label={t('addClientModal.status')} error={errors.status}>
+                  <select
+                    name="status"
+                    value={formData.status}
+                    onChange={handleChange}
+                    className="w-full border border-neutral-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-neutral-400"
+                  >
+                    <option value="1">{t('filter.new')}</option>
+                    <option value="0">{t('filter.verified')}</option>
+                  </select>
+                </FormField>
+              
+
+              <FormField id="data_veryfication" label={t('addClientModal.data_veryfication')} error={errors.data_veryfication}>
+                <select
+                  name="data_veryfication"
+                  value={formData.data_veryfication}
+                  onChange={handleChange}
+                  className="w-full border border-neutral-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-neutral-400"
+                >
+                  <option value="0">{t('dataStatus.missing')}</option>
+                  <option value="1">{t('dataStatus.ready')}</option>
+                </select>
+              </FormField>
+              </Grid>
+            </Section>)}
 
           {/* Dane firmy */}
           <Section title={t('addClientModal.companyData')}>
@@ -271,31 +389,7 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated, allClients 
                 />
               </FormField>
 
-              {!isBok(user) && (
-                <FormField id="status" label={t('addClientModal.status')} error={errors.status}>
-                  <select
-                    name="status"
-                    value={formData.status}
-                    onChange={handleChange}
-                    className="w-full border border-neutral-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-neutral-400"
-                  >
-                    <option value="1">Nowy</option>
-                    <option value="0">Zweryfikowany</option>
-                  </select>
-                </FormField>
-              )}
-
-              <FormField id="data_veryfication" label={t('addClientModal.data_veryfication')} error={errors.data_veryfication}>
-                <select
-                  name="data_veryfication"
-                  value={formData.data_veryfication}
-                  onChange={handleChange}
-                  className="w-full border border-neutral-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-neutral-400"
-                >
-                  <option value="0">Brak danych</option>
-                  <option value="1">Gotowe</option>
-                </select>
-              </FormField>
+             
 
               <FormField id="nip" label={t('addClientModal.nip')} error={errors.nip}>
                 <input
@@ -307,40 +401,55 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated, allClients 
                 />
               </FormField>
 
-              <FormField id="client_category" label={t('addClientModal.clientCategory')} error={errors.client_category}>
+              <FormField id="class_category" label={t('common.class')}>
                 <select
-                  name="client_category"
-                  value={formData.client_category}
+                  name="class_category"
+                  value={formData.class_category || '-'}
                   onChange={handleChange}
                   className="w-full border border-neutral-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-neutral-400"
                 >
-                  <option value="">{t('addClientModal.selectCategory')}</option>
-                  <option value="KLIENT_POTENCJALNY">{t('addClientModal.categories.KLIENT_POTENCJALNY')}</option>
-                  <option value="CENTRALA_SIEĆ">{t('addClientModal.categories.CENTRALA_SIEĆ')}</option>
-                  <option value="DEWELOPER">{t('addClientModal.categories.DEWELOPER')}</option>
-                  <option value="DYSTRYBUTOR_CENTRALA">{t('addClientModal.categories.DYSTRYBUTOR_CENTRALA')}</option>
-                  <option value="DYSTRYBUTOR_MAGAZYN">{t('addClientModal.categories.DYSTRYBUTOR_MAGAZYN')}</option>
-                  <option value="DYSTRYBUTOR_ODDZIAŁ">{t('addClientModal.categories.DYSTRYBUTOR_ODDZIAŁ')}</option>
-                  <option value="INSTALATOR_ENGO_PLUS">{t('addClientModal.categories.INSTALATOR_ENGO_PLUS')}</option>
-                  <option value="INSTALATOR">{t('addClientModal.categories.INSTALATOR')}</option>
-                  <option value="INSTALATOR_FIRMA">{t('addClientModal.categories.INSTALATOR_FIRMA')}</option>
-                  <option value="PODHURT">{t('addClientModal.categories.PODHURT')}</option>
-                  <option value="PODHURT_ELEKTRYKA">{t('addClientModal.categories.PODHURT_ELEKTRYKA')}</option>
-                  <option value="PROJEKTANT">{t('addClientModal.categories.PROJEKTANT')}</option>
+                  <option value="-">{t('common.noClass')}</option>
+                  <option value="A">A</option>
+                  <option value="B">B</option>
+                  <option value="C">C</option>
+                  <option value="D">D</option>
                 </select>
+              </FormField>
 
-                {formData.client_category === 'DYSTRYBUTOR_ODDZIAŁ' && (
+              {/* client_category ukryte – mapowane automatycznie */}
+              <input type="hidden" name="client_category" value={formData.client_category || ''} />
+
+              <FormField id="client_subcategory" label={t('fields.clientSubcategory')} error={errors.client_subcategory}>
+                <select
+                  name="client_subcategory"
+                  value={formData.client_subcategory || ''}
+                  onChange={handleChange}
+                  className="w-full border border-neutral-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-neutral-400"
+                >
+                  <option value="">{t('addClientModal.selectSubCategory')}</option>
+                  <option value="GRUPA ZAKUPOWA">{t('addClientModal.categories.GRUPA_ZAKUPOWA')}</option>
+                  <option value="DEWELOPER">{t('addClientModal.categories.DEWELOPER')}</option>
+                  <option value="DYSTRYBUTOR CENTRALA">{t('addClientModal.categories.DYSTRYBUTOR_CENTRALA')}</option>
+                  <option value="DYSTRYBUTOR MAGAZYN">{t('addClientModal.categories.DYSTRYBUTOR_MAGAZYN')}</option>
+                  <option value="DYSTRYBUTOR ODDZIAŁ">{t('addClientModal.categories.DYSTRYBUTOR_ODDZIAŁ')}</option>
+                  <option value="PODHURT">{t('addClientModal.categories.PODHURT')}</option>
+                  <option value="INSTALATOR FIRMA">{t('addClientModal.categories.INSTALATOR_FIRMA')}</option>
+                  <option value="INSTALATOR ENGO PLUS">{t('addClientModal.categories.ENGO_PLUS')}</option>
+                  <option value="PROJEKTANT">{t('addClientModal.categories.PROJEKTANT')}</option>
+                  <option value="KLIENT POTENCJALNY">{t('addClientModal.categories.KLIENT_POTENCJALNY')}</option>
+                </select>
+                {['DYSTRYBUTOR ODDZIAŁ', 'DYSTRYBUTOR MAGAZYN'].includes(formData.client_subcategory) && (
                   <div className="mt-2">
-                    <div className="text-neutral-800 mb-1">Siedziba główna</div>
+                    <div className="text-neutral-800 mb-1">{t('customer.hqLabel') || 'Siedziba główna'}</div>
                     <select
                       name="index_of_parent"
                       value={(formData.index_of_parent || '').trim()}
                       onChange={(e) => setFormData((prev) => ({ ...prev, index_of_parent: e.target.value.trim() }))}
                       className="w-full border border-neutral-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-neutral-400"
                     >
-                      <option value="">Wybierz centralę</option>
+                      <option value="">{t('customer.chooseHQ') || 'Wybierz centralę'}</option>
                       {allClients
-                        .filter((c) => normalizeCategory(c.client_category) === 'DYSTRYBUTOR_CENTRALA' && (c.client_code_erp && c.client_code_erp.trim() !== ''))
+                        .filter((c) => c.client_subcategory === 'DYSTRYBUTOR CENTRALA' && (c.client_code_erp && c.client_code_erp.trim() !== ''))
                         .map((parent) => (
                           <option key={parent.id} value={(parent.client_code_erp || '').trim()}>
                             {parent.company_name} ({(parent.client_code_erp || '').trim()})
@@ -352,16 +461,97 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated, allClients 
                 )}
               </FormField>
 
-              <FormField id="client_subcategory" label="Podkategoria klienta" error={errors.client_subcategory}>
-                <input
-                  type="text"
-                  name="client_subcategory"
-                  value={formData.client_subcategory || ''}
-                  onChange={handleChange}
-                  className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neutral-400"
-                />
-              </FormField>
+              
+            </Grid>
+          </Section>
 
+          {/* Related companies section */}
+          {(
+            formData.client_subcategory === 'PODHURT' ||
+            normalizeCategory(formData.client_category) === 'INSTALATOR'
+          ) && (
+            <Section title={t('relatedCompanies.title') || 'Firmy powiązane'}>
+              {/* <Grid> */}
+                <FormField id="distributor_ids" label={t('relatedCompanies.linkedDistributors') || 'Powiązani dystrybutorzy (max 3)'}>
+                  {/* Combobox: input + dropdown (A–Z) */}
+                  <div className="relative w-full" ref={distRef}>
+                    <input
+                      type="text"
+                      value={searchTerm}
+                      onChange={(e) => { setSearchTerm(e.target.value); setDistOpen(true); }}
+                      onFocus={() => setDistOpen(true)}
+                      placeholder={t('relatedCompanies.searchPlaceholder') || 'Szukaj firmy...'}
+                      className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neutral-400 bg-white text-neutral-900"
+                    />
+                    {distOpen && distributorCandidates.length > 0 && (
+                      <div className="absolute z-50 mt-1 w-full max-h-56 overflow-auto rounded border border-neutral-300 bg-white shadow">
+                        {distributorCandidates.map((d) => (
+                          <button
+                            key={d.id}
+                            type="button"
+                            className="w-full text-left px-3 py-2 hover:bg-neutral-100"
+                            onClick={() => {
+                              setSelectedDistributors((prev) => prev.includes(Number(d.id)) ? prev : prev.concat(Number(d.id)).slice(0,3));
+                              setSearchTerm('');
+                              setDistOpen(false);
+                            }}
+                          >
+                            {d.company_name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  {/* Przycisk Dodaj niepotrzebny — klik w pozycję dodaje od razu */}
+
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {selectedDistributors.map((id) => {
+                      const d = allClients.find((c) => Number(c.id) === Number(id));
+                      if (!d) return null;
+                      return (
+                        <span key={id} className="inline-flex items-center gap-2 bg-neutral-200 text-neutral-800 px-2 py-1 rounded-full">
+                          <span>{d.company_name}</span>
+                          <button type="button" className="text-red-600 hover:text-red-700" onClick={() => setSelectedDistributors((prev) => prev.filter((x) => x !== id))}>
+                            ×
+                          </button>
+                        </span>
+                      );
+                    })}
+                  </div>
+
+                  <div className="text-neutral-600 text-sm mt-1">
+                    {t('relatedCompanies.selectUpTo3') || 'Wybierz maksymalnie 3.'}
+                  </div>
+                </FormField>
+              {/* </Grid> */}
+            </Section>
+          )}
+
+          {normalizeCategory(formData.client_category) === 'DYSTRYBUTOR_CENTRALA' && (
+            <Section title={t('customer.sections.hqBranches')}>
+              <div className="text-black flex flex-col">
+                {allClients
+                  .filter((c) =>
+                    normalizeCategory(c.client_category) === 'DYSTRYBUTOR_ODDZIAŁ' &&
+                    (formData.client_code_erp && c.index_of_parent) &&
+                    (c.index_of_parent || '').trim() === (formData.client_code_erp || '').trim()
+                  )
+                  .map((branch) => (
+                    <a
+                      key={branch.id}
+                      className="cursor-pointer hover:text-lime-500"
+                      onClick={() => handleBranchClick(branch)}
+                    >
+                      {branch.company_name}
+                    </a>
+                  ))}
+              </div>
+            </Section>
+          )}
+
+          {/* Lokalizacja */}
+          <Section title={t('addClientModal.location')}>
+            <Grid className="mb-2">
               <FormField id="street" label={t('addClientModal.street')} error={errors.street}>
                 <input
                   type="text"
@@ -392,6 +582,16 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated, allClients 
                 />
               </FormField>
 
+              <FormField id="district" label={t('addClientModal.district')} error={errors.district}>
+                <input
+                  type="text"
+                  name="district"
+                  value={formData.district}
+                  onChange={handleChange}
+                  className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neutral-400"
+                />
+              </FormField>
+
               <FormField id="voivodeship" label={t('addClientModal.voivodeship')} error={errors.voivodeship}>
                 <input
                   type="text"
@@ -409,37 +609,10 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated, allClients 
                   name="country"
                   hideLabel={true}
                   className="w-full border border-neutral-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-neutral-400"
+                  disabled={user?.singleMarketId === 1}
                 />
               </FormField>
-            </Grid>
-          </Section>
-
-          {normalizeCategory(formData.client_category) === 'DYSTRYBUTOR_CENTRALA' && (
-            <Section title="Oddziały przypisane do tej centrali">
-              <div className="text-black flex flex-col">
-                {allClients
-                  .filter((c) =>
-                    normalizeCategory(c.client_category) === 'DYSTRYBUTOR_ODDZIAŁ' &&
-                    (formData.client_code_erp && c.index_of_parent) &&
-                    (c.index_of_parent || '').trim() === (formData.client_code_erp || '').trim()
-                  )
-                  .map((branch) => (
-                    <a
-                      key={branch.id}
-                      className="cursor-pointer hover:text-lime-500"
-                      onClick={() => handleBranchClick(branch)}
-                    >
-                      {branch.company_name}
-                    </a>
-                  ))}
-              </div>
-            </Section>
-          )}
-
-          {/* Lokalizacja */}
-          <Section title={t('addClientModal.location')}>
-            <Grid className="mb-2">
-              <FormField id="latitude" label="Szerokość geogr." error={errors.latitude}>
+              <FormField id="latitude" label={t('editClientModal.locationPicker.latitude')} error={errors.latitude}>
                 <input
                   type="number"
                   step="0.000001"
@@ -450,7 +623,7 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated, allClients 
                   className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neutral-400"
                 />
               </FormField>
-              <FormField id="longitude" label="Długość geogr." error={errors.longitude}>
+              <FormField id="longitude" label={t('editClientModal.locationPicker.longitude')} error={errors.longitude}>
                 <input
                   type="number"
                   step="0.000001"
@@ -491,30 +664,50 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated, allClients 
           <Section title={t('addClientModal.accounts')}>
             <Grid>
               <FormField id="engo_team_director" label={t('addClientModal.engoTeamDirector') || 'Dyrektor w zespole ENGO'} error={errors.engo_team_director}>
-                <input
-                  type="text"
+                <UserSelect
+                  roleFilter="director"
+                  activeOnly={true}
+                  marketId={formData.market_id || user?.singleMarketId}
                   name="engo_team_director"
-                  value={formData.engo_team_director || ''}
-                  onChange={handleChange}
                   className='w-full border border-neutral-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-neutral-400'
+                  value={formData.engo_team_director || ''}
+                  valueId={formData.engo_team_director_id}
+                  onChange={(val) => setFormData((prev) => ({ ...prev, engo_team_director: val }))}
+                  onChangeId={(id) => setFormData((prev) => ({ ...prev, engo_team_director_id: id }))}
+                  placeholder={t('addClientModal.chooseMember')}
+                  noMarketHint={t('addClientModal.chooseMarket')}
+                />
+              </FormField>
+              <FormField id="engo_team_manager" label={t('addClientModal.engoTeamManager') || 'Manager ENGO'} error={errors.engo_team_manager}>
+                <UserSelect
+                  role="manager"
+                  activeOnly={true}
+                  marketId={formData.market_id || user?.singleMarketId}
+                  name="engo_team_manager"
+                  className='w-full border border-neutral-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-neutral-400'
+                  value={formData.engo_team_manager || ''}
+                  valueId={formData.engo_team_manager_id}
+                  onChange={(val) => setFormData((prev) => ({ ...prev, engo_team_manager: val }))}
+                  onChangeId={(id) => setFormData((prev) => ({ ...prev, engo_team_manager_id: id }))}
+                  placeholder={t('addClientModal.chooseMember')}
+                  noMarketHint={t('addClientModal.chooseMarket')}
                 />
               </FormField>
               <FormField id="engo_team_contact" label={t('addClientModal.engoTeamContact')} error={errors.engo_team_contact}>
-                <select
+                <UserSelect
+                  roleByMarket={{ 1: 'koordynator', 2: 'tsr', '1': 'koordynator', '2': 'tsr' }}
+                  activeOnly={true}
+                  marketId={formData.market_id || user?.singleMarketId}
                   name="engo_team_contact"
-                  value={formData.engo_team_contact}
-                  onChange={handleChange}
                   className='w-full border border-neutral-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-neutral-400'
-                >
-                  <option value="">{t('addClientModal.chooseMember')}</option>
-                  <option value="Paweł Kulpa; DOK">Paweł Kulpa, DOK</option>
-                  <option value="Bartosz Jamruszkiewicz;">Bartosz Jamruszkiewicz</option>
-                  <option value="Arna Cizmovic; Bartosz Jamruszkiewicz">Arna Cizmovic, Bartosz Jamruszkiewicz</option>
-                  <option value="Bogdan Iacob; Bartosz Jamruszkiewicz">Bogdan Iacob, Bartosz Jamruszkiewicz</option>
-                  <option value="Lukasz Apanel;">Łukasz Apanel</option>
-                  <option value="Lukasz Apanel; Damian Krzyżanowski">Damian Krzyżanowski, Łukasz Apanel</option>
-                  <option value="Lukasz Apanel; Egidijus Karitonis">Egidijus Karitonis, Łukasz Apanel</option>
-                </select>
+                  value={formData.engo_team_contact || ''}
+                  valueId={formData.engo_team_contact_id}
+                  onChange={(val) => setFormData((prev) => ({ ...prev, engo_team_contact: val }))}
+                  onChangeId={(id) => setFormData((prev) => ({ ...prev, engo_team_contact_id: id }))}
+                  placeholder={t('addClientModal.chooseMember')}
+                  noMarketPlaceholder={t('addClientModal.chooseMarket')}
+                  showNoMarketHint={false}
+                />
               </FormField>
 
               <FormField id="number_of_branches" label={t('addClientModal.branches')} error={errors.number_of_branches}>
@@ -780,25 +973,25 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated, allClients 
             )}
             <Grid>
               <FormField id="structure_installer" label={t('addClientModal.structure.installer')}>
-                <input type="number" name="structure_installer" value={formData.structure_installer} onChange={handleChange} className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none" />
+                <input type="number" name="structure_installer" value={formData.structure_installer} onChange={handleChange} onFocus={() => handleStructureFocus('structure_installer')} onBlur={() => handleStructureBlur('structure_installer')} className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none" />
               </FormField>
               <FormField id="structure_wholesaler" label={t('addClientModal.structure.wholesaler')}>
-                <input type="number" name="structure_wholesaler" value={formData.structure_wholesaler} onChange={handleChange} className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none" />
+                <input type="number" name="structure_wholesaler" value={formData.structure_wholesaler} onChange={handleChange} onFocus={() => handleStructureFocus('structure_wholesaler')} onBlur={() => handleStructureBlur('structure_wholesaler')} className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none" />
               </FormField>
               <FormField id="structure_ecommerce" label={t('addClientModal.structure.ecommerce')}>
-                <input type="number" name="structure_ecommerce" value={formData.structure_ecommerce} onChange={handleChange} className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none" />
+                <input type="number" name="structure_ecommerce" value={formData.structure_ecommerce} onChange={handleChange} onFocus={() => handleStructureFocus('structure_ecommerce')} onBlur={() => handleStructureBlur('structure_ecommerce')} className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none" />
               </FormField>
               <FormField id="structure_retail" label={t('addClientModal.structure.retail')}>
-                <input type="number" name="structure_retail" value={formData.structure_retail} onChange={handleChange} className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none" />
+                <input type="number" name="structure_retail" value={formData.structure_retail} onChange={handleChange} onFocus={() => handleStructureFocus('structure_retail')} onBlur={() => handleStructureBlur('structure_retail')} className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none" />
               </FormField>
               <FormField id="structure_other" label={t('addClientModal.structure.other')} error={errors.structure_other}>
-                <input type="number" name="structure_other" value={formData.structure_other} onChange={handleChange} className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none" />
+                <input type="number" name="structure_other" value={formData.structure_other} onChange={handleChange} onFocus={() => handleStructureFocus('structure_other')} onBlur={() => handleStructureBlur('structure_other')} className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none" />
               </FormField>
             </Grid>
           </Section>
 
           {/* Kontakty */}
-          <Section title={t('addClientModal.contacts') || 'Kontakty'}>
+          <Section title={t('common.contacts') || 'Kontakty'}>
             <ContactsSection
               contacts={contacts}
               onAdd={handleAddContact}

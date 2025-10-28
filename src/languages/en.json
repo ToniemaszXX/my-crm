@@ -11,6 +11,11 @@
   "welcome": "Welcome to the Engo Controls CRM main panel",
   "customersTitle": "Clients",
   "addClient": "Add client",
+  "addInstaler": "Add installer",
+  "addDeweloper": "Add developer",
+  "addInstaller": "Add installer",
+  "addDeveloper": "Add developer",
+  "addDesigner": "Add designer",
   "searchPlaceholder": "Search client...",
   "tableHeaders": {
     "number": "#",
@@ -18,6 +23,7 @@
     "clientStatus": "Client status",
     "dataStatus": "Data status",
     "company": "Company name",
+    "category": "Category",
     "country": "Country",
     "city": "City",
     "salesperson": "Salesperson",
@@ -26,6 +32,10 @@
   "details": "Details",
   "delete": "Delete",
   "noClientsFound": "No clients found.",
+  "dataStatus": {
+    "ready": "Ready",
+    "missing": "Missing data"
+  },
   "alertClientRemove": "Are you sure you want to delete this client?",
   "clientDeleted": "Client has been deleted.",
   "clientDeleteError": "Error while deleting client.",
@@ -40,6 +50,25 @@
   "visitLabelType": "Type",
   "visitLabelPurpose": "Purpose",
   "edit": "Edit",
+  "common": {
+    "mainData": "Main data",
+    "onlineInfo": "Online / Info",
+    "additionalInfo": "Additional information",
+    "contacts": "Contacts",
+    "createdAt": "Created at",
+    "back": "Back",
+    "backToList": "Back to list",
+    "notFound": "Not found",
+    "checkUrlOrBack": "Check the URL or go back to the list.",
+    "class": "Class",
+  "noClass": "Not set",
+  "showing": "Showing",
+  "of": "of",
+  "prev": "Prev",
+  "next": "Next",
+  "page": "Page",
+  "perPage": "Per page"
+  },
   "addClientModal": {
     "yes": "Yes",
     "no": "No",
@@ -47,19 +76,21 @@
     "companyData": "Company data",
     "companyName": "Company name",
     "client_code_erp": "ERP code",
+    "client_psmobile": "PSMobile code",
     "status": "Status",
     "data_veryfication": "Data verification",
     "nip": "VAT ID",
     "street": "Street",
     "city": "City",
     "voivodeship": "Voivodeship",
+    "district": "District",
     "country": "Country",
     "postalCode": "Postal code",
     "clientCategory": "Client category",
     "fairs": "Attendance at the fair has been and is planned",
-    "competition": "Konkurencja",
+    "competition": "Competition",
     "selectCategory": "Select category",
-    "categories.KLIENT_POTENCJALNY": "Potential client",
+    "categories.KLIENT_POTENCJALNY": "POTENTIAL CLIENT",
     "categories.CENTRALA_SIEĆ": "CENTRAL NETWORK",
     "categories.DEWELOPER": "DEVELOPER",
     "categories.DYSTRYBUTOR": "DISTRIBUTOR",
@@ -67,15 +98,19 @@
     "categories.DYSTRYBUTOR_MAGAZYN": "DISTRIBUTOR WAREHOUSE",
     "categories.DYSTRYBUTOR_ODDZIAŁ": "DISTRIBUTOR BRANCH",
     "categories.ENGO_PLUS": "ENGO PLUS INSTALLER",
+    "categories.INSTALATOR_ENGO_PLUS": "ENGO PLUS INSTALLER",
     "categories.INSTALATOR": "INSTALLER",
     "categories.INSTALATOR_FIRMA": "COMPANY INSTALLER",
     "categories.PODHURT": "WHOLESALER",
     "categories.PODHURT_ELEKTRYKA": "WHOLESALER ELECTRIC",
     "categories.PROJEKTANT": "DESIGNER",
+    "categories.GRUPA_ZAKUPOWA": "PURCHASING GROUP",
     "location": "Company location",
     "latitude": "Latitude",
     "longitude": "Longitude",
     "accounts": "Accounts and services",
+    "engoTeamDirector": "Engo Team Director",
+    "engoTeamManager": "Manager Engo",
     "engoTeamContact": "Engo Team Contact",
     "chooseMember": "Choose Engo member",
     "branches": "Number of branches",
@@ -133,7 +168,10 @@
     "cancel": "Cancel",
     "saving": "Saving...",
     "success": "Client successfully added",
-    "error": "Error while adding client"
+    "error": "Error while adding client",
+    "contacts": "Contacts",
+    "market": "Market",
+    "chooseMarket": "Choose market"
   },
   "editClientModal": {
     "editLead": "Edit client",
@@ -143,11 +181,334 @@
     "locationPicker.longitude": "Longitude",
     "locationPicker.reset": "Reset pin to address"
   },
+  "installerModal": {
+    "title": "Edit Installer",
+    "categoryAndFairs": "Category and fairs",
+    "fairs": "Fairs / events"
+  },
+  "developerModal": {
+    "title": "Edit Developer"
+  },
+  "addInstallerModal": {
+    "title": "Add Installer"
+  },
+  "addDeveloperModal": {
+    "title": "Add Developer"
+  },
+  "addDesignerModal": {
+    "title": "Add Designer"
+  },
+  "addContactModal": {
+    "title": "Add contact",
+    "save": "Save",
+    "cancel": "Cancel",
+    "errors": {
+      "emptyContact": "Contact cannot be empty. Fill at least one field.",
+  "namePartRequired": "Fill at least first name or last name.",
+      "missingContext": "Missing entity context — cannot add contact.",
+      "apiFailed": "Failed to add contact (API).",
+      "saveError": "Add contact error"
+    }
+  },
+  "editContactModal": {
+    "title": "Edit contact",
+    "save": "Save",
+    "cancel": "Cancel",
+    "errors": {
+      "missingId": "Missing id — cannot save contact.",
+      "invalidOwner": "Missing unique contact owner (client/designer/installer/developer).",
+  "namePartRequired": "Fill at least first name or last name.",
+      "saveFailed": "Failed to save contact.",
+      "saveError": "Edit contact error"
+    }
+  },
+  "buttons": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "remove": "Remove",
+    "add": "Add",
+    "close": "Close"
+  },
+  "fields": {
+    "market": "Market",
+    "companyName": "Company name",
+    "clientCodeErp": "ERP code",
+    "status": "Status",
+    "dataVerification": "Data verification",
+    "street": "Street",
+    "city": "City",
+    "district": "District",
+    "voivodeship": "Voivodeship",
+    "country": "Country",
+    "postalCode": "Postal code",
+    "nip": "VAT ID",
+    "clientCategory": "Client category",
+    "classCategory": "Class",
+    "smsConsent": "SMS consent",
+    "marketingConsent": "Marketing consent",
+    "source": "Source",
+    "clientSubcategory": "Client subcategory",
+    "fairs": "Fairs / events",
+    "engoTeamDirector": "Engo Team Director",
+    "engoTeamManager": "Manager Engo",
+    "engoTeamContact": "Engo Team Contact",
+    "numberOfSalesReps": "Number of sales reps",
+    "latitude": "Latitude",
+    "longitude": "Longitude",
+    "www": "Website",
+    "facebook": "Facebook",
+    "additionalInfo": "Additional information",
+    "department": "Department",
+    "position": "Position",
+  "firstName": "First name",
+  "lastName": "Last name",
+    "name": "Full name",
+    "phone": "Phone",
+    "email": "Email",
+    "functionNotes": "Function / Notes",
+    "decisionLevel": "Decision level"
+  },
+  "installer": {
+    "titleFallback": "Installer",
+    "notFound": "Installer not found (404)",
+    "sections": {
+      "scope": "Scope of work",
+      "koi": "Area and types of served investments",
+      "subcontractors": "Subcontractors and qualifications",
+      "problems": "Problems"
+    },
+    "fields": {
+      "scope": {
+        "heating": "Heating",
+        "ac": "Air conditioning",
+        "ventilation": "Ventilation",
+        "smartHome": "Smart Home"
+      },
+      "koi": {
+        "flats": "Flats",
+        "houses": "Houses",
+        "OUP": "Public buildings",
+        "hotels": "Hotels",
+        "commercial": "Commercial buildings",
+        "other": "Other"
+      },
+      "subcontractors": {
+        "count": "Number of subcontractors",
+        "hasElectrician": "Has electrician",
+        "workWithNeeds": "Works with needs",
+        "approvedByDistributor": "Approved by distributor"
+      },
+      "problems": {
+        "arrears": "Payment arrears",
+        "time": "Time",
+        "smartClients": "Clients with smart system",
+        "expensive": "Expensive",
+        "lowMargin": "Low margin",
+        "complicatedInstallation": "Complicated installation",
+        "complicatedConfiguration": "Complicated configuration",
+        "app": "App",
+        "support": "Support",
+        "complaint": "Complaints",
+        "training": "Training",
+        "integration": "Integration",
+        "marketing": "Marketing",
+        "competition": "Competition (count)",
+        "other": "Other problems"
+      }
+    }
+  },
+  "developer": {
+    "titleFallback": "Developer",
+    "notFound": "Developer not found (404)",
+    "sections": {
+      "segmentsAndCharacter": "Segments and character",
+      "differentiators": "Differentiators",
+      "challengesInterests": "Challenges and interests",
+      "partners": "Partners",
+      "implementationModel": "Implementation model",
+      "salesSupport": "Sales support"
+    },
+    "fields": {
+      "seg": {
+        "multiFamily": "Multi-family",
+        "singleFamily": "Single-family",
+        "commercial": "Commercial",
+        "hotelLeisure": "Hotels/leisure"
+      },
+      "char": {
+        "mainstream": "Mainstream",
+        "premium": "Premium",
+        "luxury": "Luxury"
+      },
+      "scaleBand": "Scale of investment",
+      "smartHomeOffer": "SMART HOME offer",
+      "diff": {
+        "location": "Location",
+        "archDesign": "Architecture/Design",
+        "materialsQuality": "Materials quality",
+        "ecoEnergy": "Eco/energy",
+        "price": "Price",
+        "other": "Other",
+        "otherText": "Other — details"
+      },
+      "chal": {
+        "competition": "High competition",
+        "risingCosts": "Rising costs",
+        "longSalesCycle": "Long sales cycle",
+        "customerNeeds": "Growing customer needs",
+        "energyCompliance": "Standards compliance"
+      },
+      "int": {
+        "costReduction": "Bill reduction",
+        "safetyComfort": "Safety and comfort",
+        "modernSalesArg": "Modern sales argument"
+      },
+      "partners": {
+        "gc": "General contractor",
+        "hvac": "HVAC installations – contractor",
+        "electrical": "Electrical installations – contractor",
+        "archDesign": "Architectural design – studio/office",
+        "interiorDesign": "Interior design – studio (if applicable)",
+        "wholesalePlumbHeat": "Main plumbing/heating wholesaler",
+        "wholesaleElectrical": "Main electrical wholesaler"
+      },
+      "implementationModel": "Implementation model",
+      "sup": {
+        "marketing": "Marketing",
+        "showApartment": "Show apartment",
+        "salesTraining": "Sales training",
+        "solutionPackages": "Solution packages",
+        "fullCoordination": "Full coordination",
+        "termsDistribution": "Terms via distribution"
+      }
+    }
+  },
+  "designer": {
+    "titleFallback": "Designer",
+    "notFound": "Designer not found (404)",
+    "sections": {
+      "criteria15": "Criteria (1–5)",
+      "objections": "Objections",
+      "buildingTypes": "Building types",
+      "scopesStages": "Scopes and stages",
+      "collabsPains": "Collaborations and pains",
+      "support": "Support"
+    },
+    "fields": {
+      "criteria": {
+        "crit_aesthetics": "Aesthetics",
+        "crit_reliability": "Reliability",
+        "crit_usability": "Usability",
+        "crit_integration": "Integration",
+        "crit_support": "Support",
+        "crit_energy": "Energy efficiency",
+        "crit_price": "Price"
+      },
+      "objections": {
+        "primary": "Primary objection",
+        "note": "Objection note",
+        "options": {
+          "trusted_brand": "Trusted brand",
+          "too_technical": "Too technical",
+          "clients_price": "Client price",
+          "none": "None"
+        }
+      },
+      "bt": {
+        "premiumSF": "Premium SF",
+        "officeAB": "Offices class A/B+",
+        "hotel": "Hotels",
+        "public": "Public utility",
+        "apartment": "Apartments",
+        "other": "Other",
+        "otherText": "Other — details"
+      },
+      "scope": {
+        "fullArch": "Comprehensive projects",
+        "interiors": "Interior designs",
+        "installations": "Installations"
+      },
+      "stage": {
+        "concept": "Concept",
+        "permit": "Building design",
+        "execution": "Execution/interiors",
+        "depends": "Depends on project"
+      },
+      "collab": {
+        "hvac": "Sanitary installation design",
+        "electrical": "Electrical installation design",
+        "integrator": "SH integrator",
+        "contractor": "Own contractors"
+      },
+      "pain": {
+        "aesthetics": "Aesthetics",
+        "singleSystem": "One comprehensive system",
+        "noSupport": "No support",
+        "limitedKnowledge": "Limited knowledge",
+        "investorResistance": "Investor resistance",
+        "coordination": "Coordination",
+        "lackMaterials": "Lack of materials",
+        "other": "Other",
+        "otherText": "Other — details"
+      },
+      "automationInclusion": {
+        "standard": "Standard",
+        "on_request": "On investor request",
+        "rarely": "Rarely"
+      }
+    }
+  },
+  "designer.automationInclusion": {
+    "standard": "Standard",
+    "on_request": "On investor request",
+    "rarely": "Rarely"
+  },
+  "designerModal": {
+    "title": "Edit Designer",
+    "designTools": "Design tools",
+    "automationInclusion": "Automation inclusion",
+    "usesBim": "Uses BIM",
+    "specInfluence": "Specification influence",
+    "relations": "Relations/partners"
+  },
+  "designer.support": {
+    "accountManager": "Dedicated account manager",
+    "training": "Training",
+    "cadBim": "CAD/BIM libraries",
+    "samples": "Samples",
+    "conceptSupport": "Concept support",
+    "partnerTerms": "Program terms"
+  },
+  "customer": {
+    "titleFallback": "Client",
+    "notFound": "Client not found (404)",
+    "sections": {
+      "hqBranches": "Branches assigned to HQ",
+      "financialData": "Financial data",
+      "services": "Services",
+      "salesStructure": "% Sales structure"
+    },
+    "noBranchesForHQ": "No branches assigned to this HQ.",
+    "hqLabel": "Headquarters",
+    "chooseHQ": "Choose HQ",
+    "onlyForHQ": "Applies only to DYSTRYBUTOR_CENTRALA category clients."
+  },
+  "toast": {
+    "installerSaved": "Installer changes saved",
+    "developerSaved": "Developer changes saved",
+    "designerSaved": "Designer changes saved",
+    "clientSaved": "Client changes saved"
+  },
   "addVisitModal": {
     "addVisit": "Add visit",
     "chooseClient": "Select client",
+    "chooseDesigner": "Select designer",
+    "chooseInstaller": "Select installer",
+    "chooseDeveloper": "Select developer",
+    "selectEntity": "Select entity",
     "setDate": "Set date",
     "contactPerson": "With whom the meeting took place",
+    "contactPersonPlaceholder": "With whom the meeting took place",
     "kindOfMeeting": "Type of meeting",
     "kindOfMeeting.meeting": "Meeting",
     "kindOfMeeting.call": "Phone call",
@@ -156,9 +517,11 @@
     "meetingPurpose": "Meeting purpose",
     "postMeetingSummary": "Post-meeting summary",
     "marketingTasks": "Marketing tasks",
+    "marketingResponse": "Marketing response",
     "actionPlan": "Action plan",
     "competitionInfo": "Competition",
     "additionalNotes": "Additional notes",
+    "directorResponse": "Director response",
     "errors": {
       "requiredClient": "Choose client.",
       "requiredDate": "Choose date.",
@@ -166,6 +529,7 @@
     }
   },
   "editVisitModal.editVisit": "Edit visit",
+  "editVisitModal.fetchError": "Failed to fetch visit details.",
   "visit": {
     "visitsLead": "Visits",
     "addVisit": "Add visit",
@@ -173,7 +537,12 @@
     "date": "Date",
     "whome": "With whome",
     "type": "Type",
-    "goal": "Goal"
+  "goal": "Goal",
+  "postMeetingSummaries": "Post-meeting summaries",
+  "author": "Author",
+  "noSummaries": "No summaries.",
+  "marketingTasks": "Marketing tasks",
+  "noMarketingTasks": "No marketing tasks."
   },
   "logged_in_as": "Logged as",
   "role": "Type",
@@ -249,7 +618,8 @@
     "chooseContry": "Choose country",
     "reset": "Reset filters",
     "fromDate": "From",
-    "toDate": "To"
+    "toDate": "To",
+    "class": "Class"
   },
   "visitsPage": {
     "noVisit": "No visits",
@@ -273,10 +643,31 @@
     "goal": "Goal of meet:",
     "resume": "Resume:",
     "marketing": "Marketing:",
+    "marketingResponse": "Marketing response:",
     "toDo": "To do:",
+    "directorResponse": "Director response:",
     "showHistory": "Show all visits",
     "edit": "Edit",
     "close": "Close",
     "allVisits": "All visits:"
-}
+  },
+  "errors": {
+    "contactsFetch": "Failed to fetch contacts",
+    "network": "Network error",
+    "missingNewClientId": "Missing new client id",
+    "contactsErrorPrefix": "Contacts sync error",
+    "unknown": "Unknown error",
+    "failureNoDetails": "Operation failed (no details)",
+    "saveError": "Save error"
+  },
+  "contacts": {
+    "empty": "No contacts added yet"
+  },
+  "relatedCompanies": {
+    "title": "Places where ENGO products are sold",
+    "linkedDistributors": "Linked distributors (max 3)",
+  "selectUpTo3": "Select up to 3.",
+  "searchPlaceholder": "Search company...",
+  "empty": "No related companies."
+  }
 }

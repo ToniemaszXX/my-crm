@@ -34,11 +34,20 @@ export const designerSchema = z.object({
   country: z.string().optional().default(''),
   nip: z.string().optional().default(''),
 
+  // one-letter class: A, B, C, D, or '-'
+  class_category: z.enum(['A', 'B', 'C', 'D', '-']).optional().default('-'),
+
   client_category: z.string().optional().default(''),
   client_subcategory: z.string().max(255).optional().default(''),
   fairs: z.string().optional().default(''),
+  // Deprecated on FE: keep string fields optional for backward compatibility,
+  // but canonical are *_user_id below
   engo_team_director: z.string().optional().default(''),
+  engo_team_manager: z.string().optional().default(''),
   engo_team_contact: z.string().optional().default(''),
+  engo_team_user_id: z.coerce.number().int().positive().optional().nullable(),
+  engo_team_manager_user_id: z.coerce.number().int().positive().optional().nullable(),
+  engo_team_director_user_id: z.coerce.number().int().positive().optional().nullable(),
   number_of_sales_reps: z.string().optional().default(''),
   www: z.union([z.string(), z.null()]).optional(),
   facebook: z.union([z.string(), z.null()]).optional(),
@@ -47,7 +56,7 @@ export const designerSchema = z.object({
   latitude: zDecimalNullable(7, { min: -90, max: 90 }).optional(),
   longitude: zDecimalNullable(7, { min: -180, max: 180 }).optional(),
 
-  automation_inclusion: z.enum(['standard', 'on_request', 'rarely']),
+  automation_inclusion: z.enum(['standard', 'na życzenie inwestora', 'rzadko']),
   spec_influence: bool01,
   design_tools: z.union([z.string(), z.null()]).optional(),
   uses_bim: bool01,

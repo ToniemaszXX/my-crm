@@ -16,6 +16,8 @@ import Rating5 from './common/Rating5';
 import designerSchema from '../validation/designerSchema';
 import { getMarketLabel } from '../utils/markets';
 import { useAuth } from '../context/AuthContext';
+import UserSelect from './UserSelect';
+import { isReadOnly, isBok, isAdminManager } from '../utils/roles';
 
 function AddDesignerModal({ isOpen, onClose, onDesignerAdded }) {
     const { t } = useTranslation();
@@ -25,10 +27,10 @@ function AddDesignerModal({ isOpen, onClose, onDesignerAdded }) {
 
     // Factory for a fresh, empty form
     const makeInitialForm = () => ({
-    market_id: '',
+        market_id: '',
         company_name: '', client_code_erp: '', status: 1, data_veryfication: 0,
-        street: '', city: '', district: '', voivodeship: '', country: 'Polska', postal_code: '', nip: '',
-    client_category: '', client_subcategory: '', fairs: '', engo_team_director: '', engo_team_contact: '', number_of_sales_reps: '',
+        street: '', city: '', district: '', voivodeship: '', country: 'Poland', postal_code: '', nip: '',
+    client_category: 'PROJEKTANT', class_category: '-', client_subcategory: 'PROJEKTANT', fairs: '', engo_team_director: '', engo_team_manager: '', engo_team_contact: '', number_of_sales_reps: '',
         latitude: '', longitude: '', www: '', facebook: '', additional_info: '',
         automation_inclusion: 'standard', spec_influence: 0, design_tools: '', uses_bim: 0, relations: '',
         crit_aesthetics: null, crit_reliability: null, crit_usability: null, crit_integration: null, crit_support: null, crit_energy: null, crit_price: null,
@@ -48,6 +50,17 @@ function AddDesignerModal({ isOpen, onClose, onDesignerAdded }) {
             setFormData((p) => ({ ...p, market_id: user.singleMarketId }));
         }
     }, [user?.singleMarketId]);
+
+      // If only market 1, default the country to Poland (non-destructive)
+      useEffect(() => {
+          if (user?.singleMarketId === 1) {
+              setFormData((p) => {
+                  const current = p?.country;
+                  if (current && String(current).trim() !== '') return p;
+                  return { ...p, country: 'Poland' };
+              });
+          }
+      }, [user?.singleMarketId]);
 
     // For multi-market users, preselect the first market if none chosen yet
     useEffect(() => {
@@ -85,8 +98,10 @@ function AddDesignerModal({ isOpen, onClose, onDesignerAdded }) {
             return;
         }
 
-        // Zod validation aligned with BE
-        const parse = designerSchema.safeParse(formData);
+    // Always enforce PROJEKTANT for category and subcategory
+    const payload = { ...formData, client_category: 'PROJEKTANT', client_subcategory: 'PROJEKTANT' };
+    // Zod validation aligned with BE
+    const parse = designerSchema.safeParse(payload);
         if (!parse.success) {
             console.warn('[AddDesignerModal] Zod validation failed', parse.error.issues);
             const fieldErrors = {};
@@ -107,8 +122,18 @@ function AddDesignerModal({ isOpen, onClose, onDesignerAdded }) {
         }
 
         try {
+            // Map chosen IDs to *_user_id fields expected by BE
+            const idPayload = { ...payload };
+            // FE sends only *_user_id for ENGO fields
+            delete idPayload.engo_team_director;
+            delete idPayload.engo_team_manager;
+            delete idPayload.engo_team_contact;
+            if (formData.engo_team_manager_id) idPayload.engo_team_manager_user_id = Number(formData.engo_team_manager_id);
+            if (formData.engo_team_contact_id) idPayload.engo_team_user_id = Number(formData.engo_team_contact_id);
+            if (formData.engo_team_director_id) idPayload.engo_team_director_user_id = Number(formData.engo_team_director_id);
+
             const url = `${import.meta.env.VITE_API_URL}/Designers/add.php`;
-            const options = { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(formData) };
+            const options = { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(idPayload) };
             console.log('[AddDesignerModal] POST', { url, options });
 
             const res = await fetchWithAuth(url, options);
@@ -155,24 +180,28 @@ function AddDesignerModal({ isOpen, onClose, onDesignerAdded }) {
         <div className='fixed inset-0 bg-black/50 flex justify-center items-center z-[99]'>
             <div className='bg-neutral-100 pb-8 rounded-lg w-[1100px] max-h-[90vh] overflow-y-auto'>
                 <div className="bg-neutral-100 flex justify-between items-center sticky top-0 z-50 p-4 border-b border-neutral-300">
-                    <h2 className="text-lime-500 text-xl font-extrabold">Dodaj Projektanta</h2>
+                    <h2 className="text-lime-500 text-xl font-extrabold">{t('addDesignerModal.title')}</h2>
                     <button className="text-black hover:text-red-500 text-2xl font-bold bg-neutral-300 rounded-lg w-10 h-10 flex items-center justify-center leading-none" onClick={handleCancel} aria-label="Close modal">
                         <X size={20} />
                     </button>
                 </div>
 
-                <form onSubmit={safeSubmit} className="text-white flex flex-col gap-3 pl-8 pr-8">
+                <form
+                    onSubmit={safeSubmit}
+                    onKeyDown={(e) => { if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') e.preventDefault(); }}
+                    className="text-white flex flex-col gap-3 pl-8 pr-8"
+                >
                     {Array.isArray(user?.marketIds) && user.marketIds.length > 1 && (
-                        <Section title="Rynek">
+                        <Section title={t('addClientModal.market')}>
                             <Grid>
-                                <FormField id="market_id" label="Rynek">
+                                <FormField id="market_id" label={t('addClientModal.market')}>
                                     <select
                                         name="market_id"
                                         value={formData.market_id}
                                         onChange={handleChange}
                                         className="w-full border border-neutral-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-neutral-400"
                                     >
-                                        <option value="">— wybierz rynek —</option>
+                                        <option value="">{t('addClientModal.chooseMarket')}</option>
                                         {user.marketIds.map((mid) => (
                                             <option key={mid} value={mid}>{getMarketLabel(mid)}</option>
                                         ))}
@@ -182,9 +211,41 @@ function AddDesignerModal({ isOpen, onClose, onDesignerAdded }) {
                             </Grid>
                         </Section>
                     )}
-                    <Section title="Dane firmy">
+
+
+                    {isAdminManager(user) && (<Section title={t('common.BOK')}>
                         <Grid className="mb-4">
-                            <FormField id="company_name" label="Nazwa firmy" required error={errors.company_name}>
+
+                            <FormField id="status" label={t('addClientModal.status')} error={errors.status}>
+                                <select
+                                    name="status"
+                                    value={formData.status}
+                                    onChange={handleChange}
+                                    className="w-full border border-neutral-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-neutral-400"
+                                >
+                                    <option value="1">{t('filter.new')}</option>
+                                    <option value="0">{t('filter.verified')}</option>
+                                </select>
+                            </FormField>
+
+
+                            <FormField id="data_veryfication" label={t('addClientModal.data_veryfication')} error={errors.data_veryfication}>
+                                <select
+                                    name="data_veryfication"
+                                    value={formData.data_veryfication}
+                                    onChange={handleChange}
+                                    className="w-full border border-neutral-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-neutral-400"
+                                >
+                                    <option value="0">{t('dataStatus.missing')}</option>
+                                    <option value="1">{t('dataStatus.ready')}</option>
+                                </select>
+                            </FormField>
+                        </Grid>
+                    </Section>)}
+
+                    <Section title={t('addClientModal.companyData')}>
+                        <Grid className="mb-4">
+                            <FormField id="company_name" label={t('addClientModal.companyName')} required error={errors.company_name}>
                                 <input
                                     type="text"
                                     name="company_name"
@@ -194,7 +255,7 @@ function AddDesignerModal({ isOpen, onClose, onDesignerAdded }) {
                                 />
                             </FormField>
 
-                            <FormField id="client_code_erp" label="Kod ERP">
+                            <FormField id="client_code_erp" label={t('addClientModal.client_code_erp')}>
                                 <input
                                     type="text"
                                     name="client_code_erp"
@@ -204,31 +265,7 @@ function AddDesignerModal({ isOpen, onClose, onDesignerAdded }) {
                                 />
                             </FormField>
 
-                            <FormField id="status" label="Status">
-                                <select
-                                    name="status"
-                                    value={formData.status}
-                                    onChange={handleChange}
-                                    className="w-full border border-neutral-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-neutral-400"
-                                >
-                                    <option value="1">Nowy</option>
-                                    <option value="0">Zweryfikowany</option>
-                                </select>
-                            </FormField>
-
-                            <FormField id="data_veryfication" label="Weryfikacja danych">
-                                <select
-                                    name="data_veryfication"
-                                    value={formData.data_veryfication}
-                                    onChange={handleChange}
-                                    className="w-full border border-neutral-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-neutral-400"
-                                >
-                                    <option value="0">Brak danych</option>
-                                    <option value="1">Gotowe</option>
-                                </select>
-                            </FormField>
-
-                            <FormField id="nip" label="NIP">
+                            <FormField id="nip" label={t('addClientModal.nip')}>
                                 <input
                                     type="text"
                                     name="nip"
@@ -238,7 +275,22 @@ function AddDesignerModal({ isOpen, onClose, onDesignerAdded }) {
                                 />
                             </FormField>
 
-                            <FormField id="street" label="Ulica">
+                            <FormField id="class_category" label={t('common.class')}>
+                                <select
+                                    name="class_category"
+                                    value={formData.class_category || '-'}
+                                    onChange={handleChange}
+                                    className="w-full border border-neutral-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-neutral-400"
+                                >
+                                    <option value="-">{t('common.noClass')}</option>
+                                    <option value="A">A</option>
+                                    <option value="B">B</option>
+                                    <option value="C">C</option>
+                                    <option value="D">D</option>
+                                </select>
+                            </FormField>
+
+                            <FormField id="street" label={t('addClientModal.street')}>
                                 <input
                                     type="text"
                                     name="street"
@@ -248,7 +300,7 @@ function AddDesignerModal({ isOpen, onClose, onDesignerAdded }) {
                                 />
                             </FormField>
 
-                            <FormField id="city" label="Miasto">
+                            <FormField id="city" label={t('addClientModal.city')}>
                                 <input
                                     type="text"
                                     name="city"
@@ -258,7 +310,7 @@ function AddDesignerModal({ isOpen, onClose, onDesignerAdded }) {
                                 />
                             </FormField>
 
-                            <FormField id="district" label="Powiat">
+                            <FormField id="district" label={t('fields.district')}>
                                 <input
                                     type="text"
                                     name="district"
@@ -268,7 +320,7 @@ function AddDesignerModal({ isOpen, onClose, onDesignerAdded }) {
                                 />
                             </FormField>
 
-                            <FormField id="voivodeship" label="Województwo">
+                            <FormField id="voivodeship" label={t('addClientModal.voivodeship')}>
                                 <input
                                     type="text"
                                     name="voivodeship"
@@ -278,17 +330,18 @@ function AddDesignerModal({ isOpen, onClose, onDesignerAdded }) {
                                 />
                             </FormField>
 
-                            <FormField id="country" label="Kraj">
+                            <FormField id="country" label={t('addClientModal.country')}>
                                 <CountrySelect
                                     value={formData.country}
                                     onChange={handleChange}
                                     name="country"
                                     hideLabel={true}
                                     className="w-full border border-neutral-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-neutral-400"
+                                    disabled={user?.singleMarketId === 1}
                                 />
                             </FormField>
 
-                            <FormField id="postal_code" label="Kod pocztowy">
+                            <FormField id="postal_code" label={t('addClientModal.postalCode')}>
                                 <input
                                     type="text"
                                     name="postal_code"
@@ -300,9 +353,9 @@ function AddDesignerModal({ isOpen, onClose, onDesignerAdded }) {
                         </Grid>
                     </Section>
 
-                    <Section title="Lokalizacja">
+                    <Section title={t('addClientModal.location')}>
                         <Grid className="mb-2">
-                            <FormField id="latitude" label="Szerokość geogr.">
+                            <FormField id="latitude" label={t('addClientModal.latitude')}>
                                 <input
                                     type="number"
                                     step="0.000001"
@@ -313,7 +366,7 @@ function AddDesignerModal({ isOpen, onClose, onDesignerAdded }) {
                                     className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neutral-400"
                                 />
                             </FormField>
-                            <FormField id="longitude" label="Długość geogr.">
+                            <FormField id="longitude" label={t('addClientModal.longitude')}>
                                 <input
                                     type="number"
                                     step="0.000001"
@@ -339,10 +392,65 @@ function AddDesignerModal({ isOpen, onClose, onDesignerAdded }) {
                         </Mapa>
                     </Section>
 
-                    <Section title="W jakich typach obiektów się specjalizuje" className="text-gray-600">
+                    <Section title={t('common.additionalInfo')}>
+                        <Grid>
+                            <FormField id="engo_team_director" label={t('addClientModal.engoTeamDirector')}>
+                                <UserSelect
+                                    roleFilter="dyrektor"
+                                    activeOnly={true}
+                                    marketId={formData.market_id || user?.singleMarketId}
+                                    name="engo_team_director"
+                                    className='w-full border border-neutral-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-neutral-400'
+                                    value={formData.engo_team_director || ''}
+                                    onChange={(val) => setFormData((prev) => ({ ...prev, engo_team_director: val }))}
+                                    onChangeId={(id) => setFormData((prev) => ({ ...prev, engo_team_director_id: id }))}
+                                    placeholder={t('addClientModal.chooseMember')}
+                                    noMarketPlaceholder={t('addClientModal.chooseMarket')}
+                                    showNoMarketHint={false}
+                                />
+                            </FormField>
+                            <FormField id="engo_team_manager" label={t('addClientModal.engoTeamManager') || 'Manager ENGO'}>
+                                <UserSelect
+                                    role="manager"
+                                    activeOnly={true}
+                                    marketId={formData.market_id || user?.singleMarketId}
+                                    name="engo_team_manager"
+                                    className='w-full border border-neutral-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-neutral-400'
+                                    value={formData.engo_team_manager || ''}
+                                    onChange={(val) => setFormData((prev) => ({ ...prev, engo_team_manager: val }))}
+                                    onChangeId={(id) => setFormData((prev) => ({ ...prev, engo_team_manager_id: id }))}
+                                    placeholder={t('addClientModal.chooseMember')}
+                                    noMarketPlaceholder={t('addClientModal.chooseMarket')}
+                                    showNoMarketHint={false}
+                                />
+                            </FormField>
+                            <FormField id="engo_team_contact" label={t('fields.engoTeamContact')}>
+                                <UserSelect
+                                    roleByMarket={{ 1: 'koordynator', 2: 'tsr', '1': 'koordynator', '2': 'tsr' }}
+                                    activeOnly={true}
+                                    marketId={formData.market_id || user?.singleMarketId}
+                                    name="engo_team_contact"
+                                    className='w-full border border-neutral-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-neutral-400'
+                                    value={formData.engo_team_contact || ''}
+                                    onChange={(val) => setFormData((prev) => ({ ...prev, engo_team_contact: val }))}
+                                    onChangeId={(id) => setFormData((prev) => ({ ...prev, engo_team_contact_id: id }))}
+                                    placeholder={t('addClientModal.chooseMember')}
+                                    noMarketPlaceholder={t('addClientModal.chooseMarket')}
+                                    showNoMarketHint={false}
+                                />
+                            </FormField>
+                        </Grid>
+                    </Section>
+
+                    <Section title={t('designer.sections.buildingTypes')} className="text-gray-600">
                         <Grid>
                             {[
-                                ['bt_premium_sf', 'Domy jednorodzinne premium / nowoczesne rezydencje'], ['bt_office_ab', 'Budynki biurowe kl. A/B+'], ['bt_hotel', 'Hotele i obiekty noclegowe'], ['bt_public', 'Obiekty użyteczności publicznej'], ['bt_apartment', 'Apartamentowce i inwestycje deweloperskie'], ['bt_other', 'Inne']
+                                ['bt_premium_sf', t('designer.fields.bt.premiumSF')],
+                                ['bt_office_ab', t('designer.fields.bt.officeAB')],
+                                ['bt_hotel', t('designer.fields.bt.hotel')],
+                                ['bt_public', t('designer.fields.bt.public')],
+                                ['bt_apartment', t('designer.fields.bt.apartment')],
+                                ['bt_other', t('designer.fields.bt.other')]
                             ].map(([k, label]) => (
                                 <PillCheckbox
                                     key={k}
@@ -351,7 +459,7 @@ function AddDesignerModal({ isOpen, onClose, onDesignerAdded }) {
                                     onChange={(checked) => setFormData((p) => ({ ...p, [k]: checked ? 1 : 0 }))}
                                 />
                             ))}
-                            <FormField id="bt_other_text" label="Inne — doprecyzowanie">
+                            <FormField id="bt_other_text" label={t('designer.fields.bt.otherText')}>
                                 <input
                                     type="text"
                                     name="bt_other_text"
@@ -363,10 +471,12 @@ function AddDesignerModal({ isOpen, onClose, onDesignerAdded }) {
                         </Grid>
                     </Section>
 
-                    <Section title="Zakres usług projektowych">
+                    <Section title={t('designer.sections.scopesStages')}>
                         <Grid>
                             {[
-                                ['scope_full_arch', 'Kompleksowe projekty architektoniczne'], ['scope_interiors', 'Projekty i aranżacje wnętrz'], ['scope_installations', 'Instalacje wod-kan ,elektryczne, ogrzewania, HVAC'],
+                                ['scope_full_arch', t('designer.fields.scope.fullArch')],
+                                ['scope_interiors', t('designer.fields.scope.interiors')],
+                                ['scope_installations', t('designer.fields.scope.installations')],
                             ].map(([k, label]) => (
                                 <PillCheckbox
                                     key={k}
@@ -379,33 +489,36 @@ function AddDesignerModal({ isOpen, onClose, onDesignerAdded }) {
                         </Grid>
                     </Section>
 
-                    <Section title="Etap kiedy uwzględniają automatyke i Smart Home w projektach">
+                    <Section title={t('designer.sections.scopesStages')}>
                         <Grid>
-                <FormField id="automation_inclusion" label="W jakim Stopniu uwzględnia automatyke i Smart Home w projektach?">
+                            <FormField id="automation_inclusion" label={t('designerModal.automationInclusion')}>
                                 <select
                                     name="automation_inclusion"
                                     value={formData.automation_inclusion}
                                     onChange={handleChange}
                                     className="w-full border border-neutral-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-neutral-400"
                                 >
-                    <option value="standard">Standard</option>
-                    <option value="on_request">Na życzenie inwestora</option>
-                    <option value="rarely">Rzadko</option>
+                                    <option value="standard">{t('designer.automationInclusion.standard')}</option>
+                                    <option value="na życzenie inwestora">{t('designer.automationInclusion.on_request')}</option>
+                                    <option value="rzadko">{t('designer.automationInclusion.rarely')}</option>
                                 </select>
                             </FormField>
 
                             <PillCheckbox
-                                label="Wpływ na wybór specyfikacji"
+                                label={t('designerModal.specInfluence')}
                                 checked={!!formData.spec_influence}
                                 onChange={(checked) => setFormData((p) => ({ ...p, spec_influence: checked ? 1 : 0 }))}
                             />
                         </Grid>
                     </Section>
-                    
-                    <Section title="Etap kiedy zapadają decyzje o systemach sterowania i automatyki">
+
+                    <Section title={t('designer.sections.scopesStages')}>
                         <Grid>
                             {[
-                                ['stage_concept', 'Koncepcja'], ['stage_permit', 'Projekt budowlany'], ['stage_execution', 'Wykonawczy/wnętrza'], ['stage_depends', 'Zależy od projektu']
+                                ['stage_concept', t('designer.fields.stage.concept')],
+                                ['stage_permit', t('designer.fields.stage.permit')],
+                                ['stage_execution', t('designer.fields.stage.execution')],
+                                ['stage_depends', t('designer.fields.stage.depends')]
                             ].map(([k, label]) => (
                                 <PillCheckbox
                                     key={k}
@@ -417,9 +530,9 @@ function AddDesignerModal({ isOpen, onClose, onDesignerAdded }) {
                         </Grid>
                     </Section>
 
-                    <Section title="Narzędzia">
+                    <Section title={t('designerModal.designTools')}>
                         <Grid>
-                            <FormField id="design_tools" label="Z jakich narzędzi projektowych korzysta(Archicad, Revit, SketchUp, inne)?">
+                            <FormField id="design_tools" label={t('designerModal.designTools')}>
                                 <input
                                     type="text"
                                     name="design_tools"
@@ -430,7 +543,7 @@ function AddDesignerModal({ isOpen, onClose, onDesignerAdded }) {
                             </FormField>
 
                             <PillCheckbox
-                                label="Korzystają z modeli BIM"
+                                label={t('designerModal.usesBim')}
                                 checked={!!formData.uses_bim}
                                 onChange={(checked) => setFormData((p) => ({ ...p, uses_bim: checked ? 1 : 0 }))}
                                 className='mt-4 mb-4'
@@ -439,10 +552,13 @@ function AddDesignerModal({ isOpen, onClose, onDesignerAdded }) {
                         </Grid>
                     </Section>
 
-                    <Section title="Z kim ma najczęściej współprace przy projektowaniu instalacji?">
+                    <Section title={t('designer.sections.collabsPains')}>
                         <Grid>
                             {[
-                                ['collab_hvac', 'Proj. instalacji sanitarnych HVAC'], ['collab_electrical', 'Proj. instalacji elektrycznych'], ['collab_integrator', 'Integrator systemów SH'], ['collab_contractor', 'Właśni zaufani wykonawcy']
+                                ['collab_hvac', t('designer.fields.collab.hvac')],
+                                ['collab_electrical', t('designer.fields.collab.electrical')],
+                                ['collab_integrator', t('designer.fields.collab.integrator')],
+                                ['collab_contractor', t('designer.fields.collab.contractor')]
                             ].map(([k, label]) => (
                                 <PillCheckbox
                                     key={k}
@@ -454,11 +570,17 @@ function AddDesignerModal({ isOpen, onClose, onDesignerAdded }) {
                         </Grid>
                     </Section>
 
-
-
-                    <Section title="Najważniejsze kryteria przy wyborze systemów(5-najważniejsze, 1-najmniej ważne)">
+                    <Section title={t('designer.sections.criteria15')}>
                         <Grid>
-                            {[['crit_aesthetics', 'Estetyka i design'], ['crit_reliability', 'Niezawodność i renoma marki'], ['crit_usability', 'Intuicyjność i prostota obsługi dla klienta'], ['crit_integration', 'Możliwość integracji z innymi systemami'], ['crit_support', 'Wsparcie techniczne producenta przy projekcie'], ['crit_energy', 'Efektywność energetyczna i ekologia'], ['crit_price', 'Cena / dopasowanie do budżetu inwestora']].map(([k, label]) => (
+                            {[
+                                ['crit_aesthetics', t('designer.fields.criteria.crit_aesthetics')],
+                                ['crit_reliability', t('designer.fields.criteria.crit_reliability')],
+                                ['crit_usability', t('designer.fields.criteria.crit_usability')],
+                                ['crit_integration', t('designer.fields.criteria.crit_integration')],
+                                ['crit_support', t('designer.fields.criteria.crit_support')],
+                                ['crit_energy', t('designer.fields.criteria.crit_energy')],
+                                ['crit_price', t('designer.fields.criteria.crit_price')],
+                            ].map(([k, label]) => (
                                 <FormField key={k} id={k} label={label}>
                                     <Rating5
                                         value={formData[k]}
@@ -469,10 +591,16 @@ function AddDesignerModal({ isOpen, onClose, onDesignerAdded }) {
                         </Grid>
                     </Section>
 
-                    <Section title="Bóle i wyzwania przy implementacji systemów HVAC i Smart Home">
+                    <Section title={t('designer.sections.collabsPains')}>
                         <Grid>
                             {[
-                                ['pain_aesthetics', 'Brak spójnych wizualnie i estetycznych elementów'], ['pain_single_system', 'Trudność w znalezieniu jednego, kompleksowego systemu do różnych funkcji'], ['pain_no_support', 'Brak wsparcia technicznego i doradztwa na etapie koncepcji'], ['pain_limited_knowledge', 'Ograniczona wiedza na temat możliwości i nowości'], ['pain_investor_resistance', 'Opór inwestorów przed nowymi technologiami'], ['pain_coordination', 'Problemy w koordynacji międzybranżowej(architekt-instalator-elektryk)'], ['pain_lack_materials', 'Brak łatwych materiałów dla projektantów(modele CAD/BIN, specyfikacje)']
+                                ['pain_aesthetics', t('designer.fields.pain.aesthetics')],
+                                ['pain_single_system', t('designer.fields.pain.singleSystem')],
+                                ['pain_no_support', t('designer.fields.pain.noSupport')],
+                                ['pain_limited_knowledge', t('designer.fields.pain.limitedKnowledge')],
+                                ['pain_investor_resistance', t('designer.fields.pain.investorResistance')],
+                                ['pain_coordination', t('designer.fields.pain.coordination')],
+                                ['pain_lack_materials', t('designer.fields.pain.lackMaterials')]
                             ].map(([k, label]) => (
                                 <PillCheckbox
                                     key={k}
@@ -481,7 +609,7 @@ function AddDesignerModal({ isOpen, onClose, onDesignerAdded }) {
                                     onChange={(checked) => setFormData((p) => ({ ...p, [k]: checked ? 1 : 0 }))}
                                 />
                             ))}
-                            <FormField id="pain_other_text" label="Inne - jakie?">
+                            <FormField id="pain_other_text" label={t('designer.fields.pain.otherText')}>
                                 <input
                                     type="text"
                                     name="pain_other_text"
@@ -493,15 +621,15 @@ function AddDesignerModal({ isOpen, onClose, onDesignerAdded }) {
                         </Grid>
                     </Section>
 
-                    <Section title="Forma wsparcia z naszej strony">
+                    <Section title={t('designer.sections.support') || 'Support'}>
                         <Grid>
                             {[
-                                ['support_account_manager', 'Dedykowany opiekun'],
-                                ['support_training', 'Szkolenia produktowe i technologiczne dla architektów'],
-                                ['support_cad_bim', 'Dostęp do biblioteki CAD/BIM'],
-                                ['support_samples', 'Wzorniki produktów i materiały do prezentacji klientom'],
-                                ['support_concept_support', 'Wsparcie w przygotowaniu koncepcji i specyfikacji dla inwestora'],
-                                ['support_partner_terms', 'Korzystne warunki w programie partnerskim']
+                                ['support_account_manager', t('designerSupport.accountManager')],
+                                ['support_training', t('designerSupport.training')],
+                                ['support_cad_bim', t('designerSupport.cadBim')],
+                                ['support_samples', t('designerSupport.samples')],
+                                ['support_concept_support', t('designerSupport.conceptSupport')],
+                                ['support_partner_terms', t('designerSupport.partnerTerms')]
                             ].map(([k, label]) => (
                                 <PillCheckbox
                                     key={k}
@@ -513,9 +641,9 @@ function AddDesignerModal({ isOpen, onClose, onDesignerAdded }) {
                         </Grid>
                     </Section>
 
-                    <Section title="Dodatkowe">
+                    <Section title={t('common.onlineInfo')}>
                         <Grid>
-                            <FormField id="www" label="Strona WWW">
+                            <FormField id="www" label={t('addClientModal.www')}>
                                 <input
                                     type="text"
                                     name="www"
@@ -525,27 +653,30 @@ function AddDesignerModal({ isOpen, onClose, onDesignerAdded }) {
                                 />
                             </FormField>
 
-                            <FormField id="client_category" label="Kategoria klienta">
+                            {/* Lock both to PROJEKTANT */}
+                            <input type="hidden" name="client_category" value={formData.client_category || 'PROJEKTANT'} />
+                            <input type="hidden" name="client_subcategory" value={formData.client_subcategory || 'PROJEKTANT'} />
+                            <FormField id="client_category" label={t('fields.clientCategory')}>
                                 <input
                                     type="text"
-                                    name="client_category"
-                                    value={formData.client_category}
-                                    onChange={handleChange}
-                                    className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neutral-400 bg-white"
+                                    name="client_category_readonly"
+                                    value={formData.client_category || 'PROJEKTANT'}
+                                    readOnly
+                                    className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neutral-400 bg-neutral-100 text-neutral-700"
                                 />
                             </FormField>
 
-                            <FormField id="client_subcategory" label="Podkategoria klienta">
+                            <FormField id="client_subcategory" label={t('fields.clientSubcategory')}>
                                 <input
                                     type="text"
-                                    name="client_subcategory"
-                                    value={formData.client_subcategory}
-                                    onChange={handleChange}
-                                    className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neutral-400 bg-white"
+                                    name="client_subcategory_readonly"
+                                    value={formData.client_subcategory || 'PROJEKTANT'}
+                                    readOnly
+                                    className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neutral-400 bg-neutral-100 text-neutral-700"
                                 />
                             </FormField>
 
-                            <FormField id="fairs" label="Targi / wydarzenia">
+                            <FormField id="fairs" label={t('installerModal.fairs')}>
                                 <input
                                     type="text"
                                     name="fairs"
@@ -555,27 +686,7 @@ function AddDesignerModal({ isOpen, onClose, onDesignerAdded }) {
                                 />
                             </FormField>
 
-                            <FormField id="engo_team_director" label="Dyrektor w zespole ENGO">
-                                <input
-                                    type="text"
-                                    name="engo_team_director"
-                                    value={formData.engo_team_director || ''}
-                                    onChange={handleChange}
-                                    className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neutral-400 bg-white"
-                                />
-                            </FormField>
-
-                            <FormField id="engo_team_contact" label="Kontakt w zespole ENGO">
-                                <input
-                                    type="text"
-                                    name="engo_team_contact"
-                                    value={formData.engo_team_contact}
-                                    onChange={handleChange}
-                                    className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neutral-400 bg-white"
-                                />
-                            </FormField>
-
-                            <FormField id="number_of_sales_reps" label="Liczba handlowców">
+                            <FormField id="number_of_sales_reps" label={t('fields.numberOfSalesReps')}>
                                 <input
                                     type="text"
                                     name="number_of_sales_reps"
@@ -585,7 +696,7 @@ function AddDesignerModal({ isOpen, onClose, onDesignerAdded }) {
                                 />
                             </FormField>
 
-                            <FormField id="relations" label="Relacje/partnerzy">
+                            <FormField id="relations" label={t('designerModal.relations')}>
                                 <input
                                     type="text"
                                     name="relations"
@@ -595,7 +706,7 @@ function AddDesignerModal({ isOpen, onClose, onDesignerAdded }) {
                                 />
                             </FormField>
 
-                            <FormField id="facebook" label="Facebook">
+                            <FormField id="facebook" label={t('addClientModal.facebook')}>
                                 <input
                                     type="text"
                                     name="facebook"
@@ -605,7 +716,7 @@ function AddDesignerModal({ isOpen, onClose, onDesignerAdded }) {
                                 />
                             </FormField>
 
-                            <FormField id="additional_info" label="Informacje">
+                            <FormField id="additional_info" label={t('fields.additionalInfo')}>
                                 <textarea
                                     name="additional_info"
                                     value={formData.additional_info}
@@ -616,11 +727,9 @@ function AddDesignerModal({ isOpen, onClose, onDesignerAdded }) {
                         </Grid>
                     </Section>
 
-
-
-                    <Section title="Obiekcje">
+                    <Section title={t('designer.sections.objections')}>
                         <Grid>
-                            <FormField id="primary_objection" label="Główna obiekcja">
+                            <FormField id="primary_objection" label={t('designer.fields.objections.primary')}>
                                 <select
                                     name="primary_objection"
                                     value={formData.primary_objection || ''}
@@ -628,13 +737,13 @@ function AddDesignerModal({ isOpen, onClose, onDesignerAdded }) {
                                     className="w-full border border-neutral-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-neutral-400"
                                 >
                                     <option value="">—</option>
-                                    <option value="trusted_brand">Zaufana marka</option>
-                                    <option value="too_technical">Zbyt techniczne</option>
-                                    <option value="clients_price">Cena dla klienta</option>
-                                    <option value="none">Brak</option>
+                                    <option value="trusted_brand">{t('designer.fields.objections.options.trusted_brand')}</option>
+                                    <option value="too_technical">{t('designer.fields.objections.options.too_technical')}</option>
+                                    <option value="clients_price">{t('designer.fields.objections.options.clients_price')}</option>
+                                    <option value="none">{t('designer.fields.objections.options.none')}</option>
                                 </select>
                             </FormField>
-                            <FormField id="objection_note" label="Notatka o obiekcji">
+                            <FormField id="objection_note" label={t('designer.fields.objections.note')}>
                                 <input
                                     type="text"
                                     name="objection_note"
@@ -649,7 +758,7 @@ function AddDesignerModal({ isOpen, onClose, onDesignerAdded }) {
 
                     <div className='flex justify-end mt-5'>
                         <button className='buttonGreen' type="submit" disabled={isSaving}>
-                            {isSaving ? t('addClientModal.saving') : 'Zapisz'}
+                            {isSaving ? t('addClientModal.saving') : t('addClientModal.save')}
                         </button>
                         <button className='buttonRed' type="button" onClick={handleCancel} style={{ marginLeft: '10px' }}>
                             {t('addClientModal.cancel')}

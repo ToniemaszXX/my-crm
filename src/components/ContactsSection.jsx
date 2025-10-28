@@ -23,7 +23,7 @@ export default function ContactsSection({
 
   return (
     <div className="mt-2">
-      <h4 className="header2">{t('addClientModal.contact')}</h4>
+      {/* <h4 className="header2">{t('addClientModal.contact')}</h4> */}
 
       {enableSearch && (
         <input

@@ -1,6 +1,8 @@
 import { useState } from "react";
 import VisitDetails from "./VisitDetails";
 import { useTranslation } from "react-i18next";
+import { isViewer } from "@/utils/roles";
+import { useAuth } from "@/context/AuthContext";
 
 // Funkcja pomocnicza do formatowania username → Imię Nazwisko
 const formatUsername = (username) => {
@@ -15,21 +17,29 @@ function ClientVisitCard({ visit, client, onExpand, isExpanded, onEdit, onShowAl
     const company = client || visit?.client;
     const visitData = visit?.visit_date ? visit : visit?.latestVisit || (company?.latestVisit || null);
     const [isOpen, setIsOpen] = useState(false);
+    const { user: authUser } = useAuth();
 
     const latestVisitDate = visitData?.visit_date?.slice(0, 10) || "brak daty";
     const userId = visitData?.user_id;
-    const user = users.find(u => String(u.id) === String(userId));
-    const caretaker = user ? formatUsername(user.username) : "opiekun";
+    const caretakerUser = users.find(u => String(u.id) === String(userId));
+    const caretaker = caretakerUser ? formatUsername(caretakerUser.username) : "opiekun";
     const country = company?.country || "-";
 
     const toggle = () => setIsOpen(prev => !prev);
     const { t } = useTranslation();
 
     return (
-        <div className="bg-blue-100 text-black font-semibold rounded shadow mb-2">
+        <div
+            className="bg-blue-100 text-black font-semibold rounded shadow mb-2"
+            data-visit-id={visitData?.visit_id}
+            data-client-id={company?.client_id}
+            data-visit-context={visit ? 'single' : 'latest'}
+        >
             <div
                 className="px-4 py-2 cursor-pointer flex justify-between items-center hover:bg-blue-200"
                 onClick={toggle}
+                data-visit-id={visitData?.visit_id}
+                data-client-id={company?.client_id}
             >
                 <span>
                     {company?.company_name || "-"} — {country} — {caretaker} — {latestVisitDate}
@@ -52,9 +62,15 @@ function ClientVisitCard({ visit, client, onExpand, isExpanded, onEdit, onShowAl
                 <div className="bg-white text-black py-4">
                     <div className="bg-white text-black px-6 py-4">
                         {(company?.visits || []).map(v => (
-                            <div key={v.visit_id} className="mb-4 border-b pb-4 relative rounded-md bg-neutral-50 p-4">
+                            <div
+                                key={v.visit_id}
+                                className="mb-4 border-b pb-4 relative rounded-md bg-neutral-50 p-4"
+                                data-visit-id={v.visit_id}
+                                data-client-id={company?.client_id}
+                                data-latest={String(v.visit_id === (company?.latestVisit?.visit_id))}
+                            >
                                 {/* Przycisk Edytuj w prawym górnym rogu */}
-                                {onEdit && (
+                                {onEdit && !isViewer(authUser) && (
                                     <button
                                         onClick={() => onEdit(v)}
                                         className="absolute top-2 right-2 text-sm text-white bg-gray-500 hover:bg-gray-700 px-3 py-1 rounded"

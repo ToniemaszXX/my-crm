@@ -5,7 +5,9 @@ const API = import.meta.env.VITE_API_URL;
 const norm = (c = {}) => ({
   department: c.department || '',
   position: c.position || '',
-  name: c.name || '',
+  first_name: c.first_name || '',
+  last_name: c.last_name || '',
+  name: (c.name || `${c.first_name || ''} ${c.last_name || ''}`).trim(),
   phone: c.phone || '',
   email: c.email || '',
   function_notes: c.function_notes || '',
@@ -22,9 +24,9 @@ async function postJson(url, body) {
       body: JSON.stringify(body),
     });
 
-    const text = await res.text();
-    let data = null;
-    try { data = text ? JSON.parse(text) : null; } catch (_) {}
+  const text = await res.text();
+  let data = null;
+  try { data = text ? JSON.parse(text) : null; } catch { /* ignore JSON parse errors */ }
 
     const ok = res.ok && data && data.success !== false;
     const info = { ok, status: res.status, url, body, data, text };
@@ -61,11 +63,13 @@ export async function syncContacts({ clientId, original = [], current = [] }) {
   const reqs = [];
 
   for (const c of toCreate) {
-    reqs.push(postJson(`${API}/contacts/create.php`, { client_id: clientId, ...c }));
+    const name = (c.name || `${c.first_name} ${c.last_name}`).trim();
+    reqs.push(postJson(`${API}/contacts/create.php`, { client_id: clientId, ...c, name }));
   }
 
   for (const c of toUpdate) {
-    reqs.push(postJson(`${API}/contacts/update.php`, { client_id: clientId, ...c }));
+    const name = (c.name || `${c.first_name} ${c.last_name}`).trim();
+    reqs.push(postJson(`${API}/contacts/update.php`, { client_id: clientId, ...c, name }));
   }
 
   for (const id of toDeleteIds) {

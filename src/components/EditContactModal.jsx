@@ -4,6 +4,7 @@ import { X } from "lucide-react";
 import { checkSessionBeforeSubmit } from "../utils/checkSessionBeforeSubmit";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { usePreventDoubleSubmit } from "../utils/preventDoubleSubmit";
+import { useTranslation } from 'react-i18next';
 
 const emptyContact = {
   id: null,          // wymagane do update
@@ -13,7 +14,9 @@ const emptyContact = {
   deweloper_id: null,
   department: "",
   position: "",
-  name: "",
+  first_name: "",
+  last_name: "",
+  name: "", // compat for now
   phone: "",
   email: "",
   function_notes: "",
@@ -28,20 +31,32 @@ export default function EditContactModal({
 }) {
   const [form, setForm] = useState({ ...emptyContact });
   const [isSaving, setIsSaving] = useState(false);
+  const { t } = useTranslation();
 
   // Gdy otwierasz modal / zmienia się kontakt → wypełnij formularz
   useEffect(() => {
     if (!isOpen) return;
     const src = contact || {};
+    // Prefill: if legacy single `name` exists but first/last are empty, split into first_name and last_name for better UX
+    let first = src.first_name ?? "";
+    let last = src.last_name ?? "";
+    const legacyName = (src.name ?? "").trim();
+    if (!first && !last && legacyName) {
+      const pos = legacyName.lastIndexOf(" ");
+      first = pos > 0 ? legacyName.slice(0, pos).trim() : "";
+      last = pos > -1 ? legacyName.slice(pos + 1).trim() : legacyName;
+    }
     setForm({
       id: src.id ?? null,
       client_id: src.client_id ?? src.clientId ?? null,
-  designer_id: src.designer_id ?? null,
-  installer_id: src.installer_id ?? null,
-  deweloper_id: src.deweloper_id ?? null,
+      designer_id: src.designer_id ?? null,
+      installer_id: src.installer_id ?? null,
+      deweloper_id: src.deweloper_id ?? null,
       department: src.department ?? "",
       position: src.position ?? "",
-      name: src.name ?? "",
+      first_name: first,
+      last_name: last,
+      name: src.name ?? "", // compat
       phone: src.phone ?? "",
       email: src.email ?? "",
       function_notes: src.function_notes ?? "",
@@ -59,7 +74,7 @@ export default function EditContactModal({
     e.preventDefault();
 
     if (!form?.id) {
-      alert("Brak id — nie mogę zapisać zmian kontaktu.");
+      alert(t('editContactModal.errors.missingId'));
       return;
     }
 
@@ -72,7 +87,7 @@ export default function EditContactModal({
     };
     const ownerEntries = Object.entries(owner).filter(([,v]) => !!v);
     if (ownerEntries.length !== 1) {
-      alert("Brak jednoznacznego właściciela kontaktu.");
+      alert(t('editContactModal.errors.invalidOwner'));
       return;
     }
 
@@ -82,11 +97,33 @@ export default function EditContactModal({
     if (!okSession) { setIsSaving(false); return; }
 
     try {
+      // walidacja: co najmniej jedno z pól imię/nazwisko
+      const fnTrim = (form.first_name || '').trim();
+      const lnTrim = (form.last_name || '').trim();
+      const nameTrim = (form.name || '').trim();
+      if (!fnTrim && !lnTrim) {
+        if (nameTrim) {
+          const pos = nameTrim.lastIndexOf(' ');
+          const f = pos > 0 ? nameTrim.slice(0, pos).trim() : '';
+          const l = pos > -1 ? nameTrim.slice(pos + 1).trim() : nameTrim;
+          if (!f && !l) {
+            alert(t('editContactModal.errors.namePartRequired'));
+            setIsSaving(false);
+            return;
+          }
+        } else {
+          alert(t('editContactModal.errors.namePartRequired'));
+          setIsSaving(false);
+          return;
+        }
+      }
       const payload = {
         id: form.id,
         department: form.department || "",
         position: form.position || "",
-        name: form.name || "",
+        first_name: (form.first_name || '').trim() || null,
+        last_name:  (form.last_name  || '').trim() || null,
+        name: `${(form.first_name||'').trim()} ${(form.last_name||'').trim()}`.trim() || null, // compat for BE
         phone: form.phone || "",
         email: form.email || "",
         function_notes: form.function_notes || "",
@@ -101,12 +138,12 @@ export default function EditContactModal({
         body: JSON.stringify(payload),
       });
 
-      const text = await res.text();
-      let data = null;
-      try { data = text ? JSON.parse(text) : null; } catch (_) {}
+  const text = await res.text();
+  let data = null;
+  try { data = text ? JSON.parse(text) : null; } catch { /* ignore JSON parse errors */ }
 
       if (!(res.ok && data?.success)) {
-        const msg = data?.message || res.statusText || "Nie udało się zapisać kontaktu.";
+        const msg = data?.message || res.statusText || t('editContactModal.errors.saveFailed');
         alert(msg);
         setIsSaving(false);
         return;
@@ -120,7 +157,7 @@ export default function EditContactModal({
       onClose();
     } catch (err) {
       console.error(err);
-      alert(`Błąd edycji kontaktu: ${err.message}`);
+      alert(`${t('editContactModal.errors.saveError')}: ${err.message}`);
     } finally {
       setIsSaving(false);
     }
@@ -133,11 +170,11 @@ export default function EditContactModal({
       <div className="bg-neutral-100 pb-6 rounded-lg w-[900px] max-h-[85vh] overflow-y-auto">
         {/* HEADER */}
         <div className="bg-neutral-100 flex justify-between items-center sticky top-0 z-50 p-4 border-b border-neutral-300">
-          <h2 className="text-lime-500 text-xl font-extrabold">Edytuj kontakt</h2>
+          <h2 className="text-lime-500 text-xl font-extrabold">{t('editContactModal.title')}</h2>
           <button
             className="text-black hover:text-red-500 text-2xl font-bold bg-neutral-300 rounded-lg w-10 h-10 flex items-center justify-center leading-none"
             onClick={onClose}
-            aria-label="Zamknij"
+            aria-label={t('buttons.close')}
           >
             <X size={20} />
           </button>
@@ -152,22 +189,22 @@ export default function EditContactModal({
                 value={form.department}
                 onChange={(e) => handleChange("department", e.target.value)}
               >
-                <option value="">Wybierz dział</option>
-                <option value="Zarząd">Zarząd / Właściciel</option>
-                <option value="Sprzedaż">Sprzedaż</option>
-                <option value="Zakupy">Zakupy</option>
-                <option value="Marketing">Marketing</option>
-                <option value="Inwestycje">Inwestycje</option>
-                <option value="Finanse">Finanse</option>
-                <option value="Logistyka">Logistyka</option>
-                <option value="Administracja">Administracja</option>
-                <option value="Obsługi klienta">Obsługa klienta</option>
+                <option value="">{t('addClientModal.selectDepartment')}</option>
+                <option value="Zarząd">{t('addClientModal.departments.management')}</option>
+                <option value="Sprzedaż">{t('addClientModal.departments.sales')}</option>
+                <option value="Zakupy">{t('addClientModal.departments.purchasing')}</option>
+                <option value="Marketing">{t('addClientModal.departments.marketing')}</option>
+                <option value="Inwestycje">{t('addClientModal.departments.investments')}</option>
+                <option value="Finanse">{t('addClientModal.departments.finance')}</option>
+                <option value="Logistyka">{t('addClientModal.departments.logistics')}</option>
+                <option value="Administracja">{t('addClientModal.departments.admin')}</option>
+                <option value="Obsługi klienta">{t('addClientModal.departments.customerService')}</option>
               </select>
             </label>
 
             <div className="flex gap-2">
               <label className="text-neutral-800">
-                Stanowisko
+                {t('fields.position')}
                 <input
                   type="text"
                   className="contactInput"
@@ -177,17 +214,27 @@ export default function EditContactModal({
               </label>
 
               <label className="text-neutral-800">
-                Imię i nazwisko
+                {t('fields.firstName')}
                 <input
                   type="text"
                   className="contactInput"
-                  value={form.name}
-                  onChange={(e) => handleChange("name", e.target.value)}
+                  value={form.first_name}
+                  onChange={(e) => handleChange("first_name", e.target.value)}
                 />
               </label>
 
               <label className="text-neutral-800">
-                Telefon
+                {t('fields.lastName')}
+                <input
+                  type="text"
+                  className="contactInput"
+                  value={form.last_name}
+                  onChange={(e) => handleChange("last_name", e.target.value)}
+                />
+              </label>
+
+              <label className="text-neutral-800">
+                {t('fields.phone')}
                 <input
                   type="text"
                   className="contactInput"
@@ -197,7 +244,7 @@ export default function EditContactModal({
               </label>
 
               <label className="text-neutral-800">
-                Email
+                {t('fields.email')}
                 <input
                   type="email"
                   className="contactInput"
@@ -207,7 +254,7 @@ export default function EditContactModal({
               </label>
 
               <label className="text-neutral-800">
-                Funkcja / Uwagi
+                {t('fields.functionNotes')}
                 <input
                   type="text"
                   className="contactInput"
@@ -217,16 +264,16 @@ export default function EditContactModal({
               </label>
 
               <label className="text-neutral-800">
-                Decyzyjność
+                {t('addClientModal.decisionLevel')}
                 <select
                   className="contactSelect text-neutral-800"
                   value={form.decision_level}
                   onChange={(e) => handleChange("decision_level", e.target.value)}
                 >
-                  <option value="-">Decyzyjność</option>
-                  <option value="wysoka">Wysoka</option>
-                  <option value="średnia">Średnia</option>
-                  <option value="brak">Brak</option>
+                  <option value="-">{t('addClientModal.decisionLevel')}</option>
+                  <option value="wysoka">{t('addClientModal.decision.high')}</option>
+                  <option value="średnia">{t('addClientModal.decision.medium')}</option>
+                  <option value="brak">{t('addClientModal.decision.none')}</option>
                 </select>
               </label>
             </div>
@@ -239,10 +286,10 @@ export default function EditContactModal({
               onClick={onClose}
               disabled={isSaving}
             >
-              Anuluj
+              {t('buttons.cancel')}
             </button>
             <button className="buttonGreen" type="submit" disabled={isSaving}>
-              {isSaving ? "Zapisywanie..." : "Zapisz zmiany"}
+              {isSaving ? t('addClientModal.saving') : t('buttons.save')}
             </button>
           </div>
         </form>

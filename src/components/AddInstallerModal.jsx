@@ -15,6 +15,8 @@ import Mapa from './common/Mapa';
 import FormField from './common/FormField';
 import PillCheckbox from './common/PillCheckbox';
 import installerSchema from '../validation/installerSchema';
+import UserSelect from './UserSelect';
+import { isReadOnly, isBok, isAdminManager } from '../utils/roles';
 
 function AddInstallerModal({ isOpen, onClose, onInstallerAdded }) {
     const { t } = useTranslation();
@@ -22,6 +24,8 @@ function AddInstallerModal({ isOpen, onClose, onInstallerAdded }) {
     const [isSaving, setIsSaving] = useState(false);
     const [errors, setErrors] = useState({});
     const { user } = useAuth();
+    const [selectedDistributors, setSelectedDistributors] = useState([]);
+    const [distributorOptions, setDistributorOptions] = useState([]);
 
     // Factory for a fresh, empty form
     const makeInitialForm = () => ({
@@ -30,16 +34,21 @@ function AddInstallerModal({ isOpen, onClose, onInstallerAdded }) {
         client_code_erp: '',
         status: 1,
         data_veryfication: 0,
+        sms_consent: 0,
+        marketing_consent: 0,
+        source: '',
         street: '',
         city: '',
         voivodeship: '',
-        country: 'Polska',
+        country: 'Poland',
         postal_code: '',
         nip: '',
-        client_category: '',
+        client_category: 'INSTALATOR',
+        class_category: '-',
         client_subcategory: '',
         fairs: '',
-    engo_team_director: '',
+        engo_team_director: '',
+        engo_team_manager: '',
         engo_team_contact: '',
         number_of_sales_reps: '',
         latitude: '',
@@ -86,6 +95,38 @@ function AddInstallerModal({ isOpen, onClose, onInstallerAdded }) {
         }
     }, [user?.singleMarketId]);
 
+      // If only market 1, default country to Poland (don't overwrite if already set)
+      useEffect(() => {
+          if (user?.singleMarketId === 1) {
+              setFormData((p) => {
+                  const current = p?.country;
+                  if (current && String(current).trim() !== '') return p;
+                  return { ...p, country: 'Poland' };
+              });
+          }
+      }, [user?.singleMarketId]);
+
+    // Fetch distributors list (same market) when market id is known or changes
+    useEffect(() => {
+        const marketId = formData.market_id || user?.singleMarketId;
+        if (!marketId) { setDistributorOptions([]); return; }
+        let isCancelled = false;
+        (async () => {
+            try {
+                const res = await fetchWithAuth(`${import.meta.env.VITE_API_URL}/customers/list.php`);
+                const data = await res.json();
+                if (!res.ok || !data?.success) throw new Error('List fetch failed');
+                const opts = (data.clients || []).filter(c =>
+                    c.market_id === marketId && (c.client_subcategory === 'DYSTRYBUTOR CENTRALA' || c.client_subcategory === 'DYSTRYBUTOR ODDZIAŁ')
+                );
+                if (!isCancelled) setDistributorOptions(opts);
+            } catch (e) {
+                if (!isCancelled) setDistributorOptions([]);
+            }
+        })();
+        return () => { isCancelled = true; };
+    }, [formData.market_id, user?.singleMarketId]);
+
     const handleChange = (e) => {
         const { name, type } = e.target;
         let value = e.target.value;
@@ -110,13 +151,18 @@ function AddInstallerModal({ isOpen, onClose, onInstallerAdded }) {
 
         // For multi-market users, require market selection on FE
         if (Array.isArray(user?.marketIds) && user.marketIds.length > 1 && !formData.market_id) {
-            setErrors({ market_id: 'Wybierz rynek' });
+            setErrors({ market_id: t('addClientModal.chooseMarket') });
             setIsSaving(false);
             return;
         }
 
+        // Always enforce category for installers
+        if (formData.client_category !== 'INSTALATOR') {
+            setFormData((p) => ({ ...p, client_category: 'INSTALATOR' }));
+        }
+
         // Zod validation aligned with BE
-        const parse = installerSchema.safeParse(formData);
+    const parse = installerSchema.safeParse({ ...formData, client_category: 'INSTALATOR', distributor_ids: selectedDistributors });
         if (!parse.success) {
             const fieldErrors = {};
             for (const issue of parse.error.issues) {
@@ -132,26 +178,36 @@ function AddInstallerModal({ isOpen, onClose, onInstallerAdded }) {
         if (!isSessionOk) { setIsSaving(false); return; }
 
         try {
+            const idPayload = { ...formData };
+            // FE sends only *_user_id for ENGO fields
+            delete idPayload.engo_team_director;
+            delete idPayload.engo_team_manager;
+            delete idPayload.engo_team_contact;
+            if (formData.engo_team_manager_id) idPayload.engo_team_manager_user_id = Number(formData.engo_team_manager_id);
+            if (formData.engo_team_contact_id) idPayload.engo_team_user_id = Number(formData.engo_team_contact_id);
+            if (formData.engo_team_director_id) idPayload.engo_team_director_user_id = Number(formData.engo_team_director_id);
+
             const res = await fetchWithAuth(`${import.meta.env.VITE_API_URL}/Installers/add.php`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData),
+                body: JSON.stringify({ ...idPayload, client_category: 'INSTALATOR', distributor_ids: selectedDistributors }),
             });
             let data = {};
             try { data = await res.json(); } catch (_) { }
             if (!(res.ok && data?.success)) {
-                alert(data?.message || t('error'));
+                alert(data?.message || t('addClientModal.error'));
                 setIsSaving(false);
                 return;
             }
             onInstallerAdded?.(data.id);
-            alert(t('success'));
+            alert(t('addClientModal.success'));
             // reset the form so it’s clean next time
             setFormData(makeInitialForm());
+            setSelectedDistributors([]);
             onClose?.();
         } catch (err) {
             console.error(err);
-            alert(`Błąd zapisu: ${err.message}`);
+            alert(`${t('errors.saveError')}: ${err.message}`);
         } finally {
             setIsSaving(false);
         }
@@ -172,24 +228,28 @@ function AddInstallerModal({ isOpen, onClose, onInstallerAdded }) {
         <div className='fixed inset-0 bg-black/50 flex justify-center items-center z-[99]'>
             <div className='bg-neutral-100 pb-8 rounded-lg w-[1100px] max-h-[90vh] overflow-y-auto'>
                 <div className="bg-neutral-100 flex justify-between items-center sticky top-0 z-50 p-4 border-b border-neutral-300">
-                    <h2 className="text-lime-500 text-xl font-extrabold">Dodaj Instalatora</h2>
+                    <h2 className="text-lime-500 text-xl font-extrabold">{t('addInstallerModal.title')}</h2>
                     <button className="text-black hover:text-red-500 text-2xl font-bold bg-neutral-300 rounded-lg w-10 h-10 flex items-center justify-center leading-none" onClick={handleCancel} aria-label="Close modal">
                         <X size={20} />
                     </button>
                 </div>
 
-                <form onSubmit={safeSubmit} className="text-white flex flex-col gap-3 pl-8 pr-8">
+                <form
+                    onSubmit={safeSubmit}
+                    onKeyDown={(e) => { if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') e.preventDefault(); }}
+                    className="text-white flex flex-col gap-3 pl-8 pr-8"
+                >
                     {Array.isArray(user?.marketIds) && user.marketIds.length > 1 && (
-                        <Section title="Rynek">
+                        <Section title={t('addClientModal.market')}>
                             <Grid>
-                                <FormField id="market_id" label="Rynek">
+                                <FormField id="market_id" label={t('addClientModal.market')}>
                                     <select
                                         name="market_id"
                                         value={formData.market_id}
                                         onChange={handleChange}
                                         className="w-full border border-neutral-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-neutral-400"
                                     >
-                                        <option value="">— wybierz rynek —</option>
+                                        <option value="">{t('addClientModal.chooseMarket')}</option>
                                         {user.marketIds.map((mid) => (
                                             <option key={mid} value={mid}>{getMarketLabel(mid)}</option>
                                         ))}
@@ -200,9 +260,40 @@ function AddInstallerModal({ isOpen, onClose, onInstallerAdded }) {
                         </Section>
                     )}
 
-                    <Section title="Dane firmy">
+
+                    {isAdminManager(user) && (<Section title={t('common.BOK')}>
                         <Grid className="mb-4">
-                            <FormField id="company_name" label="Nazwa firmy" required error={errors.company_name}>
+
+                            <FormField id="status" label={t('addClientModal.status')} error={errors.status}>
+                                <select
+                                    name="status"
+                                    value={formData.status}
+                                    onChange={handleChange}
+                                    className="w-full border border-neutral-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-neutral-400"
+                                >
+                                    <option value="1">{t('filter.new')}</option>
+                                    <option value="0">{t('filter.verified')}</option>
+                                </select>
+                            </FormField>
+
+
+                            <FormField id="data_veryfication" label={t('addClientModal.data_veryfication')} error={errors.data_veryfication}>
+                                <select
+                                    name="data_veryfication"
+                                    value={formData.data_veryfication}
+                                    onChange={handleChange}
+                                    className="w-full border border-neutral-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-neutral-400"
+                                >
+                                    <option value="0">{t('dataStatus.missing')}</option>
+                                    <option value="1">{t('dataStatus.ready')}</option>
+                                </select>
+                            </FormField>
+                        </Grid>
+                    </Section>)}
+
+                    <Section title={t('addClientModal.companyData')}>
+                        <Grid className="mb-4">
+                            <FormField id="company_name" label={t('addClientModal.companyName')} required error={errors.company_name}>
                                 <input
                                     type="text"
                                     name="company_name"
@@ -212,7 +303,7 @@ function AddInstallerModal({ isOpen, onClose, onInstallerAdded }) {
                                 />
                             </FormField>
 
-                            <FormField id="client_code_erp" label="Kod ERP">
+                            <FormField id="client_code_erp" label={t('addClientModal.client_code_erp')}>
                                 <input
                                     type="text"
                                     name="client_code_erp"
@@ -221,32 +312,17 @@ function AddInstallerModal({ isOpen, onClose, onInstallerAdded }) {
                                     className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neutral-400"
                                 />
                             </FormField>
-
-                            <FormField id="status" label="Status">
-                                <select
-                                    name="status"
-                                    value={formData.status}
+                            <FormField id="client_psmobile" label={t('addClientModal.client_psmobile')}>
+                                <input
+                                    type="text"
+                                    name="client_psmobile"
+                                    value={formData.client_psmobile}
                                     onChange={handleChange}
-                                    className="w-full border border-neutral-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-neutral-400"
-                                >
-                                    <option value="1">Nowy</option>
-                                    <option value="0">Zweryfikowany</option>
-                                </select>
+                                    className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neutral-400"
+                                />
                             </FormField>
 
-                            <FormField id="data_veryfication" label="Weryfikacja danych">
-                                <select
-                                    name="data_veryfication"
-                                    value={formData.data_veryfication}
-                                    onChange={handleChange}
-                                    className="w-full border border-neutral-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-neutral-400"
-                                >
-                                    <option value="0">Brak danych</option>
-                                    <option value="1">Gotowe</option>
-                                </select>
-                            </FormField>
-
-                            <FormField id="nip" label="NIP">
+                            <FormField id="nip" label={t('addClientModal.nip')}>
                                 <input
                                     type="text"
                                     name="nip"
@@ -256,7 +332,55 @@ function AddInstallerModal({ isOpen, onClose, onInstallerAdded }) {
                                 />
                             </FormField>
 
-                            <FormField id="street" label="Ulica">
+                            
+                            <FormField id="source" label={t('fields.source')}>
+                                <input
+                                    type="text"
+                                    name="source"
+                                    value={formData.source}
+                                    onChange={handleChange}
+                                    className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neutral-400"
+                                />
+                            </FormField>
+
+                            <FormField id="class_category" label={t('common.class')}>
+                                <select
+                                    name="class_category"
+                                    value={formData.class_category || '-'}
+                                    onChange={handleChange}
+                                    className="w-full border border-neutral-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-neutral-400"
+                                >
+                                    <option value="-">{t('common.noClass')}</option>
+                                    <option value="A">A</option>
+                                    <option value="B">B</option>
+                                    <option value="C">C</option>
+                                    <option value="D">D</option>
+                                </select>
+                            </FormField>
+
+                            <FormField id="sms_consent" label={t('fields.smsConsent')}>
+                                <PillCheckbox
+                                    label={t('fields.smsConsent')}
+                                    checked={!!formData.sms_consent}
+                                    onChange={(checked) => setFormData((p) => ({ ...p, sms_consent: checked ? 1 : 0 }))}
+                                />
+                            </FormField>
+                            <FormField id="marketing_consent" label={t('fields.marketingConsent')}>
+                                <PillCheckbox
+                                    label={t('fields.marketingConsent')}
+                                    checked={!!formData.marketing_consent}
+                                    onChange={(checked) => setFormData((p) => ({ ...p, marketing_consent: checked ? 1 : 0 }))}
+                                />
+                            </FormField>
+
+
+                        </Grid>
+                    </Section>
+
+                    <Section title={t('addClientModal.location')}>
+                        <Grid className="mb-2">
+
+                            <FormField id="street" label={t('addClientModal.street')}>
                                 <input
                                     type="text"
                                     name="street"
@@ -266,7 +390,7 @@ function AddInstallerModal({ isOpen, onClose, onInstallerAdded }) {
                                 />
                             </FormField>
 
-                            <FormField id="city" label="Miasto">
+                            <FormField id="city" label={t('addClientModal.city')}>
                                 <input
                                     type="text"
                                     name="city"
@@ -276,7 +400,17 @@ function AddInstallerModal({ isOpen, onClose, onInstallerAdded }) {
                                 />
                             </FormField>
 
-                            <FormField id="voivodeship" label="Województwo">
+                            <FormField id="district" label={t('addClientModal.district')}>
+                                <input
+                                    type="text"
+                                    name="district"
+                                    value={formData.district}
+                                    onChange={handleChange}
+                                    className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neutral-400"
+                                />
+                            </FormField>
+
+                            <FormField id="voivodeship" label={t('addClientModal.voivodeship')}>
                                 <input
                                     type="text"
                                     name="voivodeship"
@@ -286,17 +420,18 @@ function AddInstallerModal({ isOpen, onClose, onInstallerAdded }) {
                                 />
                             </FormField>
 
-                            <FormField id="country" label="Kraj">
+                            <FormField id="country" label={t('addClientModal.country')}>
                                 <CountrySelect
                                     value={formData.country}
                                     onChange={handleChange}
                                     name="country"
                                     hideLabel={true}
                                     className="w-full border border-neutral-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-neutral-400"
+                                    disabled={user?.singleMarketId === 1}
                                 />
                             </FormField>
 
-                            <FormField id="postal_code" label="Kod pocztowy">
+                            <FormField id="postal_code" label={t('addClientModal.postalCode')}>
                                 <input
                                     type="text"
                                     name="postal_code"
@@ -305,12 +440,8 @@ function AddInstallerModal({ isOpen, onClose, onInstallerAdded }) {
                                     className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neutral-400"
                                 />
                             </FormField>
-                        </Grid>
-                    </Section>
 
-                    <Section title="Lokalizacja">
-                        <Grid className="mb-2">
-                            <FormField id="latitude" label="Szerokość geogr.">
+                            <FormField id="latitude" label={t('addClientModal.latitude')}>
                                 <input
                                     type="number"
                                     step="0.000001"
@@ -321,7 +452,7 @@ function AddInstallerModal({ isOpen, onClose, onInstallerAdded }) {
                                     className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neutral-400"
                                 />
                             </FormField>
-                            <FormField id="longitude" label="Długość geogr.">
+                            <FormField id="longitude" label={t('addClientModal.longitude')}>
                                 <input
                                     type="number"
                                     step="0.000001"
@@ -347,27 +478,32 @@ function AddInstallerModal({ isOpen, onClose, onInstallerAdded }) {
                         </Mapa>
                     </Section>
 
-                    <Section title="Kategoria i targi">
+                    <Section title={t('installerModal.categoryAndFairs')}>
                         <Grid>
-                            <FormField id="client_category" label="Kategoria klienta">
+                            {/* Lock category to INSTALATOR and hide input */}
+                            <input type="hidden" name="client_category" value={formData.client_category || 'INSTALATOR'} />
+                            <FormField id="client_category" label={t('fields.clientCategory')}>
                                 <input
                                     type="text"
-                                    name="client_category"
-                                    value={formData.client_category}
-                                    onChange={handleChange}
-                                    className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neutral-400 bg-white"
+                                    name="client_category_readonly"
+                                    value={formData.client_category || 'INSTALATOR'}
+                                    readOnly
+                                    className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neutral-400 bg-neutral-100 text-neutral-700"
                                 />
                             </FormField>
-                            <FormField id="client_subcategory" label="Podkategoria klienta">
-                                <input
-                                    type="text"
+                            <FormField id="client_subcategory" label={t('fields.clientSubcategory')}>
+                                <select
                                     name="client_subcategory"
                                     value={formData.client_subcategory}
                                     onChange={handleChange}
                                     className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neutral-400 bg-white"
-                                />
+                                >
+                                    <option value="">{t('addClientModal.selectCategory')}</option>
+                                    <option value="INSTALATOR FIRMA">{t('addClientModal.categories.INSTALATOR_FIRMA')}</option>
+                                    <option value="INSTALATOR ENGO PLUS">{t('addClientModal.categories.ENGO_PLUS')}</option>
+                                </select>
                             </FormField>
-                            <FormField id="fairs" label="Targi / wydarzenia">
+                            <FormField id="fairs" label={t('installerModal.fairs')}>
                                 <input
                                     type="text"
                                     name="fairs"
@@ -376,40 +512,62 @@ function AddInstallerModal({ isOpen, onClose, onInstallerAdded }) {
                                     className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neutral-400 bg-white"
                                 />
                             </FormField>
-                            <FormField id="engo_team_director" label="Dyrektor w zespole ENGO">
-                                <input
-                                    type="text"
+
+                            <FormField id="engo_team_director" label={t('addClientModal.engoTeamDirector')}>
+                                <UserSelect
+                                    roleFilter="dyrektor"
+                                    activeOnly={true}
+                                    marketId={formData.market_id || user?.singleMarketId}
                                     name="engo_team_director"
+                                    className='w-full border border-neutral-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-neutral-400'
                                     value={formData.engo_team_director || ''}
-                                    onChange={handleChange}
-                                    className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neutral-400 bg-white"
+                                    onChange={(val) => setFormData((prev) => ({ ...prev, engo_team_director: val }))}
+                                    onChangeId={(id) => setFormData((prev) => ({ ...prev, engo_team_director_id: id }))}
+                                    placeholder={t('addClientModal.chooseMember')}
+                                    noMarketPlaceholder={t('addClientModal.chooseMarket')}
+                                    showNoMarketHint={false}
                                 />
                             </FormField>
-                            <FormField id="engo_team_contact" label="Kontakt w zespole ENGO">
-                                <input
-                                    type="text"
+                            <FormField id="engo_team_manager" label={t('addClientModal.engoTeamManager') || 'Manager ENGO'}>
+                                <UserSelect
+                                    role="manager"
+                                    activeOnly={true}
+                                    marketId={formData.market_id || user?.singleMarketId}
+                                    name="engo_team_manager"
+                                    className='w-full border border-neutral-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-neutral-400'
+                                    value={formData.engo_team_manager || ''}
+                                    onChange={(val) => setFormData((prev) => ({ ...prev, engo_team_manager: val }))}
+                                    onChangeId={(id) => setFormData((prev) => ({ ...prev, engo_team_manager_id: id }))}
+                                    placeholder={t('addClientModal.chooseMember')}
+                                    noMarketPlaceholder={t('addClientModal.chooseMarket')}
+                                    showNoMarketHint={false}
+                                />
+                            </FormField>
+                            <FormField id="engo_team_contact" label={t('addClientModal.engoTeamContact')}>
+                                <UserSelect
+                                    roleByMarket={{ 1: 'koordynator', 2: 'tsr', '1': 'koordynator', '2': 'tsr' }}
+                                    activeOnly={true}
+                                    marketId={formData.market_id || user?.singleMarketId}
                                     name="engo_team_contact"
-                                    value={formData.engo_team_contact}
-                                    onChange={handleChange}
-                                    className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neutral-400 bg-white"
-                                />
-                            </FormField>
-                            <FormField id="number_of_sales_reps" label="Liczba handlowców">
-                                <input
-                                    type="text"
-                                    name="number_of_sales_reps"
-                                    value={formData.number_of_sales_reps}
-                                    onChange={handleChange}
-                                    className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neutral-400 bg-white"
+                                    className='w-full border border-neutral-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-neutral-400'
+                                    value={formData.engo_team_contact || ''}
+                                    onChange={(val) => setFormData((prev) => ({ ...prev, engo_team_contact: val }))}
+                                    onChangeId={(id) => setFormData((prev) => ({ ...prev, engo_team_contact_id: id }))}
+                                    placeholder={t('addClientModal.chooseMember')}
+                                    noMarketPlaceholder={t('addClientModal.chooseMarket')}
+                                    showNoMarketHint={false}
                                 />
                             </FormField>
                         </Grid>
                     </Section>
 
-                    <Section title="Zakres działalności">
+                    <Section title={t('installer.sections.scope')}>
                         <Grid>
                             {[
-                                ['install_heating', 'Ogrzewanie'], ['install_AC', 'Klimatyzacja'], ['install_ventilation', 'Wentylacja'], ['install_sh', 'Smart Home'],
+                                ['install_heating', t('installer.fields.scope.heating')],
+                                ['install_AC', t('installer.fields.scope.ac')],
+                                ['install_ventilation', t('installer.fields.scope.ventilation')],
+                                ['install_sh', t('installer.fields.scope.smartHome')],
                             ].map(([k, label]) => (
                                 <PillCheckbox
                                     key={k}
@@ -421,10 +579,14 @@ function AddInstallerModal({ isOpen, onClose, onInstallerAdded }) {
                         </Grid>
                     </Section>
 
-                    <Section title="KOI – typy obiektów">
+                    <Section title={t('installer.sections.koi')}>
                         <Grid>
                             {[
-                                ['koi_flats', 'Mieszkania'], ['koi_houses', 'Domy'], ['koi_OUP', 'OUP'], ['koi_hotels', 'Hotele'], ['koi_comercial', 'Obiekty komercyjne'],
+                                ['koi_flats', t('installer.fields.koi.flats')],
+                                ['koi_houses', t('installer.fields.koi.houses')],
+                                ['koi_OUP', t('installer.fields.koi.OUP')],
+                                ['koi_hotels', t('installer.fields.koi.hotels')],
+                                ['koi_comercial', t('installer.fields.koi.commercial')],
                             ].map(([k, label]) => (
                                 <PillCheckbox
                                     key={k}
@@ -433,7 +595,7 @@ function AddInstallerModal({ isOpen, onClose, onInstallerAdded }) {
                                     onChange={(checked) => setFormData((p) => ({ ...p, [k]: checked ? 1 : 0 }))}
                                 />
                             ))}
-                            <FormField id="koi_others" label="Inne KOI">
+                            <FormField id="koi_others" label={t('installer.fields.koi.other')}>
                                 <input
                                     type="text"
                                     name="koi_others"
@@ -445,9 +607,9 @@ function AddInstallerModal({ isOpen, onClose, onInstallerAdded }) {
                         </Grid>
                     </Section>
 
-                    <Section title="Podwykonawcy i kwalifikacje">
+                    <Section title={t('installer.sections.subcontractors')}>
                         <Grid>
-                            <FormField id="numbers_of_subcontractors" label="Liczba podwykonawców">
+                            <FormField id="numbers_of_subcontractors" label={t('installer.fields.subcontractors.count')}>
                                 <input
                                     type="number"
                                     name="numbers_of_subcontractors"
@@ -457,7 +619,9 @@ function AddInstallerModal({ isOpen, onClose, onInstallerAdded }) {
                                 />
                             </FormField>
                             {[
-                                ['has_electrician', 'Ma elektryka'], ['work_with_needs', 'Pracuje z potrzebami'], ['approved_by_distributor', 'Zatwierdzony przez dystrybutora'],
+                                ['has_electrician', t('installer.fields.subcontractors.hasElectrician')],
+                                ['work_with_needs', t('installer.fields.subcontractors.workWithNeeds')],
+                                ['approved_by_distributor', t('installer.fields.subcontractors.approvedByDistributor')],
                             ].map(([k, label]) => (
                                 <PillCheckbox
                                     key={k}
@@ -469,11 +633,22 @@ function AddInstallerModal({ isOpen, onClose, onInstallerAdded }) {
                         </Grid>
                     </Section>
 
-                    <Section title="Problemy">
+                    <Section title={t('installer.sections.problems')}>
                         <Grid>
                             {[
-                                ['problems_arrears', 'Zaległości płatnicze'], ['problem_time', 'Czas'], ['problem_clients_with_inteligent_system', 'Klienci z inteligentnym systemem'], ['problem_expensive', 'Drogo'], ['problem_low_margin', 'Niska marża'], ['problem_complicated_installation', 'Skomplikowany montaż'],
-                                ['problem_complicated_configuration', 'Skomplikowana konfiguracja'], ['problem_app', 'Aplikacja'], ['problem_support', 'Wsparcie'], ['problem_complaint', 'Reklamacje'], ['problem_training', 'Szkolenia'], ['problem_integration', 'Integracja'], ['problem_marketing_stuff', 'Marketing'],
+                                ['problems_arrears', t('installer.fields.problems.arrears')],
+                                ['problem_time', t('installer.fields.problems.time')],
+                                ['problem_clients_with_inteligent_system', t('installer.fields.problems.smartClients')],
+                                ['problem_expensive', t('installer.fields.problems.expensive')],
+                                ['problem_low_margin', t('installer.fields.problems.lowMargin')],
+                                ['problem_complicated_installation', t('installer.fields.problems.complicatedInstallation')],
+                                ['problem_complicated_configuration', t('installer.fields.problems.complicatedConfiguration')],
+                                ['problem_app', t('installer.fields.problems.app')],
+                                ['problem_support', t('installer.fields.problems.support')],
+                                ['problem_complaint', t('installer.fields.problems.complaint')],
+                                ['problem_training', t('installer.fields.problems.training')],
+                                ['problem_integration', t('installer.fields.problems.integration')],
+                                ['problem_marketing_stuff', t('installer.fields.problems.marketing')],
                             ].map(([k, label]) => (
                                 <PillCheckbox
                                     key={k}
@@ -482,7 +657,7 @@ function AddInstallerModal({ isOpen, onClose, onInstallerAdded }) {
                                     onChange={(checked) => setFormData((p) => ({ ...p, [k]: checked ? 1 : 0 }))}
                                 />
                             ))}
-                            <FormField id="problem_competition" label="Konkurencja (liczba)">
+                            <FormField id="problem_competition" label={t('installer.fields.problems.competition')}>
                                 <input
                                     type="number"
                                     name="problem_competition"
@@ -491,7 +666,7 @@ function AddInstallerModal({ isOpen, onClose, onInstallerAdded }) {
                                     className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neutral-400 bg-white"
                                 />
                             </FormField>
-                            <FormField id="problem_others" label="Inne problemy">
+                            <FormField id="problem_others" label={t('installer.fields.problems.other')}>
                                 <input
                                     type="text"
                                     name="problem_others"
@@ -503,9 +678,9 @@ function AddInstallerModal({ isOpen, onClose, onInstallerAdded }) {
                         </Grid>
                     </Section>
 
-                    <Section title="Dodatkowe">
+                    <Section title={t('common.onlineInfo')}>
                         <Grid>
-                            <FormField id="www" label="Strona WWW">
+                            <FormField id="www" label={t('addClientModal.www')}>
                                 <input
                                     type="text"
                                     name="www"
@@ -514,7 +689,7 @@ function AddInstallerModal({ isOpen, onClose, onInstallerAdded }) {
                                     className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neutral-400 bg-white"
                                 />
                             </FormField>
-                            <FormField id="facebook" label="Facebook">
+                            <FormField id="facebook" label={t('addClientModal.facebook')}>
                                 <input
                                     type="text"
                                     name="facebook"
@@ -523,7 +698,7 @@ function AddInstallerModal({ isOpen, onClose, onInstallerAdded }) {
                                     className="w-full border border-neutral-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neutral-400 bg-white"
                                 />
                             </FormField>
-                            <FormField id="additional_info" label="Dodatkowe informacje">
+                            <FormField id="additional_info" label={t('fields.additionalInfo')}>
                                 <textarea
                                     name="additional_info"
                                     value={formData.additional_info}
@@ -536,7 +711,7 @@ function AddInstallerModal({ isOpen, onClose, onInstallerAdded }) {
 
                     <div className='flex justify-end mt-5'>
                         <button className='buttonGreen' type="submit" disabled={isSaving}>
-                            {isSaving ? t('addClientModal.saving') : 'Zapisz'}
+                            {isSaving ? t('addClientModal.saving') : t('addClientModal.save')}
                         </button>
                         <button className='buttonRed' type="button" onClick={handleCancel} style={{ marginLeft: '10px' }}>
                             {t('addClientModal.cancel')}

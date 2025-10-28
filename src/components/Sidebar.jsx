@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { fetchWithAuth } from '../utils/fetchWithAuth';
+import NotificationBell from './NotificationBell';
 
 function Sidebar() {
   const { t } = useTranslation();
@@ -19,7 +20,7 @@ function Sidebar() {
   }
 
   return (
-    <div className="fixed top-0 left-0 bg-black p-5 h-screen z-[10] landscape:w-56 portrait:w-42 flex flex-col justify-between">
+    <div className="fixed top-0 left-0 bg-black p-5 h-screen z-[10] landscape:w-56 portrait:w-42 flex flex-col">
       <div>
         <h2 className='text-lime-500 text-xl font-bold mb-4'>CRM ENGO</h2>
         <ul className="list-none p-0 text-white">
@@ -35,18 +36,29 @@ function Sidebar() {
           <li className='mb-3'>
             <Link to="/trainings">{t('menu.trainings')}</Link>
           </li>
+          {user?.role === 'admin' && (
+            <li className='mb-3'>
+              <Link to="/settings">Ustawienia</Link>
+            </li>
+          )}
           <li className='mb-3'>
             <Link to="/logout">{t('menu.logout')}</Link>
           </li>
         </ul>
       </div>
 
-      {user && (
-        <div className="text-white mt-4 text-sm border-t border-gray-700 pt-3">
-          <p>{t('logged_in_as')}: <strong>{NameLogged}</strong></p>
-          <p>{t('role')}: <strong>{user.role}</strong></p>
+      {/* Bottom area: bell + user info anchored to bottom */}
+      <div className="mt-auto">
+        <div className="mb-[10px] text-white">
+          <NotificationBell variant="sidebar" />
         </div>
-      )}
+        {user && (
+          <div className="text-white text-sm border-t border-gray-700 pt-3">
+            <p>{t('logged_in_as')}: <strong>{NameLogged}</strong></p>
+            <p>{t('role')}: <strong>{user.role}</strong></p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

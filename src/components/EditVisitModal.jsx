@@ -3,25 +3,30 @@ import { useTranslation } from 'react-i18next';
 import { checkSessionBeforeSubmit } from '../utils/checkSessionBeforeSubmit';
 import { fetchWithAuth } from '../utils/fetchWithAuth';
 import { usePreventDoubleSubmit } from '../utils/preventDoubleSubmit';
+import { useAuth } from '../context/AuthContext';
+import { isAdminManager } from '../utils/roles';
 
 function EditVisitModal({ isOpen, onClose, onVisitUpdated, visit, clients, entityType = 'client', entities, fixedEntityId }) {
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
     id: "",
-  client_id: "",
-  designer_id: "",
-  installer_id: "",
-  deweloper_id: "",
-  entity_type: undefined,
-  entity_id: undefined,
+    client_id: "",
+    designer_id: "",
+    installer_id: "",
+    deweloper_id: "",
+    entity_type: undefined,
+    entity_id: undefined,
     visit_date: "",
     contact_person: "",
     meeting_type: "meeting",
     meeting_purpose: "",
     post_meeting_summary: "",
     marketing_tasks: "",
+    marketing_response: "",
     action_plan: "",
     competition_info: "",
     additional_notes: "",
+    director_response: "",
   });
 
   const { t } = useTranslation();
@@ -81,12 +86,14 @@ function EditVisitModal({ isOpen, onClose, onVisitUpdated, visit, clients, entit
               meeting_purpose: v.meeting_purpose || "",
               post_meeting_summary: v.post_meeting_summary || "",
               marketing_tasks: v.marketing_tasks || "",
+              marketing_response: v.marketing_response || "",
               action_plan: v.action_plan || "",
               competition_info: v.competition_info || "",
               additional_notes: v.additional_notes || "",
+              director_response: v.director_response || "",
             });
           } else {
-            alert("Błąd pobierania danych wizyty.");
+            alert(t('editVisitModal.fetchError'));
           }
         })
         .catch((err) => {
@@ -157,7 +164,7 @@ function EditVisitModal({ isOpen, onClose, onVisitUpdated, visit, clients, entit
         }
       }
     } catch (err) {
-      setServerError("Błąd połączenia z serwerem.");
+      setServerError(t('errors.network'));
     }
   };
 
@@ -172,6 +179,14 @@ function EditVisitModal({ isOpen, onClose, onVisitUpdated, visit, clients, entit
   const selectValue = formData[idFieldName] || (entityType === 'client' ? formData.client_id : "");
   const disabled = !!fixedEntityId;
 
+  const chooseLabel = entityType === 'designer'
+    ? t('addVisitModal.chooseDesigner')
+    : entityType === 'installer'
+    ? t('addVisitModal.chooseInstaller')
+    : entityType === 'deweloper'
+    ? t('addVisitModal.chooseDeveloper')
+    : t('addVisitModal.chooseClient');
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-start pt-20  z-[99]">
       <div className="bg-white text-black p-6 rounded-lg w-[600px] max-h-[90vh] overflow-y-auto">
@@ -179,7 +194,7 @@ function EditVisitModal({ isOpen, onClose, onVisitUpdated, visit, clients, entit
         <form onSubmit={safeSubmit} className="space-y-3">
 
 
-          <label className="text-neutral-800">{t('addVisitModal.chooseClient')}
+      <label className="text-neutral-800">{chooseLabel}
             <select
               name={idFieldName}
               value={selectValue}
@@ -188,7 +203,7 @@ function EditVisitModal({ isOpen, onClose, onVisitUpdated, visit, clients, entit
               required
               disabled={disabled}
             >
-              <option value="">{t('addVisitModal.chooseClient')}</option>
+        <option value="">{chooseLabel}</option>
               {(list || [])
                 .filter(c => c.id && c.company_name)
                 .sort((a, b) => a.company_name.localeCompare(b.company_name))
@@ -217,11 +232,11 @@ function EditVisitModal({ isOpen, onClose, onVisitUpdated, visit, clients, entit
             )}
           </label>
 
-          <label className="text-neutral-800">{t('addVisitModal.contactPerson')}
+      <label className="text-neutral-800">{t('addVisitModal.contactPerson')}
             <input
               type="text"
               name="contact_person"
-              placeholder="Z kim odbyła się wizyta"
+        placeholder={t('addVisitModal.contactPersonPlaceholder')}
               value={formData.contact_person}
               onChange={handleChange}
               className="w-full border p-2"
@@ -249,9 +264,16 @@ function EditVisitModal({ isOpen, onClose, onVisitUpdated, visit, clients, entit
             { name: "meeting_purpose", label: t('addVisitModal.meetingPurpose') },
             { name: "post_meeting_summary", label: t('addVisitModal.postMeetingSummary') },
             { name: "marketing_tasks", label: t('addVisitModal.marketingTasks') },
+            // Only for Admin/Manager/Zarzad/BOK/MKG
+            ...(isAdminManager(user) ? [
+              { name: "marketing_response", label: t('addVisitModal.marketingResponse') },
+            ] : []),
             { name: "action_plan", label: t('addVisitModal.actionPlan') },
             { name: "competition_info", label: t('addVisitModal.competitionInfo') },
             { name: "additional_notes", label: t('addVisitModal.additionalNotes') },
+            ...(isAdminManager(user) ? [
+              { name: "director_response", label: t('addVisitModal.directorResponse') },
+            ] : []),
           ].map(({ name, label }) => (
             <label key={name} className="text-neutral-800">{label}
               <textarea

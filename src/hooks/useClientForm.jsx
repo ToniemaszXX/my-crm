@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 export default function useClientForm(initialData = {}) {
   const [formData, setFormData] = useState({
     id: null,
-  market_id: '',
+    market_id: '',
     company_name: '',
     client_code_erp: '',
     status: 1,
@@ -15,13 +15,19 @@ export default function useClientForm(initialData = {}) {
     voivodeship: '',
     country: '',
     nip: '',
+    class_category: '-',
     client_category: '',
-  client_subcategory: '',
+    client_subcategory: '',
     fairs: '',
     competition: '',
     index_of_parent: '',
-  engo_team_director: '',
+    engo_team_director: '',
+    engo_team_manager: '',
     engo_team_contact: '',
+    // new: selected user IDs
+    engo_team_director_id: undefined,
+    engo_team_manager_id: undefined,
+    engo_team_contact_id: undefined,
     number_of_branches: '',
     number_of_sales_reps: '',
     www: '',
@@ -64,7 +70,9 @@ export default function useClientForm(initialData = {}) {
         id: c.id ?? undefined,
         department: c.department ?? '',
         position: c.position ?? '',
-        name: c.name ?? '',
+        first_name: c.first_name ?? '',
+        last_name: c.last_name ?? '',
+        name: (c.name ?? `${c.first_name || ''} ${c.last_name || ''}`).trim(),
         phone: c.phone ?? '',
         email: c.email ?? '',
         function_notes: c.function_notes ?? '',
@@ -73,7 +81,7 @@ export default function useClientForm(initialData = {}) {
 
       setFormData({
         id: initialData.id || null,
-  market_id: initialData.market_id ?? '',
+        market_id: initialData.market_id ?? '',
         company_name: initialData.company_name || '',
         client_code_erp: initialData.client_code_erp || '',
         status: initialData.status ?? 1,
@@ -84,13 +92,20 @@ export default function useClientForm(initialData = {}) {
         voivodeship: initialData.voivodeship || '',
         country: initialData.country || '',
         nip: initialData.nip || '',
+        class_category: (initialData.class_category || '-'),
         client_category: (initialData.client_category || '').trim().replace(/\s+/g, '_'),
-  client_subcategory: initialData.client_subcategory || '',
+        client_subcategory: initialData.client_subcategory || '',
         fairs: initialData.fairs || '',
         competition: initialData.competition || '',
         index_of_parent: initialData.index_of_parent || '',
-  engo_team_director: (initialData.engo_team_director || '').trim() || '',
-        engo_team_contact: (initialData.engo_team_contact || '').trim() || '',
+  // UI etykiety ignorują wartości tekstowe z BE; etykieta będzie ustawiona po ID przez UserSelect
+  engo_team_director: '',
+  engo_team_manager: '',
+  engo_team_contact: '',
+        // new: hydrate IDs from record if provided by BE
+        engo_team_director_id: initialData.engo_team_director_user_id || undefined,
+        engo_team_manager_id: initialData.engo_team_manager_user_id || undefined,
+        engo_team_contact_id: initialData.engo_team_user_id || undefined,
         number_of_branches: initialData.number_of_branches || '',
         number_of_sales_reps: initialData.number_of_sales_reps || '',
         www: initialData.www || '',
@@ -121,7 +136,7 @@ export default function useClientForm(initialData = {}) {
         latitude: initialData.latitude || '',
         longitude: initialData.longitude || ''
       });
-  setContacts((initialData.contacts || []).map(sanitizeContact));
+      setContacts((initialData.contacts || []).map(sanitizeContact));
     }
   }, [initialData]);
 
@@ -138,8 +153,18 @@ export default function useClientForm(initialData = {}) {
       'structure_retail',
       'structure_other'
     ].includes(name)) {
-      const numeric = parseInt(newValue, 10);
-      newValue = isNaN(numeric) ? 0 : Math.min(Math.max(numeric, 0), 100);
+      // Allow empty string while typing; clamp only when value is numeric
+      if (newValue === '') {
+        newValue = '';
+      } else {
+        const numeric = parseInt(newValue, 10);
+        // if not a number (e.g., just cleared), keep as '' to avoid forcing 0 immediately
+        if (isNaN(numeric)) {
+          newValue = '';
+        } else {
+          newValue = Math.min(Math.max(numeric, 0), 100);
+        }
+      }
     }
 
     setFormData((prev) => ({ ...prev, [name]: newValue }));
@@ -155,7 +180,7 @@ export default function useClientForm(initialData = {}) {
   const handleAddContact = () => {
     setContacts([
       ...contacts,
-      { department: '', position: '', name: '', phone: '', email: '', function_notes: '', decision_level: '-' }
+      { department: '', position: '', first_name: '', last_name: '', name: '', phone: '', email: '', function_notes: '', decision_level: '-' }
     ]);
   };
 
@@ -168,11 +193,16 @@ export default function useClientForm(initialData = {}) {
   const resetForm = () => {
     setFormData({
       id: null,
-  market_id: '',
+      market_id: '',
       company_name: '', client_code_erp: '', status: 1, data_veryfication: 0,
-      street: '', city: '', postal_code: '', voivodeship: '', country: '', nip: '',
-  client_category: '', fairs: '', competition: '', index_of_parent: '', engo_team_director: '', engo_team_contact: '',
-  client_subcategory: '',
+      street: '', city: '', postal_code: '', voivodeship: '', country: '', nip: '', class_category: '-',
+      client_category: '', fairs: '', competition: '', index_of_parent: '', engo_team_director: '', engo_team_contact: '',
+      engo_team_manager: '',
+      client_subcategory: '',
+      // reset IDs as well
+      engo_team_director_id: undefined,
+      engo_team_manager_id: undefined,
+      engo_team_contact_id: undefined,
       number_of_branches: '', number_of_sales_reps: '', www: '',
       turnover_pln: '', turnover_eur: '', installation_sales_share: '', automatic_sales_share: '', sales_potential: '',
       has_webstore: '', has_b2b_platform: '', has_b2c_platform: '', facebook: '', auction_service: '',

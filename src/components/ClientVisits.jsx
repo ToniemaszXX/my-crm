@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
-import { isTsr } from "../utils/roles";
+import { isTsr, isViewer } from "../utils/roles";
 import { useTranslation } from "react-i18next";
+import { fetchWithAuth } from "../utils/fetchWithAuth";
 
 function ClientVisits({ client, clientId: propClientId, onEdit }) {
   const { user } = useAuth();
@@ -9,6 +10,7 @@ function ClientVisits({ client, clientId: propClientId, onEdit }) {
 
   const [visits, setVisits] = useState(client?.visits || null);
   const [loading, setLoading] = useState(false);
+  const [users, setUsers] = useState([]);
 
   // Ensure numeric clientId to match backend (which returns integers)
   const clientIdRaw = client?.client_id ?? client?.id ?? propClientId;
@@ -40,9 +42,40 @@ function ClientVisits({ client, clientId: propClientId, onEdit }) {
       });
   }, [visits, clientId]);
 
+  // Fetch users to resolve who added the visit
+  useEffect(() => {
+    let ignore = false;
+    fetchWithAuth(`${import.meta.env.VITE_API_URL}/users/list.php`)
+      .then(res => res.json().catch(() => null))
+      .then(data => {
+        if (ignore) return;
+        const list = data?.data || data?.users || [];
+        setUsers(Array.isArray(list) ? list : []);
+      })
+      .catch(() => { if (!ignore) setUsers([]); });
+    return () => { ignore = true; };
+  }, []);
+
   if (!clientId) return null;
   if (loading) return <p>{t('loading')}</p>;
   if (!visits || visits.length === 0) return <p>{t('visitsPage.noVisit')}</p>;
+
+  // helper: prefer "name surname"; fallback to formatting username
+  const formatUserDisplay = (u) => {
+    if (!u) return "—";
+    const parts = [];
+    if (u.name) parts.push(String(u.name));
+    if (u.surname) parts.push(String(u.surname));
+    const joined = parts.join(" ").trim();
+    if (joined) return joined;
+    if (u.username) {
+      return String(u.username)
+        .split(".")
+        .map((p) => (p ? p.charAt(0).toUpperCase() + p.slice(1) : p))
+        .join(" ");
+    }
+    return "—";
+  };
 
   return (
     <ul className="bg-white text-black p-4 rounded mt-2 space-y-2">
@@ -53,28 +86,35 @@ function ClientVisits({ client, clientId: propClientId, onEdit }) {
     const isAfter24h = diffInSeconds > 86400;
     const canEdit = !isTsr(user) || (isTsr(user) && !isAfter24h);
 
-    const renderField = (label, value) => {
+  const renderField = (label, value) => {
       if (!value) return null;
       return (
         <p>
-          <strong>{label}:</strong> {value}
+          <strong>{label}:</strong> {" "}
+          <span className="whitespace-pre-wrap break-words">{value}</span>
         </p>
       );
     };
+  const userId = visit.user_id;
+  const userObj = users.find((u) => String(u.id) === String(userId));
+  const caretaker = formatUserDisplay(userObj);
 
     return (
       <li key={visit.visit_id} className="border p-2 rounded flex justify-between items-start gap-4">
         <div className="space-y-1">
           {renderField(t('visit.date'), visit.visit_date)}
           {renderField("Utworzono", visit.created_at)}
+          {renderField(t('visitsPage.trader'), caretaker)}
           {renderField(t('addVisitModal.contactPerson'), visit.contact_person)}
           {renderField(t('addVisitModal.kindOfMeeting'), visit.meeting_type)}
           {renderField(t('addVisitModal.meetingPurpose'), visit.meeting_purpose)}
           {renderField(t('addVisitModal.postMeetingSummary'), visit.post_meeting_summary)}
           {renderField(t('addVisitModal.marketingTasks'), visit.marketing_tasks)}
+          {renderField(t('visitsPage.marketingResponse'), visit.marketing_response)}
           {renderField(t('addVisitModal.actionPlan'), visit.action_plan)}
           {renderField(t('addVisitModal.competitionInfo'), visit.competition_info)}
           {renderField(t('addVisitModal.additionalNotes'), visit.additional_notes)}
+          {renderField(t('visitsPage.directorResponse'), visit.director_response)}
 
           {visit.attachment_file && (
             <p>
@@ -91,7 +131,7 @@ function ClientVisits({ client, clientId: propClientId, onEdit }) {
           )}
         </div>
 
-        {onEdit && (
+        {onEdit && !isViewer(user) && (
           <button
             onClick={() => canEdit ? onEdit(visit) : alert(t("visit.editBlocked"))}
             className={`h-fit px-3 py-1 rounded ${

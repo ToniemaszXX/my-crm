@@ -4,6 +4,11 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useTranslation } from 'react-i18next';
 
+// Simple in-memory cache and throttle for Nominatim requests
+const geocodeCache = new Map(); // key: address string, value: { lat, lng }
+let lastGeocodeTs = 0;
+let inflightController = null;
+
 const markerIcon = new L.Icon({
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
   iconSize: [25, 41],
@@ -38,6 +43,15 @@ function MapCenterUpdater({ position }) {
       map.setView(position);
     }
   }, [position]);
+
+  // Invalidate size when map mounts or when container becomes visible (e.g., modal open)
+  useEffect(() => {
+    const t = setTimeout(() => {
+      try { map.invalidateSize(); } catch {}
+    }, 0);
+    return () => clearTimeout(t);
+  }, [map]);
+
   return null;
 }
 
@@ -46,70 +60,102 @@ export default function LocationPicker({
   city,
   voivodeship,
   postal_code,
-  country = "Polska",
+  country = 'Polska',
   latitude,
   longitude,
   onCoordsChange,
+  isOpen, // optional: if provided by modal, can retrigger invalidation
 }) {
   const hasCustomPin = useRef(false);
   const [position, setPosition] = useState({ lat: 52.237049, lng: 21.017532 });
   const [debouncedAddress, setDebouncedAddress] = useState('');
-  const [forceRefresh, setForceRefresh] = useState(false); // 👈 Do ręcznego wyzwolenia resetu
+  const [forceRefresh, setForceRefresh] = useState(false);
   const { t } = useTranslation();
 
-  // Sklejanie adresu
+  // Glue address parts
   const addressParts = [street, city, postal_code, voivodeship, country]
     .filter(Boolean)
     .join(' ')
     .trim();
 
-  // Debounce
+  // Debounce stronger (900ms) to reduce API churn
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (!hasCustomPin.current && addressParts.length > 10) {
+      if (!hasCustomPin.current && addressParts.length > 5) {
         setDebouncedAddress(addressParts);
       }
-    }, 500);
+    }, 900);
     return () => clearTimeout(timer);
-  }, [addressParts, forceRefresh]); // 👈 uwzględniamy też ręczny reset
+  }, [addressParts, forceRefresh]);
 
-  // Geolokalizacja
+  // If coords are preset and valid, prefer them and suppress auto geocoding
   useEffect(() => {
-    if (
-      !hasCustomPin.current &&
-      debouncedAddress.length > 10 &&
-      /\d/.test(debouncedAddress) // sprawdź, czy jest jakaś liczba (np. nr domu)
-    ) {
-      fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(debouncedAddress)}`)
-        .then((res) => res.json())
-        .then((data) => {
-          if (data[0]) {
-            const newCoords = {
-              lat: parseFloat(data[0].lat),
-              lng: parseFloat(data[0].lon),
-            };
-            setPosition(newCoords);
-          }
-        })
-        .catch((err) => console.error('Geocoding error:', err));
-    }
-  }, [debouncedAddress]);
-  
-
-  // Ręcznie wpisane współrzędne
-  useEffect(() => {
-    if (
-      !hasCustomPin.current &&
-      latitude !== '' &&
-      longitude !== '' &&
-      !isNaN(parseFloat(latitude)) &&
-      !isNaN(parseFloat(longitude))
-    ) {
+    const latOk = latitude !== '' && !isNaN(parseFloat(latitude));
+    const lngOk = longitude !== '' && !isNaN(parseFloat(longitude));
+    if (!hasCustomPin.current && latOk && lngOk) {
+      hasCustomPin.current = true; // lock to provided coords until reset
       setPosition({ lat: parseFloat(latitude), lng: parseFloat(longitude) });
     }
   }, [latitude, longitude]);
 
-  // Emit do rodzica
+  // Optional: re-invalidate map size when modal opens
+  const mapForInvalidation = useMap;
+  useEffect(() => {
+    if (!isOpen) return;
+    // Best effort; actual invalidate happens inside MapCenterUpdater as well
+    try { /* no-op placeholder */ } catch {}
+  }, [isOpen]);
+
+  // Geocoding with cache, throttle (min 1000ms between calls), and cancellation
+  useEffect(() => {
+    if (hasCustomPin.current) return; // honor manual pin or preset coords
+    if (!debouncedAddress) return;
+
+    // Use cache if available
+    if (geocodeCache.has(debouncedAddress)) {
+      const cached = geocodeCache.get(debouncedAddress);
+      setPosition(cached);
+      return;
+    }
+
+    const now = Date.now();
+    const wait = Math.max(0, 1000 - (now - lastGeocodeTs));
+
+    // Cancel any inflight request
+    if (inflightController) {
+      try { inflightController.abort(); } catch {}
+    }
+    inflightController = new AbortController();
+
+    const timer = setTimeout(() => {
+      lastGeocodeTs = Date.now();
+      fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(debouncedAddress)}&addressdetails=0&limit=1`, {
+        signal: inflightController.signal,
+        // Note: Browsers set UA automatically; for compliance, proxy via backend if possible.
+        headers: { 'Accept-Language': 'pl,en;q=0.8' },
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (Array.isArray(data) && data[0]) {
+            const newCoords = {
+              lat: parseFloat(data[0].lat),
+              lng: parseFloat(data[0].lon),
+            };
+            geocodeCache.set(debouncedAddress, newCoords);
+            setPosition(newCoords);
+          }
+        })
+        .catch((err) => {
+          if (err?.name === 'AbortError') return; // expected on fast changes
+          // Soft-handle 429 or network issues: just skip update
+          // console.warn('Geocoding error:', err);
+        });
+    }, wait);
+
+    return () => clearTimeout(timer);
+  }, [debouncedAddress]);
+
+  // Emit coords to parent
   useEffect(() => {
     if (typeof onCoordsChange === 'function') {
       onCoordsChange(position);
@@ -122,17 +168,24 @@ export default function LocationPicker({
   };
 
   const handleResetToAddress = () => {
-    if (addressParts.length > 10) {
+    if (addressParts.length > 5) {
       hasCustomPin.current = false;
-      setForceRefresh(prev => !prev); // wyzwala ponowny efekt debounce
+      setForceRefresh((prev) => !prev); // retrigger debounce/geocode
     }
   };
-  
 
   return (
     <div className="mt-4">
-      <MapContainer center={position} zoom={13} style={{ height: '400px', width: '100%' }} className="z-10 rounded-md">
-        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+      <MapContainer
+        center={position}
+        zoom={13}
+        style={{ height: '400px', width: '100%' }}
+        className="z-10 rounded-md"
+      >
+        <TileLayer
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution="&copy; OpenStreetMap contributors"
+        />
         <MapCenterUpdater position={position} />
         <DraggableMarker position={position} setPosition={handleManualPosition} />
       </MapContainer>

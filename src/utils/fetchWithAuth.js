@@ -22,7 +22,7 @@ export async function fetchWithAuth(url, options = {}) {
   Accept: 'application/json',
   };
 
-  console.log('[fetchWithAuth] Request', { url, options: { ...restOptions, headers: finalHeaders } });
+  // console.log('[fetchWithAuth] Request', { url, options: { ...restOptions, headers: finalHeaders } });
   let res = await fetch(url, {
     ...restOptions,
     headers: finalHeaders,
@@ -66,6 +66,6 @@ export async function fetchWithAuth(url, options = {}) {
     }
   }
 
-  console.log('[fetchWithAuth] Response', { url, status: res.status, ok: res.ok });
+  // console.log('[fetchWithAuth] Response', { url, status: res.status, ok: res.ok });
   return res;
 }
