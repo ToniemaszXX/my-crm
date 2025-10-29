@@ -17,6 +17,10 @@ import Mapa from './common/Mapa';
 import FormField from './common/FormField';
 import PillCheckbox from './common/PillCheckbox';
 import Rating5 from './common/Rating5';
+import AutosaveIndicator from './AutosaveIndicator';
+import { useDraftAutosave } from '../utils/useDraftAutosave';
+import { draftsDiscard } from '../api/drafts';
+import { lsDiscardDraft } from '../utils/autosaveStorage';
 
 function EditDesignerModal({ isOpen, designer, onClose, onDesignerUpdated }) {
   const { t } = useTranslation();
@@ -24,6 +28,11 @@ function EditDesignerModal({ isOpen, designer, onClose, onDesignerUpdated }) {
   const [errors, setErrors] = useState({});
   const [formData, setFormData] = useState(null);
   const { user } = useAuth();
+  const contextKeyRef = useRef(designer?.id ? `designer_edit_${designer.id}` : 'designer_edit');
+  useEffect(() => {
+    if (designer?.id) contextKeyRef.current = `designer_edit_${designer.id}`;
+    localStorage.setItem('draft_ctx_designer_edit', contextKeyRef.current);
+  }, [designer?.id]);
 
   useEffect(() => {
     if (designer && isOpen) {
@@ -166,8 +175,11 @@ function EditDesignerModal({ isOpen, designer, onClose, onDesignerUpdated }) {
       });
       const text = await res.text(); let data = null; try { data = text ? JSON.parse(text) : null; } catch { }
       if (!(res.ok && data?.success)) { alert(data?.message || 'Błąd zapisu projektanta'); setIsSaving(false); return; }
-      onDesignerUpdated?.(formData.id);
-      onClose?.();
+  onDesignerUpdated?.(formData.id);
+  try { if (draftId) await draftsDiscard(draftId); } catch {}
+  try { lsDiscardDraft({ entityType: 'designer', contextKey: contextKeyRef.current }); } catch {}
+  localStorage.removeItem('draft_ctx_designer_edit');
+  onClose?.();
     } catch (err) { console.error(err); alert(`Błąd: ${err.message}`); }
     finally { setIsSaving(false); }
   };
@@ -177,11 +189,28 @@ function EditDesignerModal({ isOpen, designer, onClose, onDesignerUpdated }) {
 
   if (!isOpen || !formData) return null;
 
+  const isDirty = !!((formData.company_name||'').trim() || (formData.street||'').trim() || (formData.city||'').trim() || (formData.www||'').trim() || (formData.facebook||'').trim() || (formData.additional_info||'').trim());
+
+  const { status, nextInMs, lastSavedAt, saveNow, draftId, initialRestored } = useDraftAutosave({
+    entityType: 'designer',
+    entityId: designer?.id,
+    contextKey: contextKeyRef.current,
+    values: formData,
+    isDirty,
+    enabled: isOpen,
+  });
+
+  useEffect(() => {
+    if (initialRestored && isOpen) {
+      setFormData((prev) => ({ ...prev, ...initialRestored }));
+    }
+  }, [initialRestored, isOpen]);
+
   return (
     <div className='fixed inset-0 bg-black/50 flex justify-center items-center z-[99]'>
       <div className='bg-neutral-100 pb-8 rounded-lg w-[1100px] max-h-[90vh] overflow-y-auto'>
         <div className="bg-neutral-100 flex justify-between items-center sticky top-0 z-50 p-4 border-b border-neutral-300">
-          <h2 className="text-lime-500 text-xl font-extrabold">{t('designerModal.title') || 'Edytuj Projektanta'}</h2>
+          <h2 className="text-lime-500 text-xl font-extrabold flex items-center gap-3">{t('designerModal.title') || 'Edytuj Projektanta'} <AutosaveIndicator status={status} nextInMs={nextInMs} lastSavedAt={lastSavedAt} onSaveNow={saveNow} /></h2>
           <button className="text-black hover:text-red-500 text-2xl font-bold bg-neutral-300 rounded-lg w-10 h-10 flex items-center justify-center leading-none" onClick={onClose} aria-label="Close modal">
             <X size={20} />
           </button>

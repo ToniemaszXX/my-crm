@@ -1,5 +1,5 @@
 // src/components/AddClientModal.jsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import useClientForm from '../hooks/useClientForm';
 import LocationPicker from './LocationPicker';
 import { useTranslation } from 'react-i18next';
@@ -20,6 +20,10 @@ import Section from './common/Section';
 import Grid from './common/Grid';
 import FormField from './common/FormField';
 import Mapa from './common/Mapa';
+import AutosaveIndicator from './AutosaveIndicator';
+import { useDraftAutosave } from '../utils/useDraftAutosave';
+import { draftsDiscard } from '../api/drafts';
+import { lsDiscardDraft } from '../utils/autosaveStorage';
 
 const normalizeCategory = cat => (cat ? cat.toString() : '').trim().replace(/\s+/g, '_');
 
@@ -34,6 +38,21 @@ function AddClientModal({ isOpen, onClose, onClientAdded, allClients }) {
   const [errors, setErrors] = useState({}); // { pole: komunikat }
   const { user } = useAuth();
   const [selectedDistributors, setSelectedDistributors] = useState([]); // up to 3 client ids
+  // Stały context_key między reloadami (do czasu finalnego zapisu)
+  const contextStorageKey = 'draft_ctx_customer';
+  const contextKeyRef = useRef(null);
+  if (contextKeyRef.current === null) {
+    let existing = null;
+    try { existing = localStorage.getItem(contextStorageKey); } catch {}
+    if (!existing) {
+      const gen = (typeof crypto !== 'undefined' && crypto.randomUUID)
+        ? `customer-new-${crypto.randomUUID()}`
+        : `customer-new-${Date.now()}-${Math.floor(Math.random()*1e6)}`;
+      existing = gen;
+      try { localStorage.setItem(contextStorageKey, existing); } catch {}
+    }
+    contextKeyRef.current = existing;
+  }
 
   // Auto-assign market_id if user has a single market; leave empty if multiple for manual selection
   useEffect(() => {
@@ -98,7 +117,7 @@ function AddClientModal({ isOpen, onClose, onClientAdded, allClients }) {
       delete clientPayload.index_of_parent;
     }
 
-    try {
+  try {
       // 2) Najpierw tworzymy klienta
       const resClient = await fetchWithAuth(`${import.meta.env.VITE_API_URL}/customers/add.php`, {
         method: 'POST',
@@ -149,6 +168,10 @@ function AddClientModal({ isOpen, onClose, onClientAdded, allClients }) {
       }
 
       alert(t('addClientModal.success'));
+  // Po sukcesie: odrzuć szkic (BE + localStorage) i usuń context_key
+  try { if (draftId) await draftsDiscard(draftId); } catch {}
+  try { lsDiscardDraft({ entityType: 'customer', contextKey: contextKeyRef.current }); } catch {}
+  try { localStorage.removeItem(contextStorageKey); } catch {}
       resetForm();
       onClientAdded?.();
       onClose();
@@ -162,6 +185,42 @@ function AddClientModal({ isOpen, onClose, onClientAdded, allClients }) {
 
   const wrapSubmit = usePreventDoubleSubmit();
   const safeSubmit = wrapSubmit(handleSubmit);
+
+  // AUTOSAVE: wartości pod autosave (formData + contacts)
+  const autosaveValues = useMemo(() => ({ formData, contacts }), [formData, contacts]);
+
+  // Heurystyczne isDirty bez odwołania do initialRestored (unikamy TDZ)
+  const computedIsDirty = useMemo(() => {
+    const hasCore = (
+      String(formData.company_name || '').trim() !== '' ||
+      String(formData.city || '').trim() !== '' ||
+      String(formData.street || '').trim() !== '' ||
+      String(formData.nip || '').trim() !== '' ||
+      (Array.isArray(contacts) && contacts.length > 0)
+    );
+    // unikamy autosave dopóki nic nie wpisano
+    return hasCore;
+  }, [formData.company_name, formData.city, formData.street, formData.nip, contacts?.length]);
+
+  const { status: autosaveStatus, nextInMs, lastSavedAt, saveNow, draftId, initialRestored } = useDraftAutosave({
+    entityType: 'customer',
+    contextKey: contextKeyRef.current,
+    values: autosaveValues,
+    isDirty: computedIsDirty,
+    enabled: isOpen,
+  });
+
+  // Hydratacja formularza danymi ze szkicu (jednorazowo, jeśli jest)
+  const hydratedRef = useRef(false);
+  useEffect(() => {
+    if (!isOpen) return;
+    if (hydratedRef.current) return;
+    if (!initialRestored) return;
+    hydratedRef.current = true;
+    const { formData: fd, contacts: ct } = initialRestored || {};
+    if (fd && typeof fd === 'object') setFormData((prev) => ({ ...prev, ...fd }));
+    if (Array.isArray(ct)) setContacts(ct);
+  }, [initialRestored, isOpen, setFormData, setContacts]);
 
   // wspólne propsy dla <input type="number"> (kwoty, procenty, lat/lng)
   const numberInputGuards = {
@@ -244,9 +303,17 @@ function AddClientModal({ isOpen, onClose, onClientAdded, allClients }) {
       <div className='bg-neutral-100 pb-8 rounded-lg w-[1100px] max-h-[90vh] overflow-y-auto'>
         <div className="bg-neutral-100 flex justify-between items-center sticky top-0 z-50 p-4 border-b border-neutral-300">
           <h2 className="text-lime-500 text-xl font-extrabold">{t('addClientModal.title')}</h2>
-          <button className="text-black hover:text-red-500 text-2xl font-bold bg-neutral-300 rounded-lg w-10 h-10 flex items-center justify-center leading-none" onClick={onClose} aria-label="Close modal">
+          <div className="flex items-center gap-3">
+            <AutosaveIndicator
+              status={autosaveStatus}
+              nextInMs={nextInMs}
+              lastSavedAt={lastSavedAt}
+              onSaveNow={saveNow}
+            />
+            <button className="text-black hover:text-red-500 text-2xl font-bold bg-neutral-300 rounded-lg w-10 h-10 flex items-center justify-center leading-none" onClick={onClose} aria-label="Close modal">
             <X size={20} />
-          </button>
+            </button>
+          </div>
         </div>
 
         <form

@@ -16,6 +16,10 @@ import FormField from './common/FormField';
 import PillCheckbox from './common/PillCheckbox';
 import UserSelect from './UserSelect';
 import { isReadOnly, isBok, isAdminManager } from '../utils/roles';
+import AutosaveIndicator from './AutosaveIndicator';
+import { useDraftAutosave } from '../utils/useDraftAutosave';
+import { draftsDiscard } from '../api/drafts';
+import { lsDiscardDraft } from '../utils/autosaveStorage';
 
 function EditDeweloperModal({ isOpen, developer, onClose, onDeveloperUpdated }) {
   const { t } = useTranslation();
@@ -23,6 +27,11 @@ function EditDeweloperModal({ isOpen, developer, onClose, onDeveloperUpdated }) 
   const [errors, setErrors] = useState({});
   const [formData, setFormData] = useState(null);
   const { user } = useAuth();
+  const contextKeyRef = useRef(developer?.id ? `developer_edit_${developer.id}` : 'developer_edit');
+  useEffect(() => {
+    if (developer?.id) contextKeyRef.current = `developer_edit_${developer.id}`;
+    localStorage.setItem('draft_ctx_developer_edit', contextKeyRef.current);
+  }, [developer?.id]);
 
   useEffect(() => {
     if (developer && isOpen) {
@@ -165,8 +174,11 @@ function EditDeweloperModal({ isOpen, developer, onClose, onDeveloperUpdated }) 
       });
       let data = {}; try { data = await res.json(); } catch { }
       if (!(res.ok && data?.success)) { alert(data?.message || 'Błąd zapisu dewelopera'); setIsSaving(false); return; }
-      onDeveloperUpdated?.(formData.id);
-      onClose?.();
+  onDeveloperUpdated?.(formData.id);
+  try { if (draftId) await draftsDiscard(draftId); } catch {}
+  try { lsDiscardDraft({ entityType: 'developer', contextKey: contextKeyRef.current }); } catch {}
+  localStorage.removeItem('draft_ctx_developer_edit');
+  onClose?.();
     } catch (err) { console.error(err); alert(`Błąd: ${err.message}`); }
     finally { setIsSaving(false); }
   };
@@ -176,11 +188,28 @@ function EditDeweloperModal({ isOpen, developer, onClose, onDeveloperUpdated }) 
 
   if (!isOpen || !formData) return null;
 
+  const isDirty = !!((formData.company_name||'').trim() || (formData.street||'').trim() || (formData.city||'').trim() || (formData.www||'').trim() || (formData.facebook||'').trim() || (formData.additional_info||'').trim());
+
+  const { status, nextInMs, lastSavedAt, saveNow, draftId, initialRestored } = useDraftAutosave({
+    entityType: 'developer',
+    entityId: developer?.id,
+    contextKey: contextKeyRef.current,
+    values: formData,
+    isDirty,
+    enabled: isOpen,
+  });
+
+  useEffect(() => {
+    if (initialRestored && isOpen) {
+      setFormData((prev) => ({ ...prev, ...initialRestored }));
+    }
+  }, [initialRestored, isOpen]);
+
   return (
     <div className='fixed inset-0 bg-black/50 flex justify-center items-center z-[99]'>
       <div className='bg-neutral-100 pb-8 rounded-lg w-[1100px] max-h-[90vh] overflow-y-auto'>
         <div className="bg-neutral-100 flex justify-between items-center sticky top-0 z-50 p-4 border-b border-neutral-300">
-          <h2 className="text-lime-500 text-xl font-extrabold">{t('developerModal.title') || 'Edytuj Dewelopera'}</h2>
+          <h2 className="text-lime-500 text-xl font-extrabold flex items-center gap-3">{t('developerModal.title') || 'Edytuj Dewelopera'} <AutosaveIndicator status={status} nextInMs={nextInMs} lastSavedAt={lastSavedAt} onSaveNow={saveNow} /></h2>
           <button className="text-black hover:text-red-500 text-2xl font-bold bg-neutral-300 rounded-lg w-10 h-10 flex items-center justify-center leading-none" onClick={onClose} aria-label="Close modal">
             <X size={20} />
           </button>

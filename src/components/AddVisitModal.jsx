@@ -5,6 +5,14 @@ import { isTsr } from '../utils/roles';
 import { checkSessionBeforeSubmit } from '../utils/checkSessionBeforeSubmit';
 import { fetchWithAuth } from '../utils/fetchWithAuth';
 import { usePreventDoubleSubmit } from '../utils/preventDoubleSubmit';
+import { X } from 'lucide-react';
+import AutosaveIndicator from './AutosaveIndicator';
+import { useDraftAutosave } from '../utils/useDraftAutosave';
+import { draftsDiscard } from '../api/drafts';
+import { lsDiscardDraft } from '../utils/autosaveStorage';
+import Section from './common/Section';
+import Grid from './common/Grid';
+import FormField from './common/FormField';
 
 
 function AddVisitModal({ isOpen, onClose, onVisitAdded, clients, fixedClientId, entityType = 'client', entities, fixedEntityId }) {
@@ -32,6 +40,25 @@ function AddVisitModal({ isOpen, onClose, onVisitAdded, clients, fixedClientId, 
   const { user } = useAuth();
   const [formErrors, setFormErrors] = useState({});
   const [serverError, setServerError] = useState("");
+
+  // Persisted context key per entity target (visit-new-<type>-<id>)
+  const ctxStorageKey = useMemo(() => {
+    const id = fixedEntityId || fixedClientId || 'none';
+    return `draft_ctx_visit_${entityType}_${id}`;
+  }, [entityType, fixedEntityId, fixedClientId]);
+  const contextKeyRef = useRef(null);
+  if (contextKeyRef.current === null) {
+    let existing = null;
+    try { existing = localStorage.getItem(ctxStorageKey); } catch {}
+    if (!existing) {
+      const gen = (typeof crypto !== 'undefined' && crypto.randomUUID)
+        ? `visit-new-${entityType}-${(fixedEntityId||fixedClientId||'x')}-${crypto.randomUUID()}`
+        : `visit-new-${entityType}-${(fixedEntityId||fixedClientId||'x')}-${Date.now()}-${Math.floor(Math.random()*1e6)}`;
+      existing = gen;
+      try { localStorage.setItem(ctxStorageKey, existing); } catch {}
+    }
+    contextKeyRef.current = existing;
+  }
 
 
   const validateForm = () => {
@@ -134,10 +161,14 @@ function AddVisitModal({ isOpen, onClose, onVisitAdded, clients, fixedClientId, 
         return;
       }
 
-    if (data.success) {
-        onVisitAdded();
-        onClose();
-        setFormData({
+  if (data.success) {
+    onVisitAdded();
+    // discard draft after successful save
+    try { if (draftId) await draftsDiscard(draftId); } catch {}
+    try { lsDiscardDraft({ entityType: 'visit', contextKey: contextKeyRef.current }); } catch {}
+    try { localStorage.removeItem(ctxStorageKey); } catch {}
+    onClose();
+    setFormData({
           client_id: "",
           designer_id: "",
           installer_id: "",
@@ -174,16 +205,37 @@ function AddVisitModal({ isOpen, onClose, onVisitAdded, clients, fixedClientId, 
   const wrapSubmit = usePreventDoubleSubmit(); // <== poprawne
   const safeSubmit = wrapSubmit(handleSubmit);
 
+  // AUTOSAVE for visits (only basic fields + target)
+  const autosaveValues = useMemo(() => formData, [formData]);
+  const computedIsDirty = useMemo(() => {
+    return (
+      !!(formData.visit_date || '').trim() ||
+      !!(formData.contact_person || '').trim() ||
+      !!(formData.meeting_purpose || '').trim() ||
+      !!(formData.post_meeting_summary || '').trim() ||
+      !!(formData.action_plan || '').trim() ||
+      !!(formData.competition_info || '').trim()
+    );
+  }, [formData]);
+
+  const { status: autosaveStatus, nextInMs, lastSavedAt, saveNow, draftId } = useDraftAutosave({
+    entityType: 'visit',
+    contextKey: contextKeyRef.current,
+    values: autosaveValues,
+    isDirty: computedIsDirty,
+    enabled: isOpen,
+  });
+
   const fields = [
-    { name: "meeting_purpose", label: t('addVisitModal.meetingPurpose') },
-    { name: "post_meeting_summary", label: t('addVisitModal.postMeetingSummary') },
-    { name: "marketing_tasks", label: t('addVisitModal.marketingTasks') },
-    { name: "action_plan", label: t('addVisitModal.actionPlan') },
+    { name: "meeting_purpose", label: t('visit.goal') || t('addVisitModal.meetingPurpose') },
+    { name: "post_meeting_summary", label: t('visitsPage.resume') || t('addVisitModal.postMeetingSummary') },
+    { name: "marketing_tasks", label: t('visitsPage.marketing') || t('addVisitModal.marketingTasks') },
+    { name: "action_plan", label: t('visitsPage.toDo') || t('addVisitModal.actionPlan') },
     { name: "competition_info", label: t('addVisitModal.competitionInfo') },
   ];
 
   if (!isTsr(user)) {
-    fields.push({ name: "additional_notes", label: t('addVisitModal.additionalNotes') });
+    fields.push({ name: "additional_notes", label: t('common.additionalInfo') || t('addVisitModal.additionalNotes') });
   }
 
 
@@ -380,158 +432,175 @@ function AddVisitModal({ isOpen, onClose, onVisitAdded, clients, fixedClientId, 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-start pt-20  z-[99]">
-      <div className="bg-white text-black p-6 rounded-lg w-[600px] max-h-[90vh] overflow-y-auto">
-        <h2 className="text-xl font-bold mb-4">{t('addVisitModal.addVisit')}</h2>
-        <form onSubmit={safeSubmit} className="space-y-3">
+    <div className='fixed inset-0 bg-black/50 flex justify-center items-center z-[99]'>
+      <div className='bg-neutral-100 pb-8 rounded-lg w-[800px] max-h-[90vh] overflow-y-auto'>
+        <div className="bg-neutral-100 flex justify-between items-center sticky top-0 z-50 p-4 border-b border-neutral-300 mb-5">
+          <h2 className="text-lime-500 text-xl font-extrabold">{t('addVisitModal.addVisit') || t('addVisit')}</h2>
+          <div className="flex items-center gap-3">
+            <AutosaveIndicator status={autosaveStatus} nextInMs={nextInMs} lastSavedAt={lastSavedAt} onSaveNow={saveNow} />
+            <button className="text-black hover:text-red-500 text-2xl font-bold bg-neutral-300 rounded-lg w-10 h-10 flex items-center justify-center leading-none" onClick={onClose} aria-label="Close modal">
+              <X size={20} />
+            </button>
+          </div>
+        </div>
+        <form onSubmit={safeSubmit} className="text-white flex flex-col gap-3 pl-8 pr-8">
+          <Section>
+            <div className="flex flex-col gap-3">
 
-          <label className="text-neutral-800">{chooseLabel}
-            {/* Searchable picker */}
-            <div className="relative" ref={pickerRef}>
-              {disabled ? (
-                <input
-                  type="text"
-                  className="w-full border p-2 bg-gray-100 cursor-not-allowed"
-                  value={selectedOption?.company_name || ""}
-                  placeholder={chooseLabel}
-                  readOnly
-                />
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => setIsPickerOpen((o) => !o)}
-                    className="w-full border p-2 bg-white text-left rounded"
-                  >
-                    {selectedOption?.company_name || chooseLabel}
-                  </button>
-                  {isPickerOpen && (
-                    <div className="absolute z-20 mt-1 w-full bg-white border rounded shadow-lg">
-                      <div className="p-2 border-b">
-                        <input
-                          type="text"
-                          autoFocus
-                          value={pickerQuery}
-                          onChange={(e) => setPickerQuery(e.target.value)}
-                          placeholder={t('visitsPage.searchPlaceholder')}
-                          className="w-full border p-2 rounded"
-                        />
-                      </div>
-                      <div className="max-h-64 overflow-y-auto">
-                        {filteredOptions.length === 0 ? (
-                          <div className="p-3 text-gray-500">—</div>
-                        ) : (
-                          filteredOptions.map((c) => (
-                            <button
-                              type="button"
-                              key={c.id || c.client_id}
-                              onMouseDown={(e) => { e.stopPropagation(); handlePick(c); }}
-                              onClick={(e) => e.stopPropagation()}
-                              className="w-full text-left px-3 py-2 hover:bg-gray-100"
-                            >
-                              {c.company_name}
-                            </button>
-                          ))
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-
-            {(formErrors.target || formErrors[idFieldName] || formErrors.client_id) && (
-              <p className="text-red-600 text-sm mt-1">{formErrors.target || formErrors[idFieldName] || formErrors.client_id}</p>
-            )}
-          </label>
-
-
-          <label className="text-neutral-800">{t('addVisitModal.setDate')}
-            <input
-              type="date"
-              name="visit_date"
-              value={formData.visit_date}
-              onChange={handleChange}
-              className="w-full border p-2"
-            />
-            {formErrors.visit_date && (
-              <p className="text-red-600 text-sm mt-1">{formErrors.visit_date}</p>
-            )}
-          </label>
-
-          <label className="text-neutral-800">{t('addVisitModal.contactPerson')}
-            <div className="relative" ref={contactRef}>
-              <input
-                type="text"
-                name="contact_person"
-                placeholder={t('addVisitModal.contactPersonPlaceholder')}
-                value={formData.contact_person}
-                onChange={(e) => { handleChange(e); setIsContactOpen(true); }}
-                onFocus={() => setIsContactOpen(true)}
-                className="w-full border p-2"
-                autoComplete="off"
-              />
-              {isContactOpen && (
-                <div className="absolute z-20 mt-1 w-full bg-white border rounded shadow-lg max-h-64 overflow-y-auto">
-                  {filteredContacts.length > 0 ? (
-                    filteredContacts.map((c) => (
-                      <button
-                        key={c.id}
-                        type="button"
-                        onMouseDown={(e) => { e.preventDefault(); handleContactPick(c); }}
-                        className="w-full text-left px-3 py-2 hover:bg-gray-100"
-                      >
-                        {toFullName(c)}
-                      </button>
-                    ))
+          <div className="border-0 p-0 mb-0">
+            <Grid className="grid-cols-1 md:!grid-cols-1">
+              <FormField id="target" label={chooseLabel} error={formErrors.target || formErrors[idFieldName] || formErrors.client_id}>
+                <div className="relative" ref={pickerRef}>
+                  {disabled ? (
+                    <input
+                      type="text"
+                      className="w-full border border-neutral-300 rounded px-3 py-2 bg-neutral-200 cursor-not-allowed"
+                      value={selectedOption?.company_name || ""}
+                      placeholder={chooseLabel}
+                      readOnly
+                    />
                   ) : (
-                    <div className="px-3 py-2 text-gray-500">—</div>
-                  )}
-                  {canAddContact && (
-                    <div className="border-t">
+                    <>
                       <button
                         type="button"
-                        onMouseDown={(e) => { e.preventDefault(); handleAddNewContact(); }}
-                        disabled={isAddingContact}
-                        className="w-full text-left px-3 py-2 hover:bg-gray-100 text-green-700 disabled:opacity-60"
+                        onClick={() => setIsPickerOpen((o) => !o)}
+                        className="w-full border border-neutral-300 rounded px-3 py-2 bg-white text-left"
                       >
-                        + {t('addClientModal.save')} kontakt: "{formData.contact_person}"
+                        {selectedOption?.company_name || chooseLabel}
                       </button>
+                      {isPickerOpen && (
+                        <div className="absolute z-20 mt-1 w-full bg-white border rounded shadow-lg">
+                          <div className="p-2 border-b">
+                            <input
+                              type="text"
+                              autoFocus
+                              value={pickerQuery}
+                              onChange={(e) => setPickerQuery(e.target.value)}
+                              placeholder={t('visitsPage.searchPlaceholder')}
+                              className="w-full border border-neutral-300 rounded px-3 py-2"
+                            />
+                          </div>
+                          <div className="max-h-64 overflow-y-auto">
+                            {filteredOptions.length === 0 ? (
+                              <div className="p-3 text-gray-500">—</div>
+                            ) : (
+                              filteredOptions.map((c) => (
+                                <button
+                                  type="button"
+                                  key={c.id || c.client_id}
+                                  onMouseDown={(e) => { e.stopPropagation(); handlePick(c); }}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="w-full text-left px-3 py-2 hover:bg-neutral-100"
+                                >
+                                  {c.company_name}
+                                </button>
+                              ))
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              </FormField>
+            </Grid>
+          </div>
+
+          <div className="border-0 p-0 mb-0">
+            <Grid className="grid-cols-1 md:!grid-cols-1">
+              <FormField id="visit_date" label={t('addVisitModal.setDate')} error={formErrors.visit_date}>
+                <input
+                  type="date"
+                  name="visit_date"
+                  value={formData.visit_date}
+                  onChange={handleChange}
+                  className="w-full border border-neutral-300 rounded px-3 py-2 bg-white"
+                />
+              </FormField>
+            </Grid>
+          </div>
+
+          <div className="border-0 p-0 mb-0">
+            <Grid className="grid-cols-1 md:!grid-cols-1">
+              <FormField id="contact_person" label={t('addVisitModal.contactPerson')} error={formErrors.contact_person}>
+                <div className="relative" ref={contactRef}>
+                  <input
+                    type="text"
+                    name="contact_person"
+                    placeholder={t('addVisitModal.contactPersonPlaceholder')}
+                    value={formData.contact_person}
+                    onChange={(e) => { handleChange(e); setIsContactOpen(true); }}
+                    onFocus={() => setIsContactOpen(true)}
+                    className="w-full border border-neutral-300 rounded px-3 py-2 bg-white"
+                    autoComplete="off"
+                  />
+                  {isContactOpen && (
+                    <div className="absolute z-20 mt-1 w-full bg-white border rounded shadow-lg max-h-64 overflow-y-auto">
+                      {filteredContacts.length > 0 ? (
+                        filteredContacts.map((c) => (
+                          <button
+                            key={c.id}
+                            type="button"
+                            onMouseDown={(e) => { e.preventDefault(); handleContactPick(c); }}
+                            className="w-full text-left px-3 py-2 hover:bg-neutral-100"
+                          >
+                            {toFullName(c)}
+                          </button>
+                        ))
+                      ) : (
+                        <div className="px-3 py-2 text-gray-500">—</div>
+                      )}
+                      {canAddContact && (
+                        <div className="border-t">
+                          <button
+                            type="button"
+                            onMouseDown={(e) => { e.preventDefault(); handleAddNewContact(); }}
+                            disabled={isAddingContact}
+                            className="w-full text-left px-3 py-2 hover:bg-neutral-100 text-green-700 disabled:opacity-60"
+                          >
+                            + {t('addClientModal.save')} kontakt: "{formData.contact_person}"
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
-              )}
-            </div>
-            {formErrors.contact_person && (
-              <p className="text-red-600 text-sm mt-1">{formErrors.contact_person}</p>
-            )}
-          </label>
+              </FormField>
+            </Grid>
+          </div>
 
-          <label className="text-neutral-800">{t('addVisitModal.kindOfMeeting')}
-            <select
-              name="meeting_type"
-              value={formData.meeting_type}
-              onChange={handleChange}
-              className="w-full border p-2"
-            >
-              <option value="meeting">{t('addVisitModal.kindOfMeeting.meeting')}</option>
-              <option value="call">{t('addVisitModal.kindOfMeeting.call')}</option>
-              <option value="email">{t('addVisitModal.kindOfMeeting.email')}</option>
-              <option value="video">{t('addVisitModal.kindOfMeeting.video')}</option>
-            </select>
-          </label>
+          <div className="border-0 p-0 mb-0">
+            <Grid className="grid-cols-1 md:!grid-cols-1">
+              <FormField id="meeting_type" label={t('addVisitModal.kindOfMeeting')}>
+                <select
+                  name="meeting_type"
+                  value={formData.meeting_type}
+                  onChange={handleChange}
+                  className="w-full border border-neutral-300 rounded px-3 py-2 bg-white"
+                >
+                  <option value="meeting">{t('addVisitModal.kindOfMeeting.meeting')}</option>
+                  <option value="call">{t('addVisitModal.kindOfMeeting.call')}</option>
+                  <option value="email">{t('addVisitModal.kindOfMeeting.email')}</option>
+                  <option value="video">{t('addVisitModal.kindOfMeeting.video')}</option>
+                </select>
+              </FormField>
+            </Grid>
+          </div>
 
-          {fields.map(({ name, label }) => (
-            <label key={name} className="text-neutral-800">{label}
-              <textarea
-                key={name}
-                name={name}
-                value={formData[name]}
-                onChange={handleChange}
-                className="w-full border p-2"
-              />
-            </label>
-          ))}
+          <div className="border-0 p-0 mb-0">
+            <Grid className="grid-cols-1 md:!grid-cols-1">
+              {fields.map(({ name, label }) => (
+                <FormField key={name} id={name} label={label}>
+                  <textarea
+                    name={name}
+                    value={formData[name]}
+                    onChange={handleChange}
+                    className="w-full border border-neutral-300 rounded px-3 py-2 min-h-[80px] bg-white text-neutral-950"
+                  />
+                </FormField>
+              ))}
+            </Grid>
+          </div>
 
           {serverError && (
             <div className="text-red-600 font-semibold p-2 border border-red-400 bg-red-100 rounded">
@@ -539,7 +608,7 @@ function AddVisitModal({ isOpen, onClose, onVisitAdded, clients, fixedClientId, 
             </div>
           )}
 
-          <div className="flex justify-end gap-2">
+          <div className='flex justify-end mt-5 gap-2'>
             <button type="button" onClick={onClose} className="buttonRed">
               {t('addClientModal.cancel')}
             </button>
@@ -547,6 +616,8 @@ function AddVisitModal({ isOpen, onClose, onVisitAdded, clients, fixedClientId, 
               {t('addClientModal.save')}
             </button>
           </div>
+            </div>
+          </Section>
         </form>
       </div>
     </div>

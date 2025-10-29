@@ -5,6 +5,10 @@ import { fetchWithAuth } from '../utils/fetchWithAuth';
 import { usePreventDoubleSubmit } from '../utils/preventDoubleSubmit';
 import { useAuth } from '../context/AuthContext';
 import { isAdminManager } from '../utils/roles';
+import Section from './common/Section';
+import Grid from './common/Grid';
+import FormField from './common/FormField';
+import { X } from 'lucide-react';
 
 function EditVisitModal({ isOpen, onClose, onVisitUpdated, visit, clients, entityType = 'client', entities, fixedEntityId }) {
   const { user } = useAuth();
@@ -188,79 +192,90 @@ function EditVisitModal({ isOpen, onClose, onVisitUpdated, visit, clients, entit
     : t('addVisitModal.chooseClient');
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-start pt-20  z-[99]">
-      <div className="bg-white text-black p-6 rounded-lg w-[600px] max-h-[90vh] overflow-y-auto">
-        <h2 className="text-xl font-bold mb-4">{t('editVisitModal.editVisit')}</h2>
-        <form onSubmit={safeSubmit} className="space-y-3">
+    <div className='fixed inset-0 bg-black/50 flex justify-center items-center z-[99]'>
+      <div className='bg-neutral-100 pb-8 rounded-lg w-[1100px] max-h-[90vh] overflow-y-auto'>
+        <div className="bg-neutral-100 flex justify-between items-center sticky top-0 z-50 p-4 border-b border-neutral-300">
+          <h2 className="text-lime-500 text-xl font-extrabold">{t('editVisitModal.editVisit')}</h2>
+          <button className="text-black hover:text-red-500 text-2xl font-bold bg-neutral-300 rounded-lg w-10 h-10 flex items-center justify-center leading-none" onClick={onClose} aria-label="Close modal">
+            <X size={20} />
+          </button>
+        </div>
+        <form onSubmit={safeSubmit} className="text-white flex flex-col gap-3 pl-8 pr-8">
 
 
-      <label className="text-neutral-800">{chooseLabel}
-            <select
-              name={idFieldName}
-              value={selectValue}
-              onChange={handleChange}
-              className="w-full border p-2"
-              required
-              disabled={disabled}
-            >
-        <option value="">{chooseLabel}</option>
-              {(list || [])
-                .filter(c => c.id && c.company_name)
-                .sort((a, b) => a.company_name.localeCompare(b.company_name))
-                .map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.company_name}
-                  </option>
-                ))}
-            </select>
+          <Section title={t('addVisitModal.target') || chooseLabel}>
+            <Grid>
+              <FormField id="target" label={chooseLabel} error={formErrors.target || formErrors[idFieldName] || formErrors.client_id}>
+                <select
+                  name={idFieldName}
+                  value={selectValue}
+                  onChange={handleChange}
+                  className="w-full border border-neutral-300 rounded px-3 py-2 bg-white"
+                  required
+                  disabled={disabled}
+                >
+                  <option value="">{chooseLabel}</option>
+                  {(list || [])
+                    .filter(c => c.id && c.company_name)
+                    .sort((a, b) => a.company_name.localeCompare(b.company_name))
+                    .map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.company_name}
+                      </option>
+                    ))}
+                </select>
+              </FormField>
+            </Grid>
+          </Section>
 
-            {(formErrors.target || formErrors[idFieldName] || formErrors.client_id) && (
-              <p className="text-red-600 text-sm mt-1">{formErrors.target || formErrors[idFieldName] || formErrors.client_id}</p>
-            )}
-          </label>
+          <Section title={t('addVisitModal.setDate')}>
+            <Grid>
+              <FormField id="visit_date" label={t('addVisitModal.setDate')} error={formErrors.visit_date}>
+                <input
+                  type="date"
+                  name="visit_date"
+                  value={formData.visit_date}
+                  onChange={handleChange}
+                  className="w-full border border-neutral-300 rounded px-3 py-2 bg-white"
+                />
+              </FormField>
+            </Grid>
+          </Section>
 
-          <label className="text-neutral-800">{t('addVisitModal.setDate')}
-            <input
-              type="date"
-              name="visit_date"
-              value={formData.visit_date}
-              onChange={handleChange}
-              className="w-full border p-2"
-            />
-            {formErrors.visit_date && (
-              <p className="text-red-600 text-sm mt-1">{formErrors.visit_date}</p>
-            )}
-          </label>
+          <Section title={t('addVisitModal.contactPerson')}>
+            <Grid>
+              <FormField id="contact_person" label={t('addVisitModal.contactPerson')} error={formErrors.contact_person}>
+                <input
+                  type="text"
+                  name="contact_person"
+                  placeholder={t('addVisitModal.contactPersonPlaceholder')}
+                  value={formData.contact_person}
+                  onChange={handleChange}
+                  className="w-full border border-neutral-300 rounded px-3 py-2 bg-white"
+                />
+              </FormField>
+            </Grid>
+          </Section>
 
-      <label className="text-neutral-800">{t('addVisitModal.contactPerson')}
-            <input
-              type="text"
-              name="contact_person"
-        placeholder={t('addVisitModal.contactPersonPlaceholder')}
-              value={formData.contact_person}
-              onChange={handleChange}
-              className="w-full border p-2"
-            />
-            {formErrors.contact_person && (
-              <p className="text-red-600 text-sm mt-1">{formErrors.contact_person}</p>
-            )}
-          </label>
+          <Section title={t('addVisitModal.kindOfMeeting')}>
+            <Grid>
+              <FormField id="meeting_type" label={t('addVisitModal.kindOfMeeting')}>
+                <select
+                  name="meeting_type"
+                  value={formData.meeting_type}
+                  onChange={handleChange}
+                  className="w-full border border-neutral-300 rounded px-3 py-2 bg-white"
+                >
+                  <option value="meeting">{t('addVisitModal.kindOfMeeting.meeting')}</option>
+                  <option value="call">{t('addVisitModal.kindOfMeeting.call')}</option>
+                  <option value="email">{t('addVisitModal.kindOfMeeting.email')}</option>
+                  <option value="video">{t('addVisitModal.kindOfMeeting.video')}</option>
+                </select>
+              </FormField>
+            </Grid>
+          </Section>
 
-          <label className="text-neutral-800">{t('addVisitModal.kindOfMeeting')}
-            <select
-              name="meeting_type"
-              value={formData.meeting_type}
-              onChange={handleChange}
-              className="w-full border p-2"
-            >
-              <option value="meeting">{t('addVisitModal.kindOfMeeting.meeting')}</option>
-              <option value="call">{t('addVisitModal.kindOfMeeting.call')}</option>
-              <option value="email">{t('addVisitModal.kindOfMeeting.email')}</option>
-              <option value="video">{t('addVisitModal.kindOfMeeting.video')}</option>
-            </select>
-          </label>
-
-          {[
+          {[ 
             { name: "meeting_purpose", label: t('addVisitModal.meetingPurpose') },
             { name: "post_meeting_summary", label: t('addVisitModal.postMeetingSummary') },
             { name: "marketing_tasks", label: t('addVisitModal.marketingTasks') },
@@ -275,17 +290,21 @@ function EditVisitModal({ isOpen, onClose, onVisitUpdated, visit, clients, entit
               { name: "director_response", label: t('addVisitModal.directorResponse') },
             ] : []),
           ].map(({ name, label }) => (
-            <label key={name} className="text-neutral-800">{label}
-              <textarea
-                name={name}
-                value={formData[name]}
-                onChange={handleChange}
-                className="w-full border p-2"
-              />
-            </label>
+            <Section key={name} title={label}>
+              <Grid>
+                <FormField id={name} label={label}>
+                  <textarea
+                    name={name}
+                    value={formData[name]}
+                    onChange={handleChange}
+                    className="w-full border border-neutral-300 rounded px-3 py-2 min-h-[80px] bg-white text-neutral-950"
+                  />
+                </FormField>
+              </Grid>
+            </Section>
           ))}
 
-          <div className="flex justify-end gap-2">
+          <div className='flex justify-end mt-5 gap-2'>
             <button type="button" onClick={onClose} className="buttonRed">
               {t('addClientModal.cancel')}
             </button>

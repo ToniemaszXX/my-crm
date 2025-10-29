@@ -5,6 +5,9 @@ import { checkSessionBeforeSubmit } from "../utils/checkSessionBeforeSubmit";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { usePreventDoubleSubmit } from "../utils/preventDoubleSubmit";
 import { useTranslation } from 'react-i18next';
+import Section from './common/Section';
+import Grid from './common/Grid';
+import FormField from './common/FormField';
 
 const emptyContact = {
   id: null,          // wymagane do update
@@ -166,9 +169,8 @@ export default function EditContactModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-[110]">
-      <div className="bg-neutral-100 pb-6 rounded-lg w-[900px] max-h-[85vh] overflow-y-auto">
-        {/* HEADER */}
+    <div className='fixed inset-0 bg-black/50 flex justify-center items-center z-[110]'>
+      <div className='bg-neutral-100 pb-8 rounded-lg w-[900px] max-h-[85vh] overflow-y-auto'>
         <div className="bg-neutral-100 flex justify-between items-center sticky top-0 z-50 p-4 border-b border-neutral-300">
           <h2 className="text-lime-500 text-xl font-extrabold">{t('editContactModal.title')}</h2>
           <button
@@ -180,93 +182,55 @@ export default function EditContactModal({
           </button>
         </div>
 
-        {/* FORM */}
-        <form onSubmit={handleSubmit} className="px-6 pt-4">
-          <div className="contactBlock">
-            <label className="text-neutral-800">
-              <select
-                className="contactSelect mb-4"
-                value={form.department}
-                onChange={(e) => handleChange("department", e.target.value)}
-              >
-                <option value="">{t('addClientModal.selectDepartment')}</option>
-                <option value="Zarząd">{t('addClientModal.departments.management')}</option>
-                <option value="Sprzedaż">{t('addClientModal.departments.sales')}</option>
-                <option value="Zakupy">{t('addClientModal.departments.purchasing')}</option>
-                <option value="Marketing">{t('addClientModal.departments.marketing')}</option>
-                <option value="Inwestycje">{t('addClientModal.departments.investments')}</option>
-                <option value="Finanse">{t('addClientModal.departments.finance')}</option>
-                <option value="Logistyka">{t('addClientModal.departments.logistics')}</option>
-                <option value="Administracja">{t('addClientModal.departments.admin')}</option>
-                <option value="Obsługi klienta">{t('addClientModal.departments.customerService')}</option>
-              </select>
-            </label>
-
-            <div className="flex gap-2">
-              <label className="text-neutral-800">
-                {t('fields.position')}
-                <input
-                  type="text"
-                  className="contactInput"
-                  value={form.position}
-                  onChange={(e) => handleChange("position", e.target.value)}
-                />
-              </label>
-
-              <label className="text-neutral-800">
-                {t('fields.firstName')}
-                <input
-                  type="text"
-                  className="contactInput"
-                  value={form.first_name}
-                  onChange={(e) => handleChange("first_name", e.target.value)}
-                />
-              </label>
-
-              <label className="text-neutral-800">
-                {t('fields.lastName')}
-                <input
-                  type="text"
-                  className="contactInput"
-                  value={form.last_name}
-                  onChange={(e) => handleChange("last_name", e.target.value)}
-                />
-              </label>
-
-              <label className="text-neutral-800">
-                {t('fields.phone')}
-                <input
-                  type="text"
-                  className="contactInput"
-                  value={form.phone}
-                  onChange={(e) => handleChange("phone", e.target.value)}
-                />
-              </label>
-
-              <label className="text-neutral-800">
-                {t('fields.email')}
-                <input
-                  type="email"
-                  className="contactInput"
-                  value={form.email}
-                  onChange={(e) => handleChange("email", e.target.value)}
-                />
-              </label>
-
-              <label className="text-neutral-800">
-                {t('fields.functionNotes')}
-                <input
-                  type="text"
-                  className="contactInput"
-                  value={form.function_notes}
-                  onChange={(e) => handleChange("function_notes", e.target.value)}
-                />
-              </label>
-
-              <label className="text-neutral-800">
-                {t('addClientModal.decisionLevel')}
+        <form onSubmit={handleSubmit} className="text-white flex flex-col gap-3 pl-8 pr-8 pt-4">
+          <Section title={t('editContactModal.contactDetails')}>
+            <Grid>
+              <FormField id="department" label={t('fields.department')}>
                 <select
-                  className="contactSelect text-neutral-800"
+                  className="w-full border border-neutral-300 rounded px-3 py-2 bg-white"
+                  value={form.department}
+                  onChange={(e) => handleChange("department", e.target.value)}
+                >
+                  <option value="">{t('addClientModal.selectDepartment')}</option>
+                  <option value="Zarząd">{t('addClientModal.departments.management')}</option>
+                  <option value="Sprzedaż">{t('addClientModal.departments.sales')}</option>
+                  <option value="Zakupy">{t('addClientModal.departments.purchasing')}</option>
+                  <option value="Marketing">{t('addClientModal.departments.marketing')}</option>
+                  <option value="Inwestycje">{t('addClientModal.departments.investments')}</option>
+                  <option value="Finanse">{t('addClientModal.departments.finance')}</option>
+                  <option value="Logistyka">{t('addClientModal.departments.logistics')}</option>
+                  <option value="Administracja">{t('addClientModal.departments.admin')}</option>
+                  <option value="Obsługi klienta">{t('addClientModal.departments.customerService')}</option>
+                </select>
+              </FormField>
+
+              <FormField id="position" label={t('fields.position')}>
+                <input type="text" className="w-full border border-neutral-300 rounded px-3 py-2 bg-white" value={form.position} onChange={(e) => handleChange("position", e.target.value)} />
+              </FormField>
+
+              <FormField id="first_name" label={t('fields.firstName')}>
+                <input type="text" className="w-full border border-neutral-300 rounded px-3 py-2 bg-white" value={form.first_name} onChange={(e) => handleChange("first_name", e.target.value)} />
+              </FormField>
+
+              <FormField id="last_name" label={t('fields.lastName')}>
+                <input type="text" className="w-full border border-neutral-300 rounded px-3 py-2 bg-white" value={form.last_name} onChange={(e) => handleChange("last_name", e.target.value)} />
+              </FormField>
+
+              <FormField id="phone" label={t('fields.phone')}>
+                <input type="text" className="w-full border border-neutral-300 rounded px-3 py-2 bg-white" value={form.phone} onChange={(e) => handleChange("phone", e.target.value)} />
+              </FormField>
+
+              <FormField id="email" label={t('fields.email')}>
+                <input type="email" className="w-full border border-neutral-300 rounded px-3 py-2 bg-white" value={form.email} onChange={(e) => handleChange("email", e.target.value)} />
+              </FormField>
+
+              <FormField id="function_notes" label={t('fields.functionNotes')}>
+                <input type="text" className="w-full border border-neutral-300 rounded px-3 py-2 bg-white" value={form.function_notes} onChange={(e) => handleChange("function_notes", e.target.value)} />
+              </FormField>
+
+              <FormField id="decision_level" label={t('addClientModal.decisionLevel')}>
+                <select
+                  className="w-full border border-neutral-300 rounded px-3 py-2 bg-white"
                   value={form.decision_level}
                   onChange={(e) => handleChange("decision_level", e.target.value)}
                 >
@@ -275,17 +239,12 @@ export default function EditContactModal({
                   <option value="średnia">{t('addClientModal.decision.medium')}</option>
                   <option value="brak">{t('addClientModal.decision.none')}</option>
                 </select>
-              </label>
-            </div>
-          </div>
+              </FormField>
+            </Grid>
+          </Section>
 
           <div className="flex justify-end gap-2 mt-5">
-            <button
-              type="button"
-              className="buttonRed"
-              onClick={onClose}
-              disabled={isSaving}
-            >
+            <button type="button" className="buttonRed" onClick={onClose} disabled={isSaving}>
               {t('buttons.cancel')}
             </button>
             <button className="buttonGreen" type="submit" disabled={isSaving}>

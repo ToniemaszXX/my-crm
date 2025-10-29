@@ -24,6 +24,10 @@ import Section from './common/Section';
 import Grid from './common/Grid';
 import FormField from './common/FormField';
 import Mapa from './common/Mapa';
+import AutosaveIndicator from './AutosaveIndicator';
+import { useDraftAutosave } from '../utils/useDraftAutosave';
+import { draftsDiscard } from '../api/drafts';
+import { lsDiscardDraft } from '../utils/autosaveStorage';
 
 const normalizeCategory = cat => (cat ? cat.toString() : '').trim().replace(/\s+/g, '_');
 
@@ -57,6 +61,11 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated, allClients 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [distOpen, setDistOpen] = useState(false);
   const distRef = useRef(null);
+  const contextKeyRef = useRef(client?.id ? `customer_edit_${client.id}` : 'customer_edit');
+  useEffect(() => {
+    if (client?.id) contextKeyRef.current = `customer_edit_${client.id}`;
+    localStorage.setItem('draft_ctx_customer_edit', contextKeyRef.current);
+  }, [client?.id]);
 
   useEffect(() => {
     // gdy otwierasz modal dla innego klienta, zrób świeżą kopię
@@ -198,8 +207,11 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated, allClients 
       // aktualizujemy "oryginał", żeby kolejne zapisy miały poprawne porównanie
       originalContactsRef.current = deepClone(contacts);
 
-      onClientUpdated?.();
-      onClose();
+  onClientUpdated?.();
+  try { if (draftId) await draftsDiscard(draftId); } catch {}
+  try { lsDiscardDraft({ entityType: 'customer', contextKey: contextKeyRef.current }); } catch {}
+  localStorage.removeItem('draft_ctx_customer_edit');
+  onClose();
     } catch (error) {
       // console.error('Error submitting client:', error);
       alert(`Error submitting client: ${error.message}`);
@@ -290,11 +302,35 @@ function EditClientModal({ isOpen, client, onClose, onClientUpdated, allClients 
 
   if (!isOpen || !formData) return null;
 
+  // Autosave: consider meaningful changes only
+  const isDirty = useMemo(() => {
+    const f = formData || {};
+    return !!((f.company_name||'').trim() || (f.street||'').trim() || (f.city||'').trim() || (f.www||'').trim() || (f.facebook||'').trim() || (f.additional_info||'').trim());
+  }, [formData]);
+
+  const { status, nextInMs, lastSavedAt, saveNow, draftId, initialRestored } = useDraftAutosave({
+    entityType: 'customer',
+    entityId: client?.id,
+    contextKey: contextKeyRef.current,
+    values: { formData, contacts, selectedDistributors },
+    isDirty,
+    enabled: isOpen,
+  });
+
+  useEffect(() => {
+    if (initialRestored && isOpen) {
+      const { formData: fd, contacts: cs, selectedDistributors: sd } = initialRestored;
+      if (fd) setFormData((prev) => ({ ...prev, ...fd }));
+      if (Array.isArray(cs)) setContacts(cs);
+      if (Array.isArray(sd)) setSelectedDistributors(sd);
+    }
+  }, [initialRestored, isOpen]);
+
   return (
     <div className='fixed inset-0 bg-black/50 flex justify-center items-center z-[99]'>
       <div className='bg-neutral-100 pb-8 rounded-lg w-[1100px] max-h-[90vh] overflow-y-auto'>
         <div className="bg-neutral-100 flex justify-between items-center sticky top-0 z-50 p-4 border-b border-neutral-300">
-          <h2 className="text-lime-500 text-xl font-extrabold">{t('editClientModal.editLead')}</h2>
+          <h2 className="text-lime-500 text-xl font-extrabold flex items-center gap-3">{t('editClientModal.editLead')} <AutosaveIndicator status={status} nextInMs={nextInMs} lastSavedAt={lastSavedAt} onSaveNow={saveNow} /></h2>
           <button
             className="text-black hover:text-red-500 text-2xl font-bold bg-neutral-300 rounded-lg w-10 h-10 flex items-center justify-center leading-none"
             onClick={onClose}

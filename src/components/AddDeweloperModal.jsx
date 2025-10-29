@@ -1,5 +1,5 @@
 // src/components/AddDeweloperModal.jsx
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import LocationPicker from './LocationPicker';
 import CountrySelect from './CountrySelect';
 import { X } from 'lucide-react';
@@ -17,6 +17,10 @@ import PillCheckbox from './common/PillCheckbox';
 import developerSchema from '../validation/developerSchema';
 import UserSelect from './UserSelect';
 import { isReadOnly, isBok, isAdminManager } from '../utils/roles';
+import AutosaveIndicator from './AutosaveIndicator';
+import { useDraftAutosave } from '../utils/useDraftAutosave';
+import { draftsDiscard } from '../api/drafts';
+import { lsDiscardDraft } from '../utils/autosaveStorage';
 
 function AddDeweloperModal({ isOpen, onClose, onDeveloperAdded }) {
   const { t } = useTranslation();
@@ -95,6 +99,8 @@ function AddDeweloperModal({ isOpen, onClose, onDeveloperAdded }) {
   };
 
   const [formData, setFormData] = useState(initialFormData);
+  const contextKeyRef = useRef(localStorage.getItem('draft_ctx_developer') || 'developer_add');
+  useEffect(() => { localStorage.setItem('draft_ctx_developer', contextKeyRef.current); }, []);
 
   useEffect(() => {
     if (user?.singleMarketId) {
@@ -169,17 +175,39 @@ function AddDeweloperModal({ isOpen, onClose, onDeveloperAdded }) {
       });
       let data = {}; try { data = await res.json(); } catch { }
       if (!(res.ok && data?.success)) { alert(data?.message || t('error')); setIsSaving(false); return; }
-      onDeveloperAdded?.(data.id);
-      alert(t('success'));
-      // reset the form so it’s clean next time
-      setFormData({ ...initialFormData });
-      onClose?.();
+  onDeveloperAdded?.(data.id);
+  alert(t('success'));
+  try { if (draftId) await draftsDiscard(draftId); } catch {}
+  try { lsDiscardDraft({ entityType: 'developer', contextKey: contextKeyRef.current }); } catch {}
+  localStorage.removeItem('draft_ctx_developer');
+  // reset the form so it’s clean next time
+  setFormData({ ...initialFormData });
+  onClose?.();
     } catch (err) { console.error(err); alert(`${t('errors.saveError')}: ${err.message}`); }
     finally { setIsSaving(false); }
   };
 
   const wrapSubmit = usePreventDoubleSubmit();
   const safeSubmit = wrapSubmit(handleSubmit);
+
+  const isDirty = useMemo(() => {
+    const f = formData || {};
+    return !!((f.company_name||'').trim() || (f.nip||'').trim() || (f.city||'').trim() || (f.street||'').trim() || (f.www||'').trim() || (f.facebook||'').trim() || (f.additional_info||'').trim());
+  }, [formData]);
+
+  const { status, nextInMs, lastSavedAt, saveNow, draftId, initialRestored } = useDraftAutosave({
+    entityType: 'developer',
+    contextKey: contextKeyRef.current,
+    values: formData,
+    isDirty,
+    enabled: isOpen,
+  });
+
+  useEffect(() => {
+    if (initialRestored && isOpen) {
+      setFormData((prev) => ({ ...prev, ...initialRestored }));
+    }
+  }, [initialRestored, isOpen]);
 
   if (!isOpen) return null;
 
@@ -188,9 +216,12 @@ function AddDeweloperModal({ isOpen, onClose, onDeveloperAdded }) {
       <div className='bg-neutral-100 pb-8 rounded-lg w-[1100px] max-h-[90vh] overflow-y-auto'>
         <div className="bg-neutral-100 flex justify-between items-center sticky top-0 z-50 p-4 border-b border-neutral-300">
           <h2 className="text-lime-500 text-xl font-extrabold">{t('addDeveloperModal.title')}</h2>
-          <button className="text-black hover:text-red-500 text-2xl font-bold bg-neutral-300 rounded-lg w-10 h-10 flex items-center justify-center leading-none" onClick={onClose} aria-label="Close modal">
-            <X size={20} />
-          </button>
+          <div className="flex items-center gap-3">
+            <AutosaveIndicator status={status} nextInMs={nextInMs} lastSavedAt={lastSavedAt} onSaveNow={saveNow} />
+            <button className="text-black hover:text-red-500 text-2xl font-bold bg-neutral-300 rounded-lg w-10 h-10 flex items-center justify-center leading-none" onClick={onClose} aria-label="Close modal">
+              <X size={20} />
+            </button>
+          </div>
         </div>
 
         <form

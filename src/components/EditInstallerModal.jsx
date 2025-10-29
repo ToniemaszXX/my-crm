@@ -16,6 +16,10 @@ import FormField from './common/FormField';
 import PillCheckbox from './common/PillCheckbox';
 import UserSelect from './UserSelect';
 import { isReadOnly, isBok, isAdminManager } from '../utils/roles';
+import AutosaveIndicator from './AutosaveIndicator';
+import { useDraftAutosave } from '../utils/useDraftAutosave';
+import { draftsDiscard } from '../api/drafts';
+import { lsDiscardDraft } from '../utils/autosaveStorage';
 
 function EditInstallerModal({ isOpen, installer, onClose, onInstallerUpdated }) {
   const { t } = useTranslation();
@@ -29,6 +33,11 @@ function EditInstallerModal({ isOpen, installer, onClose, onInstallerUpdated }) 
   const [searchTerm, setSearchTerm] = useState('');
   const [distOpen, setDistOpen] = useState(false);
   const distRef = useRef(null);
+  const contextKeyRef = useRef(installer?.id ? `installer_edit_${installer.id}` : 'installer_edit');
+  useEffect(() => {
+    if (installer?.id) contextKeyRef.current = `installer_edit_${installer.id}`;
+    localStorage.setItem('draft_ctx_installer_edit', contextKeyRef.current);
+  }, [installer?.id]);
 
   useEffect(() => {
     if (installer && isOpen) {
@@ -207,8 +216,11 @@ function EditInstallerModal({ isOpen, installer, onClose, onInstallerUpdated }) 
         setIsSaving(false);
         return;
       }
-      onInstallerUpdated?.(formData.id);
-      onClose?.();
+  onInstallerUpdated?.(formData.id);
+  try { if (draftId) await draftsDiscard(draftId); } catch {}
+  try { lsDiscardDraft({ entityType: 'installer', contextKey: contextKeyRef.current }); } catch {}
+  localStorage.removeItem('draft_ctx_installer_edit');
+  onClose?.();
     } catch (err) {
       console.error(err);
       alert(`Błąd zapisu: ${err.message}`);
@@ -220,6 +232,30 @@ function EditInstallerModal({ isOpen, installer, onClose, onInstallerUpdated }) 
   const wrapSubmit = usePreventDoubleSubmit();
   const safeSubmit = wrapSubmit(handleSubmit);
 
+  // Hooks must not be placed after any conditional return.
+  // Compute autosave state regardless of formData presence to keep hook order stable.
+  const isDirty = useMemo(() => {
+    const f = formData || {};
+    return !!((f.company_name||'').trim() || (f.street||'').trim() || (f.city||'').trim() || (f.www||'').trim() || (f.facebook||'').trim() || (f.additional_info||'').trim() || selectedDistributors.length > 0);
+  }, [formData, selectedDistributors]);
+
+  const { status, nextInMs, lastSavedAt, saveNow, draftId, initialRestored } = useDraftAutosave({
+    entityType: 'installer',
+    entityId: installer?.id,
+    contextKey: contextKeyRef.current,
+    values: { formData: formData || {}, selectedDistributors },
+    isDirty,
+    enabled: isOpen,
+  });
+
+  useEffect(() => {
+    if (initialRestored && isOpen) {
+      const { formData: fd, selectedDistributors: sd } = initialRestored;
+      if (fd) setFormData((prev) => ({ ...prev, ...fd }));
+      if (Array.isArray(sd)) setSelectedDistributors(sd);
+    }
+  }, [initialRestored, isOpen]);
+
   if (!isOpen || !formData) return null;
 
   return (
@@ -227,9 +263,12 @@ function EditInstallerModal({ isOpen, installer, onClose, onInstallerUpdated }) 
       <div className='bg-neutral-100 pb-8 rounded-lg w-[1100px] max-h-[90vh] overflow-y-auto'>
         <div className="bg-neutral-100 flex justify-between items-center sticky top-0 z-50 p-4 border-b border-neutral-300">
           <h2 className="text-lime-500 text-xl font-extrabold">{t('installerModal.title') || 'Edytuj Instalatora'}</h2>
-          <button className="text-black hover:text-red-500 text-2xl font-bold bg-neutral-300 rounded-lg w-10 h-10 flex items-center justify-center leading-none" onClick={onClose} aria-label="Close modal">
-            <X size={20} />
-          </button>
+          <div className="flex items-center gap-3">
+            <AutosaveIndicator status={status} nextInMs={nextInMs} lastSavedAt={lastSavedAt} onSaveNow={saveNow} />
+            <button className="text-black hover:text-red-500 text-2xl font-bold bg-neutral-300 rounded-lg w-10 h-10 flex items-center justify-center leading-none" onClick={onClose} aria-label="Close modal">
+              <X size={20} />
+            </button>
+          </div>
         </div>
 
         <form

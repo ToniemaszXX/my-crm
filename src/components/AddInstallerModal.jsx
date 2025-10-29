@@ -1,5 +1,5 @@
 // src/components/AddInstallerModal.jsx
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import LocationPicker from './LocationPicker';
 import CountrySelect from './CountrySelect';
 import { X } from 'lucide-react';
@@ -17,6 +17,10 @@ import PillCheckbox from './common/PillCheckbox';
 import installerSchema from '../validation/installerSchema';
 import UserSelect from './UserSelect';
 import { isReadOnly, isBok, isAdminManager } from '../utils/roles';
+import AutosaveIndicator from './AutosaveIndicator';
+import { useDraftAutosave } from '../utils/useDraftAutosave';
+import { draftsDiscard } from '../api/drafts';
+import { lsDiscardDraft } from '../utils/autosaveStorage';
 
 function AddInstallerModal({ isOpen, onClose, onInstallerAdded }) {
     const { t } = useTranslation();
@@ -88,6 +92,13 @@ function AddInstallerModal({ isOpen, onClose, onInstallerAdded }) {
     });
 
     const [formData, setFormData] = useState(() => makeInitialForm());
+
+    // Stable context key persisted across reloads for "add" flow
+    const contextKeyRef = useRef(localStorage.getItem('draft_ctx_installer') || `installer_add`);
+    useEffect(() => {
+        // persist the context key to survive reloads
+        localStorage.setItem('draft_ctx_installer', contextKeyRef.current);
+    }, []);
 
     useEffect(() => {
         if (user?.singleMarketId) {
@@ -201,6 +212,10 @@ function AddInstallerModal({ isOpen, onClose, onInstallerAdded }) {
             }
             onInstallerAdded?.(data.id);
             alert(t('addClientModal.success'));
+            // on success: discard draft (BE + LS) and clear context key
+            try { if (draftId) await draftsDiscard(draftId); } catch {}
+            try { lsDiscardDraft({ entityType: 'installer', contextKey: contextKeyRef.current }); } catch {}
+            localStorage.removeItem('draft_ctx_installer');
             // reset the form so it’s clean next time
             setFormData(makeInitialForm());
             setSelectedDistributors([]);
@@ -222,16 +237,52 @@ function AddInstallerModal({ isOpen, onClose, onInstallerAdded }) {
         onClose?.();
     };
 
+    // Autosave integration
+    const dirty = useMemo(() => {
+        const f = formData || {};
+        return !!(
+            (f.company_name || '').trim() ||
+            (f.nip || '').trim() ||
+            (f.street || '').trim() ||
+            (f.city || '').trim() ||
+            (f.client_code_erp || '').trim() ||
+            (f.www || '').trim() ||
+            (f.facebook || '').trim() ||
+            (f.additional_info || '').trim() ||
+            selectedDistributors.length > 0 ||
+            Number(f.latitude) || Number(f.longitude)
+        );
+    }, [formData, selectedDistributors]);
+
+    const { status, nextInMs, lastSavedAt, saveNow, draftId, initialRestored } = useDraftAutosave({
+        entityType: 'installer',
+        contextKey: contextKeyRef.current,
+        values: formData,
+        isDirty: dirty,
+        enabled: isOpen,
+    });
+
+    useEffect(() => {
+        if (initialRestored && isOpen) {
+            setFormData((prev) => ({ ...prev, ...initialRestored }));
+        }
+    }, [initialRestored, isOpen]);
+
     if (!isOpen) return null;
 
     return (
         <div className='fixed inset-0 bg-black/50 flex justify-center items-center z-[99]'>
             <div className='bg-neutral-100 pb-8 rounded-lg w-[1100px] max-h-[90vh] overflow-y-auto'>
                 <div className="bg-neutral-100 flex justify-between items-center sticky top-0 z-50 p-4 border-b border-neutral-300">
-                    <h2 className="text-lime-500 text-xl font-extrabold">{t('addInstallerModal.title')}</h2>
-                    <button className="text-black hover:text-red-500 text-2xl font-bold bg-neutral-300 rounded-lg w-10 h-10 flex items-center justify-center leading-none" onClick={handleCancel} aria-label="Close modal">
-                        <X size={20} />
-                    </button>
+                    <h2 className="text-lime-500 text-xl font-extrabold">
+                        {t('addInstallerModal.title')}
+                    </h2>
+                    <div className="flex items-center gap-3">
+                        <AutosaveIndicator status={status} nextInMs={nextInMs} lastSavedAt={lastSavedAt} onSaveNow={saveNow} />
+                        <button className="text-black hover:text-red-500 text-2xl font-bold bg-neutral-300 rounded-lg w-10 h-10 flex items-center justify-center leading-none" onClick={handleCancel} aria-label="Close modal">
+                            <X size={20} />
+                        </button>
+                    </div>
                 </div>
 
                 <form
